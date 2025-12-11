@@ -1,4 +1,5 @@
 import { Graphics, Container, RenderTexture, Sprite, type Renderer } from 'pixi.js'
+import { BloomFilter } from 'pixi-filters'
 import { GRID } from './constants'
 import type { GraphNode, VisualNode } from '@/types'
 import {
@@ -9,7 +10,8 @@ import {
   subdivideBezier,
   type Point,
 } from './bezier'
-import { getColormapColor, getBrighterColor } from './colormap'
+import { getColormapColor, getBrighterColor, setActiveColormap, COLORMAPS } from './colormap'
+import { ColorMapFilter } from './ColorMapFilter'
 
 // Node sizing
 const MIN_NODE_RADIUS = 6
@@ -76,6 +78,36 @@ const CURVE_STROKE_ALPHA = 0.2
 const CURVE_FILL_COLOR = 0xffffff
 const CURVE_STROKE_COLOR = 0xffffff
 
+// Easing functions
+function easeOutCubic(t: number): number {
+  return 1 - Math.pow(1 - t, 3)
+}
+
+// Animate a sprite's alpha from current value to target
+function animateSpriteAlpha(
+  sprite: Sprite,
+  targetAlpha: number,
+  duration: number,
+  onComplete?: () => void,
+) {
+  const startAlpha = sprite.alpha
+  const startTime = performance.now()
+
+  const animate = () => {
+    const elapsed = performance.now() - startTime
+    const progress = Math.min(1, elapsed / duration)
+    const eased = easeOutCubic(progress)
+    sprite.alpha = startAlpha + (targetAlpha - startAlpha) * eased
+
+    if (progress < 1) {
+      requestAnimationFrame(animate)
+    } else {
+      onComplete?.()
+    }
+  }
+  requestAnimationFrame(animate)
+}
+
 interface CurveControlPoints {
   outer: { cp1: Point; cp2: Point; end: Point }
   inner: { cp1: Point; cp2: Point }
@@ -105,10 +137,13 @@ interface CachedCurve {
   direction: 'up' | 'down'
 }
 
+type DrawDirection = 'left' | 'right' | 'symmetric'
+export type DrawDirectionStrategy = 'alternating' | 'symmetric' | 'random' | 'uniform'
+
 interface TargetGroup {
   sourceNode: VisualNode
   targets: VisualNode[]
-  drawRight: boolean
+  drawDirection: DrawDirection
 }
 
 export class Grid {
@@ -130,10 +165,17 @@ export class Grid {
   private onionTexture: RenderTexture | null = null
   private onionSprite: Sprite | null = null
   private renderer: Renderer | null = null
+  private colorMapFilter: ColorMapFilter
+  private bloomFilter: BloomFilter
 
   // Animation state
   nodeAnimationComplete = false
   nodeFinishedMap = new Map<VisualNode, number>() // value = finish timestamp
+  private curveAnimationId = 0 // incremented to cancel running animations
+
+  // Draw direction strategy
+  drawDirectionStrategy: DrawDirectionStrategy = 'alternating'
+  private randomSeed = 12345
 
   // Callbacks
   onNodeHover: ((node: VisualNode, isOver: boolean) => void) | null = null
@@ -148,6 +190,8 @@ export class Grid {
     this.nodes = new Map()
     this.selectedNodes = new Set()
     this.onionContainer = new Container()
+    this.colorMapFilter = new ColorMapFilter()
+    this.bloomFilter = new BloomFilter({ strength: 8 })
     this.container.addChild(this.graphics)
   }
 
@@ -165,12 +209,73 @@ export class Grid {
       .filter((n): n is VisualNode => n !== undefined && n.gridY < sourceNode.gridY)
   }
 
-  // Determine which direction curves should go
-  private getDrawDirection(node: VisualNode): boolean {
-    const gridCenter = this.cols / 2
-    if (node.gridX < gridCenter) return false
-    if (node.gridX > gridCenter) return true
-    return node.gridY % 2 === 0
+  // Get curve angles for a draw direction
+  private getAnglesForDirection(direction: DrawDirection): number[] {
+    switch (direction) {
+      case 'left':
+        return [CURVE_ANGLE]
+      case 'right':
+        return [-CURVE_ANGLE]
+      case 'symmetric':
+        return [CURVE_ANGLE, -CURVE_ANGLE]
+    }
+  }
+
+  // Filter targets for a specific angle (for symmetric splitting)
+  private filterTargetsForAngle(
+    targets: VisualNode[],
+    angle: number,
+    sourceNode: VisualNode,
+  ): VisualNode[] {
+    if (angle === CURVE_ANGLE) {
+      // Left side: targets left of center, or balanced
+      return this.splitTargetsByDirection(targets).left
+    } else {
+      // Right side
+      return this.splitTargetsByDirection(targets).right
+    }
+  }
+
+  // Seeded random for deterministic "random" direction
+  private seededRandom(x: number, y: number): number {
+    const hash = (x * 73856093) ^ (y * 19349663) ^ this.randomSeed
+    return ((hash * 16807) % 2147483647) / 2147483647
+  }
+
+  // Determine draw direction for a node based on current strategy
+  private getNodeDrawDirection(node: VisualNode): DrawDirection {
+    // Source nodes always symmetric
+    if (node.metadata?.isSource) {
+      return 'symmetric'
+    }
+
+    switch (this.drawDirectionStrategy) {
+      case 'uniform':
+        // All nodes draw symmetrically
+        return 'symmetric'
+
+      case 'symmetric':
+        // Center column symmetric, others based on position
+        const gridCenter = this.cols / 2
+        if (node.gridX < gridCenter) return 'left'
+        if (node.gridX > gridCenter) return 'right'
+        return 'symmetric'
+
+      case 'random':
+        // Seeded random for deterministic results
+        const rand = this.seededRandom(node.gridX, node.gridY)
+        if (rand < 0.33) return 'left'
+        if (rand < 0.66) return 'right'
+        return 'symmetric'
+
+      case 'alternating':
+      default:
+        // Left/right of center, center column alternates by row
+        const center = this.cols / 2
+        if (node.gridX < center) return 'left'
+        if (node.gridX > center) return 'right'
+        return node.gridY % 2 === 0 ? 'right' : 'left'
+    }
   }
 
   // Split targets into left/right groups (for source node)
@@ -225,24 +330,16 @@ export class Grid {
 
       if (targets.length === 0) continue
 
-      if (sourceNode.metadata?.isSource) {
-        const { left, right } = this.splitTargetsByDirection(targets)
-        if (left.length > 0) {
-          groups.push({ sourceNode, targets: left, drawRight: false })
-        }
-        if (right.length > 0) {
-          groups.push({ sourceNode, targets: right, drawRight: true })
-        }
-      } else {
-        groups.push({
-          sourceNode,
-          targets,
-          drawRight: this.getDrawDirection(sourceNode),
-        })
-      }
+      const drawDirection = this.getNodeDrawDirection(sourceNode)
+      groups.push({ sourceNode, targets, drawDirection })
     }
 
     return groups
+  }
+
+  // Set random seed for the 'random' draw direction strategy
+  setRandomSeed(seed: number) {
+    this.randomSeed = seed
   }
 
   get width() {
@@ -436,20 +533,81 @@ export class Grid {
         this.selectedNodes.add(node)
       }
     } else {
+      // Toggle: if clicking already-selected node, deselect it
+      if (this.selectedNodes.has(node) && this.selectedNodes.size === 1) {
+        this.clearSelection()
+        return
+      }
       this.selectedNodes.clear()
       this.selectedNodes.add(node)
     }
 
     this.drawNodesOverlay()
-    this.drawOnionConnectors()
+    this.animateSelection()
     this.onSelectionChange?.([...this.selectedNodes])
   }
 
   clearSelection() {
     this.selectedNodes.clear()
     this.drawNodesOverlay()
-    this.drawOnionConnectors()
+    this.fadeInStaticConnectors()
     this.onSelectionChange?.([])
+  }
+
+  // Animate curves for current selection (or all if none selected)
+  animateSelection(duration = 500) {
+    this.animateCurvesIn({ duration, durationStrategy: 'fixedIndependent' })
+  }
+
+  // Fade in the static connector sprite (used when deselecting)
+  fadeInStaticConnectors(duration = 400) {
+    // Cancel any running curve animation
+    this.curveAnimationId++
+
+    // Clear any existing connectors without fade (we'll create new ones)
+    this.clearConnectors(false)
+
+    // Draw the full static connectors (no selection filter since selectedNodes is empty)
+    this.drawOnionConnectors(1)
+
+    // Fade the sprite in from 0
+    if (this.onionSprite) {
+      this.onionSprite.alpha = 0
+      animateSpriteAlpha(this.onionSprite, 1, duration)
+    }
+  }
+
+  // Clear static connector graphics
+  private clearConnectors(fade = false, fadeDuration = 500) {
+    // Clear onion graphics immediately
+    for (const g of this.onionGraphics) {
+      this.onionContainer.removeChild(g)
+      g.destroy()
+    }
+    this.onionGraphics = []
+
+    if (this.onionSprite) {
+      if (fade && this.onionSprite.alpha > 0) {
+        const sprite = this.onionSprite
+        this.onionSprite = null
+        animateSpriteAlpha(sprite, 0, fadeDuration, () => {
+          this.container.removeChild(sprite)
+          sprite.destroy()
+        })
+      } else {
+        this.container.removeChild(this.onionSprite)
+        this.onionSprite.destroy()
+        this.onionSprite = null
+      }
+    }
+
+    if (this.onionTexture) {
+      // Don't destroy texture if fading - sprite still needs it
+      if (!fade) {
+        this.onionTexture.destroy()
+      }
+      this.onionTexture = null
+    }
   }
 
   calculateCurveBounds() {
@@ -459,73 +617,78 @@ export class Grid {
     const groups = this.buildTargetGroups(false)
     if (groups.length === 0) return this
 
-    for (const { sourceNode, targets, drawRight } of groups) {
+    for (const { sourceNode, targets, drawDirection } of groups) {
       const x0 = sourceNode.x
       const y0 = sourceNode.y
       const start = { x: x0, y: y0 }
-      const minAngle = drawRight ? -CURVE_ANGLE : CURVE_ANGLE
-      const { cosR, sinR, rotateBack } = createRotationHelpers(minAngle, x0, y0)
 
-      let globalMinX = x0
-      let globalMinY = y0
+      const angles = this.getAnglesForDirection(drawDirection)
 
-      for (const target of targets) {
-        const relX = target.x - x0
-        const relY = target.y - y0
-        const rotX = relX * cosR - relY * sinR
-        const rotY = relX * sinR + relY * cosR
+      for (const angle of angles) {
+        const curveTargets =
+          drawDirection === 'symmetric'
+            ? this.filterTargetsForAngle(targets, angle, sourceNode)
+            : targets
 
-        const { cp1, cp2, end } = calcRotatedControlPoints(
-          rotX,
-          rotY,
-          MAX_CP1X,
-          CP1Y,
-          MAX_CP2X,
-          CP2Y,
-        )
-        const cp1Back = rotateBack(cp1)
-        const cp2Back = rotateBack(cp2)
-        const endBack = rotateBack(end)
+        if (curveTargets.length === 0) continue
 
-        globalMinX = Math.min(globalMinX, sampleBezierMinX(start, cp1Back, cp2Back, endBack))
-        globalMinY = Math.min(globalMinY, sampleBezierMinY(start, cp1Back, cp2Back, endBack))
+        const { cosR, sinR, rotateBack } = createRotationHelpers(angle, x0, y0)
+
+        let globalMinX = x0
+        let globalMinY = y0
+
+        for (const target of curveTargets) {
+          const relX = target.x - x0
+          const relY = target.y - y0
+          const rotX = relX * cosR - relY * sinR
+          const rotY = relX * sinR + relY * cosR
+
+          const { cp1, cp2, end } = calcRotatedControlPoints(
+            rotX,
+            rotY,
+            MAX_CP1X,
+            CP1Y,
+            MAX_CP2X,
+            CP2Y,
+          )
+          const cp1Back = rotateBack(cp1)
+          const cp2Back = rotateBack(cp2)
+          const endBack = rotateBack(end)
+
+          globalMinX = Math.min(globalMinX, sampleBezierMinX(start, cp1Back, cp2Back, endBack))
+          globalMinY = Math.min(globalMinY, sampleBezierMinY(start, cp1Back, cp2Back, endBack))
+        }
+
+        this.curveOverhang = Math.max(this.curveOverhang, GRID.padding - globalMinX)
+        this.curveUnderhang = Math.max(this.curveUnderhang, GRID.padding - globalMinY)
       }
-
-      this.curveOverhang = Math.max(this.curveOverhang, GRID.padding - globalMinX)
-      this.curveUnderhang = Math.max(this.curveUnderhang, GRID.padding - globalMinY)
     }
 
     return this
   }
 
   drawOnionConnectors(progress = 1) {
-    // Clear old
-    for (const g of this.onionGraphics) {
-      this.onionContainer.removeChild(g)
-      g.destroy()
-    }
-    this.onionGraphics = []
-
-    if (this.onionSprite) {
-      this.container.removeChild(this.onionSprite)
-      this.onionSprite.destroy()
-      this.onionSprite = null
-    }
-    if (this.onionTexture) {
-      this.onionTexture.destroy()
-      this.onionTexture = null
-    }
+    this.clearConnectors()
 
     const groups = this.buildTargetGroups(true)
     if (groups.length === 0) return this
 
-    for (const { sourceNode, targets, drawRight } of groups) {
-      this.drawConnectorGroup(sourceNode, targets, drawRight, progress)
+    for (const { sourceNode, targets, drawDirection } of groups) {
+      const angles = this.getAnglesForDirection(drawDirection)
+      for (const angle of angles) {
+        const curveTargets =
+          drawDirection === 'symmetric'
+            ? this.filterTargetsForAngle(targets, angle, sourceNode)
+            : targets
+        if (curveTargets.length === 0) continue
+        this.drawConnectorGroup(sourceNode, curveTargets, angle, progress)
+      }
     }
 
     // Render to texture
     if (this.renderer && this.onionGraphics.length > 0) {
-      const resolution = this.renderer.resolution || 1
+      const baseResolution = this.renderer.resolution || 1
+      const resolution = baseResolution * 2 // 2x supersampling for sharper curves
       this.onionTexture = RenderTexture.create({
         width: this.canvasWidth,
         height: this.canvasHeight,
@@ -545,6 +708,7 @@ export class Grid {
       this.onionSprite = new Sprite(this.onionTexture)
       this.onionSprite.x = -this.curveOverhang
       this.onionSprite.y = -this.curveUnderhang
+      this.onionSprite.filters = [this.colorMapFilter, this.bloomFilter]
       this.container.addChildAt(this.onionSprite, 0)
     }
 
@@ -668,7 +832,7 @@ export class Grid {
   private drawConnectorGroup(
     sourceNode: VisualNode,
     targets: VisualNode[],
-    drawRight: boolean,
+    angle: number,
     progress: number,
   ) {
     const g = new Graphics()
@@ -677,8 +841,7 @@ export class Grid {
     const x0 = sourceNode.x
     const y0 = sourceNode.y
     const start = { x: x0, y: y0 }
-    const minAngle = drawRight ? -CURVE_ANGLE : CURVE_ANGLE
-    const { cosR, sinR, rotateBack } = createRotationHelpers(minAngle, x0, y0)
+    const { cosR, sinR, rotateBack } = createRotationHelpers(angle, x0, y0)
 
     const sortedTargets = [...targets].sort((a, b) => b.y - a.y)
     const fillAlpha = (getDensity() * (1 / this.maxConnections)) / 0.75
@@ -718,7 +881,7 @@ export class Grid {
 
     const startTimes = sorted.map((_, i) => {
       const t = i / (count - 1 || 1)
-      const eased = t * t
+      const eased = 1 - Math.pow(1 - t, 2)
       return eased * (totalDuration - nodeDuration)
     })
 
@@ -781,40 +944,35 @@ export class Grid {
     const groups = this.buildTargetGroups(true)
     const fillAlpha = (getDensity() * (1 / this.maxConnections)) / 0.75
 
-    for (const { sourceNode, targets, drawRight } of groups) {
+    for (const { sourceNode, targets, drawDirection } of groups) {
       const x0 = sourceNode.x
       const y0 = sourceNode.y
       const sourceStart = { x: x0, y: y0 }
-      const minAngle = drawRight ? -CURVE_ANGLE : CURVE_ANGLE
-      const { cosR, sinR, rotateBack } = createRotationHelpers(minAngle, x0, y0)
 
-      const sortedTargets = [...targets].sort((a, b) => b.y - a.y)
+      const angles = this.getAnglesForDirection(drawDirection)
 
-      for (let i = 0; i < sortedTargets.length; i++) {
-        const t = sortedTargets.length > 1 ? i / (sortedTargets.length - 1) : 0.5
-        const cp = this.calculateCurvePoints(sortedTargets[i]!, x0, y0, cosR, sinR, rotateBack, t)
+      for (const angle of angles) {
+        const curveTargets =
+          drawDirection === 'symmetric'
+            ? this.filterTargetsForAngle(targets, angle, sourceNode)
+            : targets
 
-        // Determine direction - all down for testing
-        const direction: 'up' | 'down' = 'down'
+        if (curveTargets.length === 0) continue
 
-        if (direction === 'down') {
-          const reversed = reverseCurve(sourceStart, cp)
-          curves.push({
-            start: reversed.start,
-            cp: reversed.cp,
-            fillAlpha,
-            sourceNode,
-            targetNode: sortedTargets[i]!,
-            direction,
-          })
-        } else {
+        const { cosR, sinR, rotateBack } = createRotationHelpers(angle, x0, y0)
+        const sortedTargets = [...curveTargets].sort((a, b) => b.y - a.y)
+
+        for (let i = 0; i < sortedTargets.length; i++) {
+          const t = sortedTargets.length > 1 ? i / (sortedTargets.length - 1) : 0.5
+          const cp = this.calculateCurvePoints(sortedTargets[i]!, x0, y0, cosR, sinR, rotateBack, t)
+
           curves.push({
             start: sourceStart,
             cp,
             fillAlpha,
             sourceNode,
             targetNode: sortedTargets[i]!,
-            direction,
+            direction: 'up' as const,
           })
         }
       }
@@ -839,21 +997,41 @@ export class Grid {
       duration?: number
       awaitNodeAnimation?: boolean
       awaitSourceNode?: boolean
+      awaitBothNodes?: boolean
+      durationStrategy?: 'fixedIndependent' | 'fixedGlobal'
     } = {},
   ) {
-    const { duration = 2500, awaitNodeAnimation = false, awaitSourceNode = false } = config
+    const {
+      duration = 2500,
+      awaitNodeAnimation = false,
+      awaitSourceNode = false,
+      awaitBothNodes = false,
+      durationStrategy = 'fixedIndependent',
+    } = config
+
+    // Cancel any running curve animation
+    this.curveAnimationId++
+    const animationId = this.curveAnimationId
+
+    // Fade out static connectors (will be recreated when animation completes)
+    this.clearConnectors(true)
 
     const cachedCurves = this.buildCurveCache()
     if (cachedCurves.length === 0) return this
 
     const animGraphics = new Graphics()
+    animGraphics.filters = [this.colorMapFilter, this.bloomFilter]
     this.container.addChildAt(animGraphics, 0)
 
     let globalStartTime: number | null = null
+    let warnedAboutDuration = false
 
     const shouldDrawCurve = (curve: CachedCurve): boolean => {
-      if (awaitSourceNode && !this.nodeFinishedMap.has(curve.sourceNode)) {
-        return false
+      if (awaitBothNodes) {
+        if (!this.nodeFinishedMap.has(curve.sourceNode)) return false
+        if (!this.nodeFinishedMap.has(curve.targetNode)) return false
+      } else if (awaitSourceNode) {
+        if (!this.nodeFinishedMap.has(curve.sourceNode)) return false
       }
       return true
     }
@@ -865,17 +1043,51 @@ export class Grid {
     }
 
     const getCurveProgress = (curve: CachedCurve, now: number): number => {
-      if (awaitSourceNode) {
-        const nodeFinishTime = this.nodeFinishedMap.get(curve.sourceNode)
-        if (nodeFinishTime) {
-          return calcProgress(now - nodeFinishTime, duration)
-        }
-        return 0
+      let curveStartTime: number | null = null
+
+      if (awaitBothNodes) {
+        const sourceFinish = this.nodeFinishedMap.get(curve.sourceNode)
+        const targetFinish = this.nodeFinishedMap.get(curve.targetNode)
+        if (!sourceFinish || !targetFinish) return 0
+        curveStartTime = Math.max(sourceFinish, targetFinish)
+      } else if (awaitSourceNode) {
+        curveStartTime = this.nodeFinishedMap.get(curve.sourceNode) ?? null
+        if (!curveStartTime) return 0
+      } else {
+        curveStartTime = globalStartTime
       }
-      return calcProgress(now - globalStartTime!, duration)
+
+      if (!curveStartTime) return 0
+
+      if (durationStrategy === 'fixedGlobal') {
+        // Curve must finish by globalStartTime + duration
+        const globalEndTime = globalStartTime! + duration
+        const curveAvailableDuration = globalEndTime - curveStartTime
+        if (curveAvailableDuration <= 0) {
+          if (!warnedAboutDuration) {
+            console.warn(
+              `[animateCurvesIn] fixedGlobal duration (${duration}ms) is shorter than node animation time. ` +
+                `Some curves have no time to animate. Consider increasing duration.`,
+            )
+            warnedAboutDuration = true
+          }
+          return 1
+        }
+        return calcProgress(now - curveStartTime, curveAvailableDuration)
+      } else {
+        // fixedIndependent: each curve gets full duration
+        return calcProgress(now - curveStartTime, duration)
+      }
     }
 
     const animate = () => {
+      // Check if this animation was cancelled
+      if (animationId !== this.curveAnimationId) {
+        this.container.removeChild(animGraphics)
+        animGraphics.destroy()
+        return
+      }
+
       if (globalStartTime === null) {
         globalStartTime = performance.now()
       }
@@ -916,6 +1128,23 @@ export class Grid {
 
     requestAnimationFrame(animate)
     return this
+  }
+
+  setColormap(index: number) {
+    this.colorMapFilter.colormap = index
+    setActiveColormap(COLORMAPS[index]!)
+  }
+
+  getColormap(): number {
+    return this.colorMapFilter.colormap
+  }
+
+  updateNodeColors() {
+    for (const node of this.nodes.values()) {
+      node.fillColor = getColormapColor(node.normalizedCitations)
+      node.strokeColor = getBrighterColor(node.fillColor)
+    }
+    this.drawNodesOverlay()
   }
 
   destroy() {

@@ -18,6 +18,13 @@ export interface PaperMetadata {
   doi?: string
   openAlexUrl?: string
   isSource?: boolean
+  // Additional metadata
+  type?: string // e.g., 'article', 'preprint', 'book-chapter'
+  sourceType?: string // e.g., 'journal', 'conference', 'repository'
+  sourceName?: string // e.g., 'Nature', 'arXiv'
+  openAccess?: boolean
+  language?: string
+  abstract?: string
 }
 
 export interface GraphNode {
@@ -47,6 +54,13 @@ export interface RawPaper {
   coCitedCount?: number
   coCitingCount?: number
   citingCount?: number
+  // Additional metadata
+  type?: string
+  sourceType?: string
+  sourceName?: string
+  openAccess?: boolean
+  language?: string
+  abstract?: string
 }
 
 export interface GraphEdge {

@@ -26,19 +26,20 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div 
-    v-if="hoveredNode" 
+  <div
+    v-if="hoveredNode"
     class="tooltip"
     :style="{ left: mouseX + 15 + 'px', top: mouseY + 15 + 'px' }"
   >
-    <div class="title">{{ hoveredNode.metadata.title }}</div>
-    <div class="meta">
-      <span class="year">{{ hoveredNode.order }}</span>
-      <span class="citations">{{ hoveredNode.metadata.citationCount }} citations</span>
+    <div class="tooltip-title">{{ hoveredNode.metadata.title }}</div>
+    <div class="tooltip-meta">
+      <span class="tooltip-year">{{ hoveredNode.order }}</span>
+      <span class="tooltip-separator">|</span>
+      <span class="tooltip-citations">{{ hoveredNode.metadata.citationCount }} citations</span>
     </div>
-    <div v-if="hoveredNode.metadata.authors.length" class="authors">
+    <div v-if="hoveredNode.metadata.authors.length" class="tooltip-authors">
       {{ hoveredNode.metadata.authors.slice(0, 3).join(', ') }}
-      <span v-if="hoveredNode.metadata.authors.length > 3">
+      <span v-if="hoveredNode.metadata.authors.length > 3" class="more">
         +{{ hoveredNode.metadata.authors.length - 3 }} more
       </span>
     </div>
@@ -48,37 +49,50 @@ onUnmounted(() => {
 <style scoped>
 .tooltip {
   position: fixed;
-  max-width: 320px;
-  padding: 12px;
-  background: rgba(20, 20, 35, 0.95);
-  border: 1px solid #444;
-  border-radius: 6px;
-  color: #fff;
-  font-size: 13px;
+  max-width: 300px;
+  padding: 10px 14px;
+  background: var(--bg-tooltip);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: var(--font-size-md);
   pointer-events: none;
-  z-index: 1000;
+  z-index: var(--z-tooltip);
+  box-shadow: var(--shadow-tooltip);
 }
 
-.title {
+.tooltip-title {
   font-weight: 500;
   line-height: 1.3;
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-sm);
 }
 
-.meta {
+.tooltip-meta {
   display: flex;
-  gap: 12px;
-  color: #888;
-  font-size: 12px;
+  gap: var(--spacing-sm);
+  color: var(--text-muted);
+  font-size: var(--font-size-base);
   margin-bottom: 6px;
 }
 
-.year {
-  color: #6b8afd;
+.tooltip-year {
+  color: var(--accent-link);
+  font-family: var(--font-mono);
 }
 
-.authors {
-  font-size: 12px;
-  color: #666;
+.tooltip-separator {
+  color: var(--text-faint);
+}
+
+.tooltip-authors {
+  font-size: var(--font-size-base);
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+.tooltip-authors .more {
+  color: var(--text-faint);
+  font-style: italic;
 }
 </style>

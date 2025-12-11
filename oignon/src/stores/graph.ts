@@ -47,6 +47,7 @@ export const useGraphStore = defineStore('graph', () => {
   const sidePanelCollapsed = ref(true)
   const loading = ref(false)
   const loadingProgress = ref<BuildProgress | null>(null)
+  const pendingBuildId = ref<string | null>(null)
 
   // Cache
   const CACHE_KEY = 'oignon_graph_cache'
@@ -177,6 +178,14 @@ export const useGraphStore = defineStore('graph', () => {
     loadingProgress.value = progress ?? null
   }
 
+  function triggerBuild(nodeId: string) {
+    pendingBuildId.value = nodeId
+  }
+
+  function clearPendingBuild() {
+    pendingBuildId.value = null
+  }
+
   function saveToCache() {
     if (!graph.value) return
     try {
@@ -221,6 +230,7 @@ export const useGraphStore = defineStore('graph', () => {
     sidePanelCollapsed,
     loading,
     loadingProgress,
+    pendingBuildId,
 
     // Computed
     hasGraph,
@@ -240,6 +250,8 @@ export const useGraphStore = defineStore('graph', () => {
     setColormap,
     toggleSidePanel,
     setLoading,
+    triggerBuild,
+    clearPendingBuild,
     saveToCache,
     loadFromCache,
     clearCache,

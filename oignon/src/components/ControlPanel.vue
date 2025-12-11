@@ -1,205 +1,254 @@
 <script setup lang="ts">
 import { useGraphStore } from '@/stores/graph'
-import { Colormap } from '@/types'
+import { COLORMAPS } from '@/lib/colormap'
 
 const store = useGraphStore()
 
-const colormaps = [
-  { id: Colormap.Plasma, name: 'Plasma' },
-  { id: Colormap.Viridis, name: 'Viridis' },
-  { id: Colormap.Inferno, name: 'Inferno' },
-  { id: Colormap.Magma, name: 'Magma' },
-  { id: Colormap.Cividis, name: 'Cividis' },
-  { id: Colormap.Turbo, name: 'Turbo' },
-]
+const colormaps = COLORMAPS.map((cm, index) => ({
+  id: index,
+  name: cm.name,
+}))
 
 const emit = defineEmits<{
+  colormapChange: [index: number]
   fitToView: []
   zoomIn: []
   zoomOut: []
 }>()
+
+function handleColormapChange(index: number) {
+  store.setColormap(index)
+  emit('colormapChange', index)
+}
 </script>
 
 <template>
-  <div class="control-panel" :class="{ collapsed: store.sidePanelCollapsed }">
-    <button class="toggle-btn" @click="store.toggleSidePanel">
-      {{ store.sidePanelCollapsed ? '◀' : '▶' }}
-    </button>
+  <div class="control-panel-container">
+    <div class="control-panel-wrapper">
+      <button
+        class="toggle-btn"
+        :class="{ collapsed: store.sidePanelCollapsed }"
+        @click="store.toggleSidePanel"
+        :title="store.sidePanelCollapsed ? 'Expand' : 'Collapse'"
+      >
+        <span class="arrow" />
+      </button>
 
-    <div v-if="!store.sidePanelCollapsed" class="panel-content">
-      <section class="section">
-        <h4>View</h4>
-        <div class="button-row">
-          <button @click="emit('zoomIn')">+</button>
-          <button @click="emit('zoomOut')">−</button>
-          <button @click="emit('fitToView')">Fit</button>
+      <div class="side-panel" :class="{ collapsed: store.sidePanelCollapsed }">
+        <div class="panel-header">Controls</div>
+
+        <!-- Colormap Section -->
+        <div class="panel-section">
+          <div class="panel-section-title">Colormap</div>
+          <div class="colormap-grid">
+            <button
+              v-for="cm in colormaps"
+              :key="cm.id"
+              class="colormap-btn"
+              :class="{ active: store.activeColormap === cm.id }"
+              @click="handleColormapChange(cm.id)"
+            >
+              {{ cm.name }}
+            </button>
+          </div>
         </div>
-      </section>
 
-      <section class="section">
-        <h4>Colormap</h4>
-        <div class="colormap-list">
-          <button
-            v-for="cm in colormaps"
-            :key="cm.id"
-            class="colormap-btn"
-            :class="{ active: store.activeColormap === cm.id }"
-            @click="store.setColormap(cm.id)"
-          >
-            {{ cm.name }}
-          </button>
+        <!-- Viewport Controls Section -->
+        <div class="panel-section">
+          <div class="panel-section-title">View</div>
+          <div class="viewport-controls">
+            <button class="control-btn" @click="emit('zoomIn')" title="Zoom in">+</button>
+            <button class="control-btn" @click="emit('zoomOut')" title="Zoom out">−</button>
+            <div class="control-btn-divider"></div>
+            <button class="control-btn" @click="emit('fitToView')" title="Fit to view">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+              </svg>
+            </button>
+          </div>
         </div>
-      </section>
-
-      <section v-if="store.selectedNodes.length" class="section">
-        <h4>Selected ({{ store.selectedNodes.length }})</h4>
-        <ul class="selected-list">
-          <li v-for="node in store.selectedNodes.slice(0, 5)" :key="node.id">
-            {{ node.metadata.title?.slice(0, 40) }}...
-          </li>
-          <li v-if="store.selectedNodes.length > 5" class="more">
-            +{{ store.selectedNodes.length - 5 }} more
-          </li>
-        </ul>
-        <button class="clear-btn" @click="store.clearSelection">
-          Clear Selection
-        </button>
-      </section>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.control-panel {
+.control-panel-container {
   position: absolute;
-  top: 20px;
-  right: 20px;
-  background: rgba(30, 30, 50, 0.95);
-  border-radius: 8px;
-  padding: 16px;
-  min-width: 200px;
-  color: #fff;
-  z-index: 100;
+  top: var(--spacing-xl);
+  right: var(--spacing-xl);
+  z-index: var(--z-panel);
 }
 
-.control-panel.collapsed {
-  min-width: auto;
-  padding: 8px;
-}
-
-.toggle-btn {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  background: none;
-  border: none;
-  color: #888;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.toggle-btn:hover {
-  color: #fff;
-}
-
-.panel-content {
-  margin-top: 20px;
-}
-
-.section {
-  margin-bottom: 20px;
-}
-
-.section:last-child {
-  margin-bottom: 0;
-}
-
-h4 {
-  margin: 0 0 10px 0;
-  font-size: 12px;
-  font-weight: 500;
-  color: #888;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.button-row {
+.control-panel-wrapper {
   display: flex;
-  gap: 6px;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
 }
 
-.button-row button {
-  flex: 1;
-  padding: 8px;
-  border: 1px solid #444;
-  border-radius: 4px;
-  background: #2a2a3e;
-  color: #fff;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.button-row button:hover {
-  background: #3a3a4e;
-}
-
-.colormap-list {
+.side-panel {
+  width: 200px;
+  min-width: 200px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(var(--panel-blur));
+  border-radius: var(--panel-radius);
+  border: 1px solid var(--panel-border);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  overflow: hidden;
+  transition:
+    width var(--transition-smooth),
+    min-width var(--transition-smooth),
+    opacity var(--transition-smooth),
+    border-color var(--transition-smooth);
+}
+
+.side-panel.collapsed {
+  width: 0;
+  min-width: 0;
+  opacity: 0;
+  border-color: transparent;
+  pointer-events: none;
+}
+
+.panel-header {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--border-light);
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: var(--font-size-md);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.panel-section {
+  padding: var(--spacing-md) var(--spacing-lg);
+  white-space: nowrap;
+}
+
+.panel-section:not(:last-child) {
+  border-bottom: 1px solid var(--border-light);
+}
+
+.panel-section-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--spacing-sm);
+}
+
+/* Colormap Grid */
+.colormap-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-xs);
 }
 
 .colormap-btn {
-  padding: 8px 12px;
-  border: 1px solid #444;
-  border-radius: 4px;
-  background: #2a2a3e;
-  color: #aaa;
-  font-size: 13px;
-  text-align: left;
+  padding: 6px 8px;
+  border: 1px solid var(--btn-border);
+  border-radius: var(--btn-radius);
+  background: var(--btn-bg);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
   cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
 .colormap-btn:hover {
-  background: #3a3a4e;
+  background: var(--btn-bg-hover);
+  color: var(--text-secondary);
 }
 
 .colormap-btn.active {
-  border-color: #6b8afd;
-  color: #fff;
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+  background: var(--btn-bg-active);
 }
 
-.selected-list {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 10px 0;
-  font-size: 12px;
-  color: #aaa;
+/* Viewport Controls */
+.viewport-controls {
+  display: flex;
+  gap: var(--spacing-xs);
 }
 
-.selected-list li {
-  padding: 4px 0;
-  border-bottom: 1px solid #333;
-}
-
-.selected-list .more {
-  color: #666;
-  font-style: italic;
-}
-
-.clear-btn {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #555;
-  border-radius: 4px;
-  background: transparent;
-  color: #888;
-  font-size: 12px;
+.control-btn {
+  width: var(--control-btn-size);
+  height: var(--control-btn-size);
+  border: 1px solid var(--border-light);
+  border-radius: var(--btn-radius);
+  background: var(--btn-bg);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xl);
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
 }
 
-.clear-btn:hover {
-  border-color: #777;
-  color: #fff;
+.control-btn:hover {
+  background: var(--btn-bg-hover);
+  color: var(--text-primary);
+}
+
+.control-btn:active {
+  transform: scale(0.95);
+}
+
+.control-btn-divider {
+  width: 1px;
+  background: var(--border-medium);
+  margin: 6px 2px;
+}
+
+/* Toggle button - anchored to panel */
+.toggle-btn {
+  width: var(--toggle-size);
+  height: var(--toggle-size);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--control-btn-radius);
+  background: var(--panel-bg);
+  backdrop-filter: blur(var(--panel-blur));
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+  color: var(--text-primary);
+}
+
+.toggle-btn .arrow {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform var(--transition-smooth);
+  margin-left: -2px;
+}
+
+.toggle-btn.collapsed .arrow {
+  transform: rotate(135deg);
+  margin-left: 2px;
 }
 </style>

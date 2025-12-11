@@ -1,0 +1,107 @@
+/* ============================================
+   Oignon v2 Design Tokens
+   Migrated from oignon v1 styles.css
+   ============================================ */
+
+:root {
+  /* ---- Colors: Background ---- */
+  --bg-body: #2a2a3e;
+  --bg-container: #1a1a2e;
+  --bg-panel: rgba(0, 0, 0, 0.6);
+  --bg-panel-solid: rgba(30, 30, 50, 0.95);
+  --bg-input: rgba(255, 255, 255, 0.1);
+  --bg-input-focus: rgba(255, 255, 255, 0.15);
+  --bg-item: rgba(255, 255, 255, 0.05);
+  --bg-item-hover: rgba(255, 255, 255, 0.08);
+  --bg-tooltip: rgba(0, 0, 0, 0.9);
+
+  /* ---- Colors: Text ---- */
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.9);
+  --text-tertiary: rgba(255, 255, 255, 0.8);
+  --text-muted: rgba(255, 255, 255, 0.6);
+  --text-dim: rgba(255, 255, 255, 0.5);
+  --text-faint: rgba(255, 255, 255, 0.4);
+  --text-placeholder: rgba(255, 255, 255, 0.4);
+
+  /* ---- Colors: Accent ---- */
+  --accent-green: #4ade80;
+  --accent-green-light: #86efac;
+  --accent-blue: #3b82f6;
+  --accent-blue-light: #60a5fa;
+  --accent-red: #f87171;
+  --accent-link: rgba(130, 180, 255, 0.9);
+  --accent-link-bg: rgba(130, 180, 255, 0.1);
+  --accent-link-bg-hover: rgba(130, 180, 255, 0.2);
+
+  /* ---- Colors: Borders ---- */
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --border-light: rgba(255, 255, 255, 0.1);
+  --border-medium: rgba(255, 255, 255, 0.15);
+  --border-strong: rgba(255, 255, 255, 0.25);
+  --border-focus: rgba(255, 255, 255, 0.4);
+
+  /* ---- Panel styling ---- */
+  --panel-bg: rgba(0, 0, 0, 0.6);
+  --panel-border: rgba(255, 255, 255, 0.1);
+  --panel-radius: 12px;
+  --panel-blur: 12px;
+
+  /* ---- Button styling ---- */
+  --btn-bg: rgba(255, 255, 255, 0.1);
+  --btn-bg-hover: rgba(255, 255, 255, 0.15);
+  --btn-bg-active: rgba(255, 255, 255, 0.2);
+  --btn-border: rgba(255, 255, 255, 0.15);
+  --btn-border-hover: rgba(255, 255, 255, 0.25);
+  --btn-radius: 6px;
+
+  /* ---- Control button (viewport controls) ---- */
+  --control-btn-size: 36px;
+  --control-btn-radius: 8px;
+
+  /* ---- Toggle button ---- */
+  --toggle-size: 32px;
+  --toggle-gap: 8px;
+
+  /* ---- Spacing ---- */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+
+  /* ---- Typography ---- */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+
+  --font-size-xs: 9px;
+  --font-size-sm: 11px;
+  --font-size-base: 12px;
+  --font-size-md: 13px;
+  --font-size-lg: 14px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 20px;
+
+  /* ---- Transitions ---- */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.2s ease;
+  --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ---- Shadows ---- */
+  --shadow-panel: 0 4px 6px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-tooltip: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-btn: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-glow-green: 0 0 8px rgba(74, 222, 128, 0.4);
+
+  /* ---- Z-index layers ---- */
+  --z-canvas: 1;
+  --z-overlay: 50;
+  --z-panel: 100;
+  --z-toggle: 101;
+  --z-tooltip: 1000;
+
+  /* ---- Progress bar ---- */
+  --progress-height: 4px;
+  --progress-bg: rgba(255, 255, 255, 0.1);
+  --progress-fill: var(--accent-green);
+}

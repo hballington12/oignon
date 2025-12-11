@@ -59,6 +59,28 @@ interface OpenAlexWork {
   publication_year: number
   cited_by_count?: number
   referenced_works?: string[]
+  type?: string
+  language?: string
+  open_access?: { is_oa?: boolean }
+  primary_location?: {
+    source?: {
+      display_name?: string
+      type?: string
+    }
+  }
+  abstract_inverted_index?: Record<string, number[]>
+}
+
+function reconstructAbstract(invertedIndex: Record<string, number[]> | undefined): string {
+  if (!invertedIndex) return ''
+  const words: [string, number][] = []
+  for (const [word, positions] of Object.entries(invertedIndex)) {
+    for (const pos of positions) {
+      words.push([word, pos])
+    }
+  }
+  words.sort((a, b) => a[1] - b[1])
+  return words.map(([word]) => word).join(' ')
 }
 
 function formatPaper(work: OpenAlexWork): RawPaper {
@@ -88,6 +110,12 @@ function formatPaper(work: OpenAlexWork): RawPaper {
     referencesCount: refs.length,
     openAlexUrl: work.id,
     references: refs.map(extractId),
+    type: work.type,
+    sourceType: work.primary_location?.source?.type,
+    sourceName: work.primary_location?.source?.display_name,
+    openAccess: work.open_access?.is_oa,
+    language: work.language,
+    abstract: reconstructAbstract(work.abstract_inverted_index),
   }
 }
 
@@ -108,7 +136,8 @@ async function fetchBatch(batch: string[]): Promise<Record<string, RawPaper>> {
   const idFilter = batch.join('|')
   const params = new URLSearchParams({
     filter: `openalex:${idFilter}`,
-    select: 'id,doi,title,authorships,publication_year,cited_by_count,referenced_works',
+    select:
+      'id,doi,title,authorships,publication_year,cited_by_count,referenced_works,type,language,open_access,primary_location,abstract_inverted_index',
     per_page: OPENALEX_MAX_PER_PAGE.toString(),
   })
 
@@ -703,6 +732,12 @@ export function preprocessGraph(graph: RawGraph): ProcessedGraph {
       authorsDetailed:
         authorsRaw.length && typeof authorsRaw[0] === 'object' ? authorsRaw : undefined,
       isSource: paper.isSource,
+      type: paper.type,
+      sourceType: paper.sourceType,
+      sourceName: paper.sourceName,
+      openAccess: paper.openAccess,
+      language: paper.language,
+      abstract: paper.abstract,
     }
 
     nodes.push({

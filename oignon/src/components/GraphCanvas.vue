@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { Application, Container, Graphics } from 'pixi.js'
 import { useGraphStore } from '@/stores/graph'
 import { Grid } from '@/lib/Grid'
+import { getBackgroundColor } from '@/lib/colormap'
 const store = useGraphStore()
 const canvasContainer = ref<HTMLDivElement | null>(null)
 
@@ -25,7 +26,7 @@ async function initPixi() {
   app = new Application()
   await app.init({
     resizeTo: canvasContainer.value,
-    backgroundColor: 0x1a1a2e,
+    backgroundColor: getBackgroundColor(),
     antialias: true,
     resolution: window.devicePixelRatio || 1,
     autoDensity: true,
@@ -69,6 +70,7 @@ function renderGraph() {
   }
 
   grid.onNodeClick = (node) => {
+    clickedOnNode = true
     store.selectNode(node.id)
   }
 
@@ -94,8 +96,13 @@ function renderGraph() {
   fitToView()
 
   // Animate in
-  grid.animateNodesIn(2000, 400)
-  grid.animateCurvesIn({ duration: 1500, awaitSourceNode: true })
+  grid.animateNodesIn(4000, 1000)
+  grid.animateCurvesIn({
+    duration: 1000,
+    awaitBothNodes: true,
+    awaitSourceNode: true,
+    durationStrategy: 'fixedIndependent',
+  })
 }
 
 function fitToView() {
@@ -178,13 +185,30 @@ function onPointerMove(e: PointerEvent) {
   }
 }
 
-function onPointerUp(_e: PointerEvent) {
+let clickedOnNode = false
+
+function onPointerUp(e: PointerEvent) {
+  const wasDragging = isDragging
+  const wasBoxSelecting = isBoxSelecting
   isDragging = false
   isBoxSelecting = false
 
   if (selectionBox) {
     selectionBox.clear()
   }
+
+  // Check if this was a click (not a drag)
+  const dx = Math.abs(e.clientX - dragStartX)
+  const dy = Math.abs(e.clientY - dragStartY)
+  const isClick = dx < 5 && dy < 5
+
+  if (isClick && !wasBoxSelecting && store.selectedNodeIds.size > 0 && !clickedOnNode) {
+    // Clicked on empty canvas space - deselect all
+    grid?.clearSelection()
+    store.clearSelection()
+  }
+
+  clickedOnNode = false
 }
 
 function onWheel(e: WheelEvent) {
@@ -287,11 +311,21 @@ onUnmounted(() => {
   cleanup()
 })
 
+// Colormap change handler
+function handleColormapChange(index: number) {
+  grid?.setColormap(index)
+  grid?.updateNodeColors()
+  if (app) {
+    app.renderer.background.color = getBackgroundColor()
+  }
+}
+
 // Expose for parent components
 defineExpose({
   app,
   viewport,
   fitToView,
+  setColormap: handleColormapChange,
 })
 </script>
 
