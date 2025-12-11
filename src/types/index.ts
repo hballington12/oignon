@@ -108,6 +108,7 @@ export interface SlimGraphNode {
 export interface SlimCache {
   slim: true
   nodes: SlimGraphNode[]
+  sourceId?: number // numeric ID of the source node
 }
 
 // Visual / Rendering Types
@@ -188,6 +189,32 @@ export interface BuildProgress {
 }
 
 export type ProgressCallback = (progress: BuildProgress) => void
+
+// Library Types (bookmarks and recent graphs)
+
+export interface BookmarkedPaper {
+  id: string
+  title: string
+  firstAuthor?: string
+  year?: number
+  citations: number
+  doi?: string
+  openAlexUrl?: string
+  addedAt: number // timestamp
+}
+
+export interface RecentGraph {
+  sourceId: string
+  title: string
+  firstAuthor?: string
+  year?: number
+  nodeCount: number
+  doi?: string
+  openAlexUrl?: string
+  timestamp: string // formatted date string
+  addedAt: number // timestamp for sorting
+  cache: SlimCache // slim cache data for instant reload
+}
 
 // App State Types (for Pinia store)
 

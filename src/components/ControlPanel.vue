@@ -29,6 +29,8 @@ function handleColormapChange(index: number) {
       v-model:collapsed="store.sidePanelCollapsed"
       toggle-position="upper-west"
       :width="200"
+      icon="wrench"
+      label="controls"
     >
       <div class="panel-header">Controls</div>
 

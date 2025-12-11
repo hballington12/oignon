@@ -9,8 +9,10 @@ import type {
   BuildProgress,
   SlimCache,
   PaperMetadata,
+  BookmarkedPaper,
+  RecentGraph,
 } from '@/types'
-import { hydrateMetadata } from '@/lib/graphBuilder'
+import { hydrateMetadata, fetchPaper } from '@/lib/graphBuilder'
 
 export const useGraphStore = defineStore('graph', () => {
   // Graph data
@@ -47,13 +49,71 @@ export const useGraphStore = defineStore('graph', () => {
   // UI state
   const activeColormap = ref<number>(0) // Colormap.Plasma
   const sidePanelCollapsed = ref(true)
+  const searchPanelCollapsed = ref(false)
+  const detailsPanelCollapsed = ref(false)
   const loading = ref(false)
   const loadingProgress = ref<BuildProgress | null>(null)
   const pendingBuildId = ref<string | null>(null)
   const hydratingMetadata = ref(false)
 
-  // Cache
+  // Standalone paper display (for bookmarks not in current graph)
+  const standalonePaper = ref<VisualNode | null>(null)
+  const loadingStandalone = ref(false)
+
+  // Cache keys
   const CACHE_KEY = 'oignon_graph_cache'
+  const BOOKMARKS_KEY = 'oignon_bookmarks'
+  const RECENT_GRAPHS_KEY = 'oignon_recent_graphs'
+  const COLORMAP_KEY = 'oignon_colormap'
+  const MAX_RECENT_GRAPHS = 10
+
+  // Library state
+  const bookmarkedPapers = ref<BookmarkedPaper[]>([])
+  const recentGraphs = ref<RecentGraph[]>([])
+
+  // In-memory metadata cache (session-only, not persisted)
+  // Stores full paper metadata for bookmarks to avoid re-fetching
+  const metadataCache = new Map<string, PaperMetadata>()
+
+  // Load library data and preferences from localStorage on init
+  function loadLibraryData() {
+    try {
+      const bookmarks = localStorage.getItem(BOOKMARKS_KEY)
+      if (bookmarks) {
+        bookmarkedPapers.value = JSON.parse(bookmarks)
+      }
+      const recent = localStorage.getItem(RECENT_GRAPHS_KEY)
+      if (recent) {
+        recentGraphs.value = JSON.parse(recent)
+      }
+      const colormap = localStorage.getItem(COLORMAP_KEY)
+      if (colormap !== null) {
+        activeColormap.value = parseInt(colormap, 10)
+      }
+    } catch (e) {
+      console.warn('Failed to load library data:', e)
+    }
+  }
+
+  // Save library data to localStorage
+  function saveBookmarks() {
+    try {
+      localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarkedPapers.value))
+    } catch (e) {
+      console.warn('Failed to save bookmarks:', e)
+    }
+  }
+
+  function saveRecentGraphs() {
+    try {
+      localStorage.setItem(RECENT_GRAPHS_KEY, JSON.stringify(recentGraphs.value))
+    } catch (e) {
+      console.warn('Failed to save recent graphs:', e)
+    }
+  }
+
+  // Initialize library on store creation
+  loadLibraryData()
 
   // Computed
   const hasGraph = computed(() => graph.value !== null && nodes.value.size > 0)
@@ -113,6 +173,7 @@ export const useGraphStore = defineStore('graph', () => {
     orderToRow.value = {}
     selectedNodeIds.value = new Set()
     hoveredNodeId.value = null
+    standalonePaper.value = null
   }
 
   function setNode(id: string, node: VisualNode) {
@@ -120,8 +181,13 @@ export const useGraphStore = defineStore('graph', () => {
   }
 
   function selectNode(id: string, additive = false) {
+    // Clear standalone paper when selecting a graph node
+    standalonePaper.value = null
+
     if (!additive) {
       selectedNodeIds.value = new Set([id])
+      // Focus details panel when selecting a single node
+      focusDetailsPanel()
     } else {
       const newSet = new Set(selectedNodeIds.value)
       if (newSet.has(id)) {
@@ -135,6 +201,8 @@ export const useGraphStore = defineStore('graph', () => {
 
   function clearSelection() {
     selectedNodeIds.value = new Set()
+    // Also clear standalone paper (same behavior as deselecting a graph node)
+    standalonePaper.value = null
   }
 
   function setHoveredNode(id: string | null) {
@@ -178,10 +246,17 @@ export const useGraphStore = defineStore('graph', () => {
   // UI actions
   function setColormap(colormap: number) {
     activeColormap.value = colormap
+    localStorage.setItem(COLORMAP_KEY, String(colormap))
   }
 
   function toggleSidePanel() {
     sidePanelCollapsed.value = !sidePanelCollapsed.value
+  }
+
+  // Focus on details panel (expand it, collapse search)
+  function focusDetailsPanel() {
+    detailsPanelCollapsed.value = false
+    searchPanelCollapsed.value = true
   }
 
   function setLoading(isLoading: boolean, progress?: BuildProgress) {
@@ -190,6 +265,15 @@ export const useGraphStore = defineStore('graph', () => {
   }
 
   function triggerBuild(nodeId: string) {
+    // Check if we already have this graph in the recent graphs cache
+    const cached = recentGraphs.value.find((g) => g.sourceId === nodeId)
+    if (cached) {
+      // Load from cache instead of rebuilding
+      loadRecentGraph(nodeId)
+      return
+    }
+
+    // Otherwise trigger a fresh build
     pendingBuildId.value = nodeId
   }
 
@@ -207,18 +291,69 @@ export const useGraphStore = defineStore('graph', () => {
     return `W${id}`
   }
 
+  function buildSlimCache(): SlimCache {
+    if (!graph.value) {
+      return { slim: true, nodes: [] }
+    }
+
+    // Find the source node
+    const source = graph.value.nodes.find((n) => n.metadata?.isSource)
+
+    return {
+      slim: true,
+      nodes: graph.value.nodes.map((node) => ({
+        id: toNumericId(node.id),
+        order: node.order,
+        connections: node.connections.map(toNumericId),
+      })),
+      sourceId: source ? toNumericId(source.id) : undefined,
+    }
+  }
+
+  function loadSlimCache(slimCache: SlimCache) {
+    const nodeMap = new Map<string, GraphNode>()
+    const sourceIdStr = slimCache.sourceId ? toStringId(slimCache.sourceId) : null
+
+    // First pass: create nodes with empty citedBy
+    for (const node of slimCache.nodes) {
+      const id = toStringId(node.id)
+      const isSource = id === sourceIdStr
+      nodeMap.set(id, {
+        id,
+        order: node.order,
+        connections: node.connections.map(toStringId),
+        citedBy: [],
+        metadata: {
+          title: 'Loading...',
+          authors: [],
+          citationCount: 0,
+          isSource,
+        },
+      })
+    }
+
+    // Second pass: rebuild citedBy from connections
+    for (const node of nodeMap.values()) {
+      for (const connId of node.connections) {
+        const targetNode = nodeMap.get(connId)
+        if (targetNode) {
+          targetNode.citedBy.push(node.id)
+        }
+      }
+    }
+
+    const fullNodes = Array.from(nodeMap.values())
+    loadGraph({ nodes: fullNodes })
+
+    // Hydrate metadata in background
+    const nodeIds = fullNodes.map((n) => n.id)
+    runMetadataHydration(nodeIds)
+  }
+
   function saveToCache() {
     if (!graph.value) return
     try {
-      // Save slim version with numeric IDs (citedBy rebuilt on load)
-      const slimCache: SlimCache = {
-        slim: true,
-        nodes: graph.value.nodes.map((node) => ({
-          id: toNumericId(node.id),
-          order: node.order,
-          connections: node.connections.map(toNumericId),
-        })),
-      }
+      const slimCache = buildSlimCache()
       const json = JSON.stringify(slimCache)
       localStorage.setItem(CACHE_KEY, json)
     } catch (e) {
@@ -234,41 +369,7 @@ export const useGraphStore = defineStore('graph', () => {
       if (!data?.nodes) return false
 
       if (data.slim) {
-        // Slim cache: convert numeric IDs back to strings, rebuild citedBy
-        const nodeMap = new Map<string, GraphNode>()
-
-        // First pass: create nodes with empty citedBy
-        for (const node of data.nodes as SlimCache['nodes']) {
-          const id = toStringId(node.id)
-          nodeMap.set(id, {
-            id,
-            order: node.order,
-            connections: node.connections.map(toStringId),
-            citedBy: [],
-            metadata: {
-              title: 'Loading...',
-              authors: [],
-              citationCount: 0,
-            },
-          })
-        }
-
-        // Second pass: rebuild citedBy from connections
-        for (const node of nodeMap.values()) {
-          for (const connId of node.connections) {
-            const targetNode = nodeMap.get(connId)
-            if (targetNode) {
-              targetNode.citedBy.push(node.id)
-            }
-          }
-        }
-
-        const fullNodes = Array.from(nodeMap.values())
-        loadGraph({ nodes: fullNodes })
-
-        // Hydrate metadata in background
-        const nodeIds = fullNodes.map((n) => n.id)
-        runMetadataHydration(nodeIds)
+        loadSlimCache(data as SlimCache)
       } else {
         // Full cache (legacy): load directly
         loadGraph(data)
@@ -307,6 +408,182 @@ export const useGraphStore = defineStore('graph', () => {
     localStorage.removeItem(CACHE_KEY)
   }
 
+  // Library actions - Bookmarks
+  function addBookmark(paper: {
+    id: string
+    title: string
+    firstAuthor?: string
+    year?: number
+    citations: number
+    doi?: string
+    openAlexUrl?: string
+  }) {
+    // Don't add if already bookmarked
+    if (bookmarkedPapers.value.some((b) => b.id === paper.id)) return
+
+    bookmarkedPapers.value.unshift({
+      ...paper,
+      addedAt: Date.now(),
+    })
+    saveBookmarks()
+  }
+
+  function removeBookmark(id: string) {
+    bookmarkedPapers.value = bookmarkedPapers.value.filter((b) => b.id !== id)
+    saveBookmarks()
+  }
+
+  function clearBookmarks() {
+    bookmarkedPapers.value = []
+    saveBookmarks()
+  }
+
+  function isBookmarked(id: string): boolean {
+    return bookmarkedPapers.value.some((b) => b.id === id)
+  }
+
+  // Select a bookmarked paper - either from graph or fetch standalone
+  // Helper to build a standalone VisualNode from cached metadata
+  function buildStandaloneNode(id: string, metadata: PaperMetadata, year: number): VisualNode {
+    return {
+      id,
+      order: year,
+      gridX: 0,
+      gridY: 0,
+      x: 0,
+      y: 0,
+      radius: 10,
+      normalizedCitations: 0,
+      fillColor: 0xffffff,
+      strokeColor: 0xffffff,
+      connections: [],
+      citedBy: [],
+      metadata,
+    }
+  }
+
+  async function selectBookmarkedPaper(id: string) {
+    // Clear any existing standalone paper
+    standalonePaper.value = null
+
+    // If node exists in current graph, just select it
+    if (nodes.value.has(id)) {
+      selectNode(id)
+      return
+    }
+
+    // Check in-memory cache first
+    const cached = metadataCache.get(id)
+    if (cached) {
+      selectedNodeIds.value = new Set()
+      const bookmark = bookmarkedPapers.value.find((b) => b.id === id)
+      standalonePaper.value = buildStandaloneNode(id, cached, bookmark?.year ?? 0)
+      focusDetailsPanel()
+      return
+    }
+
+    // Otherwise, fetch from OpenAlex and cache the result
+    loadingStandalone.value = true
+    try {
+      const paper = await fetchPaper(id)
+      if (paper) {
+        // Clear graph selection first (before setting standalone)
+        selectedNodeIds.value = new Set()
+
+        const metadata: PaperMetadata = {
+          title: paper.title,
+          authors: paper.authors.map((a) => a.name),
+          citationCount: paper.citationCount,
+          referencesCount: paper.referencesCount,
+          doi: paper.doi,
+          openAlexUrl: paper.openAlexUrl,
+          type: paper.type,
+          sourceType: paper.sourceType,
+          sourceName: paper.sourceName,
+          openAccess: paper.openAccess,
+          abstract: paper.abstract,
+          isSource: false,
+        }
+
+        // Cache it for this session
+        metadataCache.set(id, metadata)
+
+        standalonePaper.value = buildStandaloneNode(id, metadata, paper.year)
+        focusDetailsPanel()
+      }
+    } catch (e) {
+      console.warn('Failed to fetch bookmarked paper:', e)
+    } finally {
+      loadingStandalone.value = false
+    }
+  }
+
+  function clearStandalonePaper() {
+    standalonePaper.value = null
+  }
+
+  // Library actions - Recent Graphs
+  function addRecentGraph(
+    sourceId: string,
+    title: string,
+    nodeCount: number,
+    firstAuthor?: string,
+    year?: number,
+    doi?: string,
+    openAlexUrl?: string,
+  ) {
+    // Build slim cache from current graph
+    const cache = buildSlimCache()
+
+    // Remove existing entry for same source
+    recentGraphs.value = recentGraphs.value.filter((g) => g.sourceId !== sourceId)
+
+    // Add to front
+    recentGraphs.value.unshift({
+      sourceId,
+      title,
+      firstAuthor,
+      year,
+      nodeCount,
+      doi,
+      openAlexUrl,
+      timestamp: new Date().toLocaleDateString(),
+      addedAt: Date.now(),
+      cache,
+    })
+
+    // Keep only MAX_RECENT_GRAPHS
+    if (recentGraphs.value.length > MAX_RECENT_GRAPHS) {
+      recentGraphs.value = recentGraphs.value.slice(0, MAX_RECENT_GRAPHS)
+    }
+
+    saveRecentGraphs()
+  }
+
+  function loadRecentGraph(sourceId: string) {
+    const recent = recentGraphs.value.find((g) => g.sourceId === sourceId)
+    if (!recent) return
+
+    // Load directly from cached slim data
+    loadSlimCache(recent.cache)
+
+    // Also update the main cache
+    localStorage.setItem(CACHE_KEY, JSON.stringify(recent.cache))
+
+    // Focus details panel to show the source node
+    focusDetailsPanel()
+  }
+
+  function removeRecentGraph(sourceId: string) {
+    recentGraphs.value = recentGraphs.value.filter((g) => g.sourceId !== sourceId)
+    saveRecentGraphs()
+  }
+
+  function clearRecentGraphs() {
+    recentGraphs.value = []
+    saveRecentGraphs()
+  }
+
   return {
     // State
     graph,
@@ -321,10 +598,16 @@ export const useGraphStore = defineStore('graph', () => {
     hoveredNodeId,
     activeColormap,
     sidePanelCollapsed,
+    searchPanelCollapsed,
+    detailsPanelCollapsed,
     loading,
     loadingProgress,
     pendingBuildId,
     hydratingMetadata,
+    bookmarkedPapers,
+    recentGraphs,
+    standalonePaper,
+    loadingStandalone,
 
     // Computed
     hasGraph,
@@ -344,11 +627,24 @@ export const useGraphStore = defineStore('graph', () => {
     snapViewport,
     setColormap,
     toggleSidePanel,
+    focusDetailsPanel,
     setLoading,
     triggerBuild,
     clearPendingBuild,
     saveToCache,
     loadFromCache,
     clearCache,
+
+    // Library actions
+    addBookmark,
+    removeBookmark,
+    clearBookmarks,
+    isBookmarked,
+    selectBookmarkedPaper,
+    clearStandalonePaper,
+    addRecentGraph,
+    loadRecentGraph,
+    removeRecentGraph,
+    clearRecentGraphs,
   }
 })

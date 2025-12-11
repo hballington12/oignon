@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import PanelToggle from '@/components/PanelToggle.vue'
 
 export type TogglePosition = 'upper-east' | 'upper-west' | 'lower-east' | 'lower-west'
+export type ToggleIcon = 'info' | 'library' | 'wrench' | 'search'
 
 const props = withDefaults(
   defineProps<{
@@ -10,6 +11,10 @@ const props = withDefaults(
     togglePosition: TogglePosition
     /** Width of the panel when expanded */
     width?: number
+    /** Icon to show when collapsed */
+    icon?: ToggleIcon
+    /** Label for tooltip (e.g., "search" -> "Show search") */
+    label?: string
   }>(),
   {
     width: 200,
@@ -46,6 +51,8 @@ const wrapperAlignment = computed(() => (isLower.value ? 'flex-end' : 'flex-star
       class="panel-toggle-btn"
       :collapsed="collapsed"
       :direction="arrowDirection"
+      :icon="props.icon"
+      :label="props.label"
       @toggle="toggle"
     />
 

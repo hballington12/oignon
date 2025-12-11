@@ -1,17 +1,22 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useGraphStore } from '@/stores/graph'
 import CollapsiblePanel from '@/components/CollapsiblePanel.vue'
 
 const store = useGraphStore()
-const collapsed = ref(false)
 
 const displayNode = computed(() => {
+  // Priority: standalone paper > selected node > source node
+  if (store.standalonePaper) {
+    return store.standalonePaper
+  }
   if (store.selectedNodes.length === 1) {
     return store.selectedNodes[0] ?? null
   }
   return store.sourceNode ?? null
 })
+
+const isStandalone = computed(() => store.standalonePaper !== null)
 
 const isSource = computed(() => {
   return displayNode.value?.metadata.isSource ?? false
@@ -22,6 +27,9 @@ const isMetadataLoading = computed(() => {
 })
 
 const labelText = computed(() => {
+  if (isStandalone.value) {
+    return 'Bookmarked'
+  }
   if (store.selectedNodes.length === 1) {
     return isSource.value ? 'Source' : 'Selected'
   }
@@ -69,11 +77,40 @@ function handleBuild() {
     store.triggerBuild(displayNode.value.id)
   }
 }
+
+const isBookmarked = computed(() => {
+  if (!displayNode.value) return false
+  return store.isBookmarked(displayNode.value.id)
+})
+
+function toggleBookmark() {
+  if (!displayNode.value) return
+  const node = displayNode.value
+  if (isBookmarked.value) {
+    store.removeBookmark(node.id)
+  } else {
+    store.addBookmark({
+      id: node.id,
+      title: node.metadata.title,
+      firstAuthor: node.metadata.authors?.[0],
+      year: node.order,
+      citations: node.metadata.citationCount,
+      doi: node.metadata.doi,
+      openAlexUrl: node.metadata.openAlexUrl,
+    })
+  }
+}
 </script>
 
 <template>
-  <div v-if="displayNode && store.hasGraph" class="details-panel-container">
-    <CollapsiblePanel v-model:collapsed="collapsed" toggle-position="lower-east" :width="360">
+  <div v-if="displayNode && (store.hasGraph || isStandalone)" class="details-panel-container">
+    <CollapsiblePanel
+      v-model:collapsed="store.detailsPanelCollapsed"
+      toggle-position="lower-east"
+      :width="360"
+      icon="info"
+      label="metadata"
+    >
       <Transition name="slide" mode="out-in">
         <div :key="displayNode.id" class="details-content">
           <!-- Loading state -->
@@ -181,6 +218,26 @@ function handleBuild() {
               >
                 OpenAlex
               </a>
+              <button
+                class="bookmark-btn"
+                :class="{ bookmarked: isBookmarked }"
+                @click="toggleBookmark"
+                :title="isBookmarked ? 'Remove bookmark' : 'Add bookmark'"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  :fill="isBookmarked ? 'currentColor' : 'none'"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+                </svg>
+              </button>
             </div>
           </template>
         </div>
@@ -399,6 +456,33 @@ function handleBuild() {
 .paper-link:hover {
   background: var(--accent-link-bg-hover);
   color: var(--text-primary);
+}
+
+.bookmark-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--text-dim);
+  background: var(--bg-item);
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-left: auto;
+}
+
+.bookmark-btn:hover {
+  background: var(--bg-item-hover);
+  border-color: #f97316;
+  color: #f97316;
+}
+
+.bookmark-btn.bookmarked {
+  background: rgba(249, 115, 22, 0.15);
+  border-color: #f97316;
+  color: #f97316;
 }
 
 /* Transition for content swap */

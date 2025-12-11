@@ -5,7 +5,6 @@ import CollapsiblePanel from '@/components/CollapsiblePanel.vue'
 
 const store = useGraphStore()
 const query = ref('')
-const collapsed = ref(false)
 
 const emit = defineEmits<{
   search: [query: string]
@@ -17,7 +16,7 @@ watch(
   (newId) => {
     if (newId) {
       query.value = newId
-      collapsed.value = false
+      store.searchPanelCollapsed = false
       // Small delay to ensure panel is visible before submitting
       setTimeout(() => {
         handleSubmit()
@@ -35,7 +34,13 @@ function handleSubmit() {
 
 <template>
   <div class="search-panel-container">
-    <CollapsiblePanel v-model:collapsed="collapsed" toggle-position="upper-east" :width="260">
+    <CollapsiblePanel
+      v-model:collapsed="store.searchPanelCollapsed"
+      toggle-position="upper-east"
+      :width="260"
+      icon="search"
+      label="search"
+    >
       <div class="panel-header">Search</div>
 
       <div class="panel-section panel-section--padded">

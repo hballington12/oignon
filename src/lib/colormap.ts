@@ -77,32 +77,21 @@ const TORCH: Colormap = {
 // Available colormaps
 export const COLORMAPS: Colormap[] = [FREEZE, LAVENDER, VOLTAGE, EMBER, TORCH]
 
-// Current active colormap
-let activeColormap: Colormap = FREEZE
-
-export function getActiveColormap(): Colormap {
-  return activeColormap
-}
-
-export function setActiveColormap(colormap: Colormap) {
-  activeColormap = colormap
-}
-
 export function getColormapByIndex(index: number): Colormap {
   return COLORMAPS[index % COLORMAPS.length]!
 }
 
 /**
- * Get the background color for the current colormap (slightly above t=0)
+ * Get the background color for a colormap (slightly above t=0)
  */
-export function getBackgroundColor(colormap: Colormap = activeColormap): number {
+export function getBackgroundColor(colormap: Colormap): number {
   return getColormapColor(0.1, colormap.stops)
 }
 
 /**
  * Get the background color as a CSS hex string
  */
-export function getBackgroundColorHex(colormap: Colormap = activeColormap): string {
+export function getBackgroundColorHex(colormap: Colormap): string {
   const color = getBackgroundColor(colormap)
   return '#' + color.toString(16).padStart(6, '0')
 }
@@ -110,18 +99,15 @@ export function getBackgroundColorHex(colormap: Colormap = activeColormap): stri
 /**
  * Interpolate a color from a colormap based on normalized value t (0-1)
  */
-export function getColormapColor(
-  t: number,
-  colormap: ColormapStop[] = activeColormap.stops,
-): number {
+export function getColormapColor(t: number, stops: ColormapStop[]): number {
   t = Math.max(0, Math.min(1, t))
 
-  let lower = colormap[0]!
-  let upper = colormap[colormap.length - 1]!
+  let lower = stops[0]!
+  let upper = stops[stops.length - 1]!
 
-  for (let i = 0; i < colormap.length - 1; i++) {
-    const curr = colormap[i]!
-    const next = colormap[i + 1]!
+  for (let i = 0; i < stops.length - 1; i++) {
+    const curr = stops[i]!
+    const next = stops[i + 1]!
     if (t >= curr.t && t <= next.t) {
       lower = curr
       upper = next

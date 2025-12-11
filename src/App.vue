@@ -6,6 +6,7 @@ import SearchPanel from '@/components/SearchPanel.vue'
 import ControlPanel from '@/components/ControlPanel.vue'
 import PaperTooltip from '@/components/PaperTooltip.vue'
 import PaperDetailsPanel from '@/components/PaperDetailsPanel.vue'
+import LibraryPanel from '@/components/LibraryPanel.vue'
 import { useGraphStore } from '@/stores/graph'
 import { buildGraph, preprocessGraph } from '@/lib/graphBuilder'
 import { getBackgroundColorHex, COLORMAPS } from '@/lib/colormap'
@@ -33,6 +34,20 @@ async function handleSearch(query: string) {
     const processed = preprocessGraph(rawGraph)
     store.loadGraph(processed)
     store.saveToCache()
+
+    // Add to recent graphs
+    const sourceNode = processed.nodes.find((n) => n.metadata.isSource)
+    if (sourceNode) {
+      store.addRecentGraph(
+        sourceNode.id,
+        sourceNode.metadata.title,
+        processed.nodes.length,
+        sourceNode.metadata.authors?.[0],
+        sourceNode.order,
+        sourceNode.metadata.doi,
+        sourceNode.metadata.openAlexUrl,
+      )
+    }
   } catch (e) {
     console.error('Failed to build graph:', e)
     store.setLoading(false)
@@ -70,6 +85,7 @@ function handleColormapChange(index: number) {
     />
     <PaperTooltip />
     <PaperDetailsPanel />
+    <LibraryPanel />
   </div>
 </template>
 

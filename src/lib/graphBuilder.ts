@@ -121,7 +121,7 @@ function formatPaper(work: OpenAlexWork): RawPaper {
 }
 
 // API Fetching
-async function fetchPaper(workId: string): Promise<RawPaper | null> {
+export async function fetchPaper(workId: string): Promise<RawPaper | null> {
   try {
     const response = await fetch(`${OPENALEX_API}/works/${workId}`)
     if (!response.ok) throw new Error(`HTTP ${response.status}`)

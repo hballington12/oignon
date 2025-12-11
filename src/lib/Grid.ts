@@ -10,7 +10,7 @@ import {
   subdivideBezier,
   type Point,
 } from './bezier'
-import { getColormapColor, getBrighterColor, setActiveColormap, COLORMAPS } from './colormap'
+import { getColormapColor, getBrighterColor, COLORMAPS } from './colormap'
 import { ColorMapFilter } from './ColorMapFilter'
 
 // Node sizing
@@ -397,7 +397,7 @@ export class Grid {
           y,
           radius: MIN_NODE_RADIUS,
           normalizedCitations: 0,
-          fillColor: getColormapColor(0),
+          fillColor: getColormapColor(0, this.getColormapStops()),
           strokeColor: 0x000000,
         }
         this.nodes.set(n.id, visualNode)
@@ -425,7 +425,7 @@ export class Grid {
       if (maxCount === minCount) {
         node.radius = (MIN_NODE_RADIUS + MAX_NODE_RADIUS) / 2
         node.normalizedCitations = 0.5
-        node.fillColor = getColormapColor(0.5)
+        node.fillColor = getColormapColor(0.5, this.getColormapStops())
         continue
       }
 
@@ -436,7 +436,7 @@ export class Grid {
 
       node.radius = MIN_NODE_RADIUS + t * (MAX_NODE_RADIUS - MIN_NODE_RADIUS)
       node.normalizedCitations = t
-      node.fillColor = getColormapColor(t)
+      node.fillColor = getColormapColor(t, this.getColormapStops())
       node.strokeColor = getBrighterColor(node.fillColor)
     }
   }
@@ -1137,16 +1137,20 @@ export class Grid {
 
   setColormap(index: number) {
     this.colorMapFilter.colormap = index
-    setActiveColormap(COLORMAPS[index]!)
   }
 
   getColormap(): number {
     return this.colorMapFilter.colormap
   }
 
+  private getColormapStops() {
+    return COLORMAPS[this.colorMapFilter.colormap]!.stops
+  }
+
   updateNodeColors() {
+    const stops = this.getColormapStops()
     for (const node of this.nodes.values()) {
-      node.fillColor = getColormapColor(node.normalizedCitations)
+      node.fillColor = getColormapColor(node.normalizedCitations, stops)
       node.strokeColor = getBrighterColor(node.fillColor)
     }
     this.drawNodesOverlay()

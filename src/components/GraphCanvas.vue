@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { Application, Container, Graphics } from 'pixi.js'
 import { useGraphStore } from '@/stores/graph'
 import { Grid } from '@/lib/Grid'
-import { getBackgroundColor } from '@/lib/colormap'
+import { getBackgroundColor, COLORMAPS } from '@/lib/colormap'
 const store = useGraphStore()
 const canvasContainer = ref<HTMLDivElement | null>(null)
 
@@ -26,7 +26,7 @@ async function initPixi() {
   app = new Application()
   await app.init({
     resizeTo: canvasContainer.value,
-    backgroundColor: getBackgroundColor(),
+    backgroundColor: getBackgroundColor(COLORMAPS[store.activeColormap]!),
     antialias: true,
     resolution: window.devicePixelRatio || 1,
     autoDensity: true,
@@ -62,6 +62,7 @@ function renderGraph() {
   // Create new grid
   grid = new Grid(store.rows, store.cols)
   grid.setRenderer(app.renderer)
+  grid.setColormap(store.activeColormap)
   grid.populateNodes(store.graph.nodes, store.orderToRow)
 
   // Set up callbacks
@@ -319,7 +320,7 @@ function handleColormapChange(index: number) {
   grid?.setColormap(index)
   grid?.updateNodeColors()
   if (app) {
-    app.renderer.background.color = getBackgroundColor()
+    app.renderer.background.color = getBackgroundColor(COLORMAPS[index]!)
   }
 }
 
