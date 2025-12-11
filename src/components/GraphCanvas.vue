@@ -32,23 +32,48 @@ const DRAG_THRESHOLD_TOUCH = 15
 
 // Pinch-to-zoom state
 let pinchStartScale = 1
+let pinchStartDistance = 0
 let isPinching = false
 
 // Setup pinch gesture for mobile zoom
 usePinch(
-  ({ offset: [distance], origin: [ox, oy], first, active }) => {
+  ({ da: [distance], origin: [ox, oy], first, active }) => {
     if (first) {
       pinchStartScale = store.viewport.scale
+      pinchStartDistance = distance
       isPinching = true
     }
 
-    if (active) {
-      // distance is cumulative offset from initial pinch distance
-      // Convert to scale factor (distance of 0 = no change, positive = zoom in)
-      const scaleFactor = 1 + distance / 200
-      const newScale = pinchStartScale * scaleFactor
-      store.smoothZoom(newScale, ox, oy)
-    } else {
+    if (active && pinchStartDistance > 0) {
+      // Use ratio of current distance to starting distance
+      const scaleRatio = distance / pinchStartDistance
+      const newScale = pinchStartScale * scaleRatio
+
+      // Direct viewport update for smoother performance (skip animation)
+      const clampedScale = Math.max(
+        store.viewportLimits.minScale,
+        Math.min(store.viewportLimits.maxScale, newScale),
+      )
+
+      // Calculate new position to zoom toward pinch center
+      const worldX = (ox - store.viewport.x) / store.viewport.scale
+      const worldY = (oy - store.viewport.y) / store.viewport.scale
+
+      store.setViewport({
+        scale: clampedScale,
+        targetScale: clampedScale,
+        x: ox - worldX * clampedScale,
+        y: oy - worldY * clampedScale,
+        targetX: ox - worldX * clampedScale,
+        targetY: oy - worldY * clampedScale,
+      })
+
+      if (viewport) {
+        viewport.scale.set(clampedScale)
+        viewport.x = ox - worldX * clampedScale
+        viewport.y = oy - worldY * clampedScale
+      }
+    } else if (!active) {
       isPinching = false
     }
   },

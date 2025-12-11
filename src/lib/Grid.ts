@@ -157,6 +157,7 @@ export class Grid {
 
   private graphics: Graphics
   private nodesOverlayContainer: Container | null = null
+  private nodesStrokeGraphics: Graphics | null = null // single Graphics for all selection strokes
   private graphicsToNode: Map<Container, VisualNode> = new Map()
   private onionContainer: Container
   private onionGraphics: Graphics[] = []
@@ -492,25 +493,20 @@ export class Grid {
     // Note: pointertap removed - selection handled at stage level in GraphCanvas
   }
 
-  drawNodesOverlay() {
-    if (this.nodesOverlayContainer) {
-      this.container.removeChild(this.nodesOverlayContainer)
-      this.nodesOverlayContainer.destroy({ children: true })
-    }
-
+  // Create all node Graphics objects (called once)
+  private createNodeGraphics() {
     this.nodesOverlayContainer = new Container()
     this.graphicsToNode.clear()
 
     for (const node of this.nodes.values()) {
       const g = new Graphics()
       const { x, y, radius, fillColor } = node
-      const isSelected = this.selectedNodes.has(node)
 
       this.drawNodeShadows(g, x, y, radius)
       g.circle(x, y, radius)
       g.fill({ color: fillColor })
       this.drawNodeHighlights(g, x, y, radius)
-      this.drawNodeStroke(g, x, y, radius, isSelected)
+      // Note: stroke is now drawn separately in updateSelectionStrokes()
       this.setupNodeInteraction(g, node)
 
       g.pivot.set(x, y)
@@ -520,8 +516,42 @@ export class Grid {
       this.nodesOverlayContainer.addChild(g)
     }
 
+    // Create stroke graphics layer (sits on top of nodes)
+    this.nodesStrokeGraphics = new Graphics()
+    this.nodesOverlayContainer.addChild(this.nodesStrokeGraphics)
+
     this.container.addChild(this.nodesOverlayContainer)
+  }
+
+  drawNodesOverlay() {
+    // Only create node Graphics if they don't exist yet
+    if (!this.nodesOverlayContainer) {
+      this.createNodeGraphics()
+    }
+
+    // Always update selection strokes
+    this.updateSelectionStrokes()
     return this
+  }
+
+  // Update only the stroke overlay (called on selection change)
+  private updateSelectionStrokes() {
+    if (!this.nodesStrokeGraphics) return
+
+    this.nodesStrokeGraphics.clear()
+
+    // Draw default strokes for all nodes
+    for (const node of this.nodes.values()) {
+      const { x, y, radius } = node
+      const isSelected = this.selectedNodes.has(node)
+      const stroke = isSelected ? NODE_STROKE.selected : NODE_STROKE.default
+      this.nodesStrokeGraphics.circle(x, y, radius)
+      this.nodesStrokeGraphics.stroke({
+        width: stroke.width,
+        color: stroke.color,
+        alpha: stroke.alpha,
+      })
+    }
   }
 
   selectNode(node: VisualNode, multiSelect = false) {
@@ -1107,10 +1137,24 @@ export class Grid {
       node.fillColor = getColormapColor(node.normalizedCitations, stops)
       node.strokeColor = getBrighterColor(node.fillColor)
     }
+    // Force full redraw since fill colors changed
+    this.clearNodesOverlay()
     this.drawNodesOverlay()
   }
 
+  // Clear nodes overlay to force full recreation (used when colors change)
+  private clearNodesOverlay() {
+    if (this.nodesOverlayContainer) {
+      this.container.removeChild(this.nodesOverlayContainer)
+      this.nodesOverlayContainer.destroy({ children: true })
+      this.nodesOverlayContainer = null
+      this.nodesStrokeGraphics = null
+      this.graphicsToNode.clear()
+    }
+  }
+
   destroy() {
+    this.clearNodesOverlay()
     this.container.destroy({ children: true })
     this.onionTexture?.destroy()
   }
