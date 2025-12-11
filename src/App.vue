@@ -1,17 +1,54 @@
 <script setup lang="ts">
 import '@/assets/styles/variables.css'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import GraphCanvas from '@/components/GraphCanvas.vue'
 import SearchPanel from '@/components/SearchPanel.vue'
 import ControlPanel from '@/components/ControlPanel.vue'
 import PaperTooltip from '@/components/PaperTooltip.vue'
 import PaperDetailsPanel from '@/components/PaperDetailsPanel.vue'
 import LibraryPanel from '@/components/LibraryPanel.vue'
+import MobileTabBar from '@/components/MobileTabBar.vue'
+import MobileInfoPanel from '@/components/MobileInfoPanel.vue'
+import { TAB_HEIGHTS, TAB_BAR_HEIGHT, type TabId } from '@/types/mobile'
 import { useGraphStore } from '@/stores/graph'
+import { useMobile } from '@/composables/useMobile'
 import { buildGraph, preprocessGraph } from '@/lib/graphBuilder'
 import { getBackgroundColorHex, COLORMAPS } from '@/lib/colormap'
 
 const store = useGraphStore()
+const { isMobile } = useMobile()
+const activeTab = ref<TabId | null>(null)
+
+function handleTabSelect(tab: TabId) {
+  // Toggle off if tapping the same tab
+  activeTab.value = activeTab.value === tab ? null : tab
+}
+
+// Switch to search tab on mobile when a build is triggered
+watch(
+  () => store.pendingBuildId,
+  (newId) => {
+    if (newId && isMobile.value) {
+      activeTab.value = 'search'
+    }
+  },
+)
+
+// Switch to details tab on mobile when a node is selected
+watch(
+  () => store.selectedNodes[0],
+  (node) => {
+    if (node && isMobile.value) {
+      activeTab.value = 'details'
+    }
+  },
+)
+
+const bottomAreaHeight = computed(() => {
+  if (!activeTab.value) return TAB_BAR_HEIGHT
+  return TAB_BAR_HEIGHT + TAB_HEIGHTS[activeTab.value]
+})
+
 const backgroundColor = computed(() => {
   const colormap = COLORMAPS[store.activeColormap]
   return colormap ? getBackgroundColorHex(colormap) : '#000000'
@@ -69,23 +106,42 @@ function handleZoomOut() {
 }
 
 function handleColormapChange(index: number) {
+  store.setColormap(index)
   graphCanvas.value?.setColormap(index)
 }
 </script>
 
 <template>
-  <div class="app" :style="{ background: backgroundColor }">
-    <GraphCanvas ref="graphCanvas" />
-    <SearchPanel @search="handleSearch" />
-    <ControlPanel
-      @fit-to-view="handleFitToView"
-      @zoom-in="handleZoomIn"
-      @zoom-out="handleZoomOut"
-      @colormap-change="handleColormapChange"
-    />
-    <PaperTooltip />
-    <PaperDetailsPanel />
-    <LibraryPanel />
+  <div class="app" :class="{ mobile: isMobile }" :style="{ background: backgroundColor }">
+    <!-- Canvas area (shared between layouts) -->
+    <div class="canvas-area">
+      <GraphCanvas ref="graphCanvas" />
+    </div>
+
+    <!-- Desktop panels -->
+    <template v-if="!isMobile">
+      <SearchPanel @search="handleSearch" />
+      <ControlPanel
+        @fit-to-view="handleFitToView"
+        @zoom-in="handleZoomIn"
+        @zoom-out="handleZoomOut"
+        @colormap-change="handleColormapChange"
+      />
+      <PaperTooltip />
+      <PaperDetailsPanel />
+      <LibraryPanel />
+    </template>
+
+    <!-- Mobile bottom area -->
+    <div v-if="isMobile" class="mobile-bottom-area" :style="{ height: bottomAreaHeight + 'px' }">
+      <MobileInfoPanel
+        :active-tab="activeTab"
+        @colormap-change="handleColormapChange"
+        @search="handleSearch"
+        @show-details="activeTab = 'details'"
+      />
+      <MobileTabBar :active-tab="activeTab" @select="handleTabSelect" />
+    </div>
   </div>
 </template>
 
@@ -109,5 +165,29 @@ body,
   width: 100%;
   height: 100%;
   position: relative;
+}
+
+/* Canvas area - full size on desktop, flex on mobile */
+.canvas-area {
+  position: absolute;
+  inset: 0;
+}
+
+/* Mobile flexbox layout */
+.app.mobile {
+  display: flex;
+  flex-direction: column;
+}
+
+.app.mobile .canvas-area {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.mobile-bottom-area {
+  flex-shrink: 0;
+  transition: height var(--transition-smooth);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 </style>

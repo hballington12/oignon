@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { Application, Container, Graphics } from 'pixi.js'
+import { Application, Container, Graphics, FederatedPointerEvent } from 'pixi.js'
 import { useGraphStore } from '@/stores/graph'
 import { Grid } from '@/lib/Grid'
 import { getBackgroundColor, COLORMAPS } from '@/lib/colormap'
@@ -9,16 +9,25 @@ const canvasContainer = ref<HTMLDivElement | null>(null)
 
 let app: Application | null = null
 let viewport: Container | null = null
+let background: Graphics | null = null
 let selectionBox: Graphics | null = null
 let grid: Grid | null = null
+let resizeObserver: ResizeObserver | null = null
+let baseScale = 1
+let resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
-// Drag state
-let isDragging = false
-let isBoxSelecting = false
+// Gesture state machine
+type GestureState = 'idle' | 'possible' | 'dragging' | 'boxSelecting'
+let gestureState: GestureState = 'idle'
 let dragStartX = 0
 let dragStartY = 0
 let lastX = 0
 let lastY = 0
+let pointerDownTarget: Container | null = null
+
+// Thresholds
+const DRAG_THRESHOLD_MOUSE = 5
+const DRAG_THRESHOLD_TOUCH = 15
 
 async function initPixi() {
   if (!canvasContainer.value) return
@@ -34,6 +43,13 @@ async function initPixi() {
 
   canvasContainer.value.appendChild(app.canvas)
 
+  // Create background for capturing pointer events on empty space
+  background = new Graphics()
+  background.eventMode = 'static'
+  background.cursor = 'default'
+  app.stage.addChild(background)
+  updateBackgroundHitArea()
+
   // Create viewport container
   viewport = new Container()
   app.stage.addChild(viewport)
@@ -42,11 +58,37 @@ async function initPixi() {
   selectionBox = new Graphics()
   app.stage.addChild(selectionBox)
 
-  // Set up interaction handlers
-  setupInteraction()
+  // Set up Pixi-based interaction handlers
+  setupPixiInteraction()
+
+  // Wheel still needs DOM handler (Pixi wheel support is limited)
+  canvasContainer.value.addEventListener('wheel', onWheel, { passive: false })
+
+  // Handle resize to update background hit area and refit graph (only if not zoomed in)
+  resizeObserver = new ResizeObserver(() => {
+    updateBackgroundHitArea()
+    if (store.viewport.scale <= baseScale) {
+      // Debounce fitToView to wait for panel transitions to complete
+      if (resizeDebounceTimer) clearTimeout(resizeDebounceTimer)
+      resizeDebounceTimer = setTimeout(() => {
+        fitToView()
+      }, 100)
+    }
+  })
+  resizeObserver.observe(canvasContainer.value)
 
   // Start animation loop
   app.ticker.add(animationLoop)
+}
+
+function updateBackgroundHitArea() {
+  if (!background || !canvasContainer.value) return
+  const rect = canvasContainer.value.getBoundingClientRect()
+  background.hitArea = { contains: () => true } // Catch everything
+  // Redraw to cover full screen (invisible but needed for hit testing)
+  background.clear()
+  background.rect(0, 0, rect.width, rect.height)
+  background.fill({ color: 0x000000, alpha: 0 })
 }
 
 function renderGraph() {
@@ -71,7 +113,6 @@ function renderGraph() {
   }
 
   grid.onNodeClick = (node) => {
-    clickedOnNode = true
     store.selectNode(node.id)
   }
 
@@ -79,13 +120,8 @@ function renderGraph() {
     store.selectedNodeIds = new Set(nodes.map((n) => n.id))
   }
 
-  // Calculate bounds and draw
-  grid.calculateCurveBounds()
+  // Draw nodes
   grid.drawNodesOverlay()
-
-  // Position grid container
-  grid.container.x = grid.curveOverhang
-  grid.container.y = grid.curveUnderhang
   viewport.addChild(grid.container)
 
   // Sync nodes to store
@@ -110,77 +146,90 @@ function fitToView() {
   if (!grid || !canvasContainer.value || !viewport) return
 
   const rect = canvasContainer.value.getBoundingClientRect()
-  const padding = 40
+  const padding = 5
 
   const sx = (rect.width - padding * 2) / grid.canvasWidth
   const sy = (rect.height - padding * 2) / grid.canvasHeight
-  const newScale = Math.min(sx, sy, 1)
+  const newScale = Math.min(sx, sy)
 
   const newX = (rect.width - grid.canvasWidth * newScale) / 2
   const newY = (rect.height - grid.canvasHeight * newScale) / 2
 
+  baseScale = newScale
+
   store.setViewport({
-    scale: newScale,
     targetScale: newScale,
-    x: newX,
-    y: newY,
     targetX: newX,
     targetY: newY,
-    animating: false,
+    animating: true,
   })
-
-  viewport.scale.set(newScale)
-  viewport.x = newX
-  viewport.y = newY
 
   store.viewportLimits.defaultScale = newScale
   store.viewportLimits.minScale = newScale / 1.5
 }
 
-function setupInteraction() {
-  if (!canvasContainer.value) return
+function setupPixiInteraction() {
+  if (!app) return
 
-  const el = canvasContainer.value
-
-  el.addEventListener('pointerdown', onPointerDown)
-  el.addEventListener('pointermove', onPointerMove)
-  el.addEventListener('pointerup', onPointerUp)
-  el.addEventListener('pointerleave', onPointerUp)
-  el.addEventListener('wheel', onWheel, { passive: false })
+  // Listen at stage level to catch all pointer events (event delegation)
+  app.stage.eventMode = 'static'
+  app.stage.hitArea = app.screen
+  app.stage.on('pointerdown', onPointerDown)
+  app.stage.on('pointermove', onPointerMove)
+  app.stage.on('pointerup', onPointerUp)
+  app.stage.on('pointerupoutside', onPointerUp)
 }
 
-function onPointerDown(e: PointerEvent) {
+function onPointerDown(e: FederatedPointerEvent) {
   // Stop any ongoing zoom/pan animation
   store.snapViewport()
 
-  dragStartX = e.clientX
-  dragStartY = e.clientY
-  lastX = e.clientX
-  lastY = e.clientY
+  dragStartX = e.globalX
+  dragStartY = e.globalY
+  lastX = e.globalX
+  lastY = e.globalY
+  pointerDownTarget = e.target as Container
 
+  // Enter "possible" state - we don't know yet if this is tap or drag
   if (e.ctrlKey || e.metaKey) {
-    isBoxSelecting = true
+    gestureState = 'boxSelecting'
   } else {
-    isDragging = true
+    gestureState = 'possible'
   }
 }
 
-function onPointerMove(e: PointerEvent) {
-  if (isDragging && viewport) {
-    const dx = e.clientX - lastX
-    const dy = e.clientY - lastY
-    viewport.x += dx
-    viewport.y += dy
-    store.setViewport({ x: viewport.x, y: viewport.y })
-    lastX = e.clientX
-    lastY = e.clientY
+function onPointerMove(e: FederatedPointerEvent) {
+  if (gestureState === 'idle') return
+
+  const dx = e.globalX - dragStartX
+  const dy = e.globalY - dragStartY
+  const distance = Math.sqrt(dx * dx + dy * dy)
+
+  // Determine threshold based on input type
+  const isTouch = e.pointerType === 'touch'
+  const threshold = isTouch ? DRAG_THRESHOLD_TOUCH : DRAG_THRESHOLD_MOUSE
+
+  // Transition from "possible" to "dragging" once threshold exceeded
+  if (gestureState === 'possible' && distance > threshold) {
+    gestureState = 'dragging'
   }
 
-  if (isBoxSelecting && selectionBox) {
-    const x = Math.min(dragStartX, e.clientX)
-    const y = Math.min(dragStartY, e.clientY)
-    const w = Math.abs(e.clientX - dragStartX)
-    const h = Math.abs(e.clientY - dragStartY)
+  // Only pan if we've committed to dragging
+  if (gestureState === 'dragging' && viewport) {
+    const moveDx = e.globalX - lastX
+    const moveDy = e.globalY - lastY
+    viewport.x += moveDx
+    viewport.y += moveDy
+    store.setViewport({ x: viewport.x, y: viewport.y })
+    lastX = e.globalX
+    lastY = e.globalY
+  }
+
+  if (gestureState === 'boxSelecting' && selectionBox) {
+    const x = Math.min(dragStartX, e.globalX)
+    const y = Math.min(dragStartY, e.globalY)
+    const w = Math.abs(e.globalX - dragStartX)
+    const h = Math.abs(e.globalY - dragStartY)
 
     selectionBox.clear()
     selectionBox.rect(x, y, w, h)
@@ -189,30 +238,33 @@ function onPointerMove(e: PointerEvent) {
   }
 }
 
-let clickedOnNode = false
-
-function onPointerUp(e: PointerEvent) {
-  const wasDragging = isDragging
-  const wasBoxSelecting = isBoxSelecting
-  isDragging = false
-  isBoxSelecting = false
+function onPointerUp(e: FederatedPointerEvent) {
+  const previousState = gestureState
 
   if (selectionBox) {
     selectionBox.clear()
   }
 
-  // Check if this was a click (not a drag)
-  const dx = Math.abs(e.clientX - dragStartX)
-  const dy = Math.abs(e.clientY - dragStartY)
-  const isClick = dx < 5 && dy < 5
-
-  if (isClick && !wasBoxSelecting && store.selectedNodeIds.size > 0 && !clickedOnNode) {
-    // Clicked on empty canvas space - deselect all
-    grid?.clearSelection()
-    store.clearSelection()
+  // If we were still in "possible" state, it was a tap (not a drag)
+  if (previousState === 'possible') {
+    const node = grid?.getNodeFromTarget(pointerDownTarget)
+    if (node) {
+      // Tapped on a node - select it
+      const multiSelect = e.ctrlKey || e.metaKey
+      grid?.selectNode(node, multiSelect)
+      grid?.onNodeClick?.(node)
+    } else {
+      // Tapped on background - deselect all
+      if (store.selectedNodeIds.size > 0) {
+        grid?.clearSelection()
+        store.clearSelection()
+      }
+    }
   }
 
-  clickedOnNode = false
+  // Reset state
+  pointerDownTarget = null
+  gestureState = 'idle'
 }
 
 function onWheel(e: WheelEvent) {
@@ -269,15 +321,16 @@ function animationLoop() {
 }
 
 function cleanup() {
+  // Remove DOM listeners
   if (canvasContainer.value) {
-    const el = canvasContainer.value
-    el.removeEventListener('pointerdown', onPointerDown)
-    el.removeEventListener('pointermove', onPointerMove)
-    el.removeEventListener('pointerup', onPointerUp)
-    el.removeEventListener('pointerleave', onPointerUp)
-    el.removeEventListener('wheel', onWheel)
+    canvasContainer.value.removeEventListener('wheel', onWheel)
+  }
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+    resizeObserver = null
   }
 
+  // Clean up Pixi objects
   if (grid) {
     grid.destroy()
     grid = null
@@ -287,6 +340,10 @@ function cleanup() {
     app.destroy(true)
     app = null
   }
+
+  background = null
+  viewport = null
+  selectionBox = null
 }
 
 // Watch for graph changes - wait for app to be ready
@@ -342,5 +399,6 @@ defineExpose({
   width: 100%;
   height: 100%;
   overflow: hidden;
+  touch-action: none;
 }
 </style>

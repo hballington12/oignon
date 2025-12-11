@@ -97,6 +97,14 @@ export function getBackgroundColorHex(colormap: Colormap): string {
 }
 
 /**
+ * Get a darker background color for overlays (t=0.05)
+ */
+export function getDarkerBackgroundColorHex(colormap: Colormap): string {
+  const color = getColormapColor(0.05, colormap.stops)
+  return '#' + color.toString(16).padStart(6, '0')
+}
+
+/**
  * Interpolate a color from a colormap based on normalized value t (0-1)
  */
 export function getColormapColor(t: number, stops: ColormapStop[]): number {

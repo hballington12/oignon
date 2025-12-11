@@ -38,7 +38,7 @@ const NODE_STROKE = {
 }
 
 const NODE_HIT_AREA_SCALE = 1.5
-const NODE_MIN_HIT_RADIUS = 12
+const NODE_MIN_HIT_RADIUS = 20 // Sized for touch targets (44px diameter recommended)
 
 // Curve params (hardcoded for now, was in controls.js)
 const CURVE_PARAMS = {
@@ -153,8 +153,6 @@ export class Grid {
   nodes: Map<string, VisualNode>
   selectedNodes: Set<VisualNode>
 
-  curveOverhang = 0
-  curveUnderhang = 0
   maxConnections = 0
 
   private graphics: Graphics
@@ -351,11 +349,11 @@ export class Grid {
   }
 
   get canvasWidth() {
-    return this.width + GRID.padding * 2 + this.curveOverhang * 2
+    return this.width + GRID.padding * 2
   }
 
   get canvasHeight() {
-    return this.height + GRID.padding * 2 + this.curveUnderhang * 2
+    return this.height + GRID.padding * 2
   }
 
   setRenderer(renderer: Renderer) {
@@ -483,14 +481,15 @@ export class Grid {
       contains: (px: number, py: number) => Math.hypot(px - x, py - y) <= hitRadius,
     }
 
-    g.on('pointerover', () => this.onNodeHover?.(node, true))
-    g.on('pointerout', () => this.onNodeHover?.(node, false))
-    g.on('pointertap', (e) => {
-      e.stopPropagation()
-      const multiSelect = e.ctrlKey || e.metaKey
-      this.selectNode(node, multiSelect)
-      this.onNodeClick?.(node)
+    g.on('pointerover', (e) => {
+      if (e.pointerType === 'touch') return // No hover tooltips on touch
+      this.onNodeHover?.(node, true)
     })
+    g.on('pointerout', (e) => {
+      if (e.pointerType === 'touch') return
+      this.onNodeHover?.(node, false)
+    })
+    // Note: pointertap removed - selection handled at stage level in GraphCanvas
   }
 
   drawNodesOverlay() {
@@ -554,6 +553,12 @@ export class Grid {
     this.onSelectionChange?.([])
   }
 
+  // Look up a node from a PixiJS display object (for event delegation)
+  getNodeFromTarget(target: Container | null): VisualNode | null {
+    if (!target) return null
+    return this.graphicsToNode.get(target) ?? null
+  }
+
   // Animate curves for current selection (or all if none selected)
   animateSelection(duration = 500) {
     this.animateCurvesIn({ duration, durationStrategy: 'fixedIndependent' })
@@ -610,63 +615,6 @@ export class Grid {
     }
   }
 
-  calculateCurveBounds() {
-    this.curveOverhang = 0
-    this.curveUnderhang = 0
-
-    const groups = this.buildTargetGroups(false)
-    if (groups.length === 0) return this
-
-    for (const { sourceNode, targets, drawDirection } of groups) {
-      const x0 = sourceNode.x
-      const y0 = sourceNode.y
-      const start = { x: x0, y: y0 }
-
-      const angles = this.getAnglesForDirection(drawDirection)
-
-      for (const angle of angles) {
-        const curveTargets =
-          drawDirection === 'symmetric'
-            ? this.filterTargetsForAngle(targets, angle, sourceNode)
-            : targets
-
-        if (curveTargets.length === 0) continue
-
-        const { cosR, sinR, rotateBack } = createRotationHelpers(angle, x0, y0)
-
-        let globalMinX = x0
-        let globalMinY = y0
-
-        for (const target of curveTargets) {
-          const relX = target.x - x0
-          const relY = target.y - y0
-          const rotX = relX * cosR - relY * sinR
-          const rotY = relX * sinR + relY * cosR
-
-          const { cp1, cp2, end } = calcRotatedControlPoints(
-            rotX,
-            rotY,
-            MAX_CP1X,
-            CP1Y,
-            MAX_CP2X,
-            CP2Y,
-          )
-          const cp1Back = rotateBack(cp1)
-          const cp2Back = rotateBack(cp2)
-          const endBack = rotateBack(end)
-
-          globalMinX = Math.min(globalMinX, sampleBezierMinX(start, cp1Back, cp2Back, endBack))
-          globalMinY = Math.min(globalMinY, sampleBezierMinY(start, cp1Back, cp2Back, endBack))
-        }
-
-        this.curveOverhang = Math.max(this.curveOverhang, GRID.padding - globalMinX)
-        this.curveUnderhang = Math.max(this.curveUnderhang, GRID.padding - globalMinY)
-      }
-    }
-
-    return this
-  }
-
   drawOnionConnectors(progress = 1) {
     this.clearConnectors()
 
@@ -687,17 +635,19 @@ export class Grid {
 
     // Render to texture
     if (this.renderer && this.onionGraphics.length > 0) {
+      const bounds = this.onionContainer.getLocalBounds()
       const baseResolution = this.renderer.resolution || 1
       const resolution = baseResolution * 2 // 2x supersampling for sharper curves
       this.onionTexture = RenderTexture.create({
-        width: this.canvasWidth,
-        height: this.canvasHeight,
+        width: bounds.width,
+        height: bounds.height,
         resolution,
         antialias: true,
       })
 
-      this.onionContainer.x = this.curveOverhang
-      this.onionContainer.y = this.curveUnderhang
+      // Offset container so bounds start at origin for rendering
+      this.onionContainer.x = -bounds.x
+      this.onionContainer.y = -bounds.y
 
       this.renderer.render({
         container: this.onionContainer,
@@ -705,9 +655,13 @@ export class Grid {
         clear: true,
       })
 
+      // Reset container position and position sprite to match original bounds
+      this.onionContainer.x = 0
+      this.onionContainer.y = 0
+
       this.onionSprite = new Sprite(this.onionTexture)
-      this.onionSprite.x = -this.curveOverhang
-      this.onionSprite.y = -this.curveUnderhang
+      this.onionSprite.x = bounds.x
+      this.onionSprite.y = bounds.y
       this.onionSprite.filters = [this.colorMapFilter, this.bloomFilter]
       this.container.addChildAt(this.onionSprite, 0)
     }
