@@ -21,6 +21,9 @@ const emit = defineEmits<{
   colormapChange: [index: number]
   search: [query: string]
   showDetails: []
+  zoomIn: []
+  zoomOut: []
+  fitToView: []
 }>()
 
 const panelHeight = computed(() => {
@@ -49,6 +52,9 @@ const activeComponent = computed(() => {
           @colormap-change="emit('colormapChange', $event)"
           @search="emit('search', $event)"
           @show-details="emit('showDetails')"
+          @zoom-in="emit('zoomIn')"
+          @zoom-out="emit('zoomOut')"
+          @fit-to-view="emit('fitToView')"
         />
       </Transition>
     </div>

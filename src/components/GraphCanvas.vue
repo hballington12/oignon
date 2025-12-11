@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { Application, Container, Graphics, FederatedPointerEvent } from 'pixi.js'
+import { usePinch } from '@vueuse/gesture'
 import { useGraphStore } from '@/stores/graph'
 import { Grid } from '@/lib/Grid'
 import { getBackgroundColor, COLORMAPS } from '@/lib/colormap'
@@ -28,6 +29,34 @@ let pointerDownTarget: Container | null = null
 // Thresholds
 const DRAG_THRESHOLD_MOUSE = 5
 const DRAG_THRESHOLD_TOUCH = 15
+
+// Pinch-to-zoom state
+let pinchStartScale = 1
+let isPinching = false
+
+// Setup pinch gesture for mobile zoom
+usePinch(
+  ({ offset: [distance], origin: [ox, oy], first, active }) => {
+    if (first) {
+      pinchStartScale = store.viewport.scale
+      isPinching = true
+    }
+
+    if (active) {
+      // distance is cumulative offset from initial pinch distance
+      // Convert to scale factor (distance of 0 = no change, positive = zoom in)
+      const scaleFactor = 1 + distance / 200
+      const newScale = pinchStartScale * scaleFactor
+      store.smoothZoom(newScale, ox, oy)
+    } else {
+      isPinching = false
+    }
+  },
+  {
+    domTarget: canvasContainer,
+    eventOptions: { passive: false },
+  },
+)
 
 async function initPixi() {
   if (!canvasContainer.value) return
@@ -199,7 +228,7 @@ function onPointerDown(e: FederatedPointerEvent) {
 }
 
 function onPointerMove(e: FederatedPointerEvent) {
-  if (gestureState === 'idle') return
+  if (gestureState === 'idle' || isPinching) return
 
   const dx = e.globalX - dragStartX
   const dy = e.globalY - dragStartY

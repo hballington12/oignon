@@ -139,6 +139,9 @@ function handleColormapChange(index: number) {
         @colormap-change="handleColormapChange"
         @search="handleSearch"
         @show-details="activeTab = 'details'"
+        @zoom-in="handleZoomIn"
+        @zoom-out="handleZoomOut"
+        @fit-to-view="handleFitToView"
       />
       <MobileTabBar :active-tab="activeTab" @select="handleTabSelect" />
     </div>
