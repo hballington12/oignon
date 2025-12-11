@@ -8,6 +8,7 @@ import type {
   Author,
   BuildProgress,
   ProgressCallback,
+  PaperMetadata,
 } from '@/types'
 
 // Configuration
@@ -651,6 +652,51 @@ export async function buildGraph(
     edges,
     metadata,
   }
+}
+
+// Hydrate metadata for slim-cached nodes
+export async function hydrateMetadata(
+  nodeIds: string[],
+  onProgress?: (completed: number, total: number) => void,
+): Promise<Record<string, PaperMetadata>> {
+  const batches = chunk(nodeIds, OPENALEX_MAX_FILTER_IDS)
+  const totalBatches = batches.length
+  let completedBatches = 0
+
+  const results: Record<string, PaperMetadata> = {}
+
+  for (let i = 0; i < batches.length; i += MAX_PARALLEL_REQUESTS) {
+    const batchGroup = batches.slice(i, i + MAX_PARALLEL_REQUESTS)
+    const batchResults = await Promise.all(batchGroup.map(fetchBatch))
+
+    for (const paperMap of batchResults) {
+      for (const [id, paper] of Object.entries(paperMap)) {
+        const authorNames = (paper.authors || []).map((a) =>
+          typeof a === 'object' ? a.name || '' : String(a),
+        )
+
+        results[id] = {
+          title: paper.title || '',
+          authors: authorNames,
+          authorsDetailed: paper.authors,
+          citationCount: paper.citationCount || 0,
+          referencesCount: paper.referencesCount,
+          doi: paper.doi,
+          openAlexUrl: paper.openAlexUrl,
+          type: paper.type,
+          sourceType: paper.sourceType,
+          sourceName: paper.sourceName,
+          openAccess: paper.openAccess,
+          language: paper.language,
+          abstract: paper.abstract,
+        }
+      }
+      completedBatches++
+      onProgress?.(completedBatches, totalBatches)
+    }
+  }
+
+  return results
 }
 
 // Preprocessing (converts graph to app format)

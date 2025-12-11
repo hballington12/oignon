@@ -96,6 +96,20 @@ export interface ProcessedGraph {
   nodes: GraphNode[]
 }
 
+// Slim cache types (for localStorage efficiency)
+// Uses numeric IDs (stripped of "W" prefix) to save space
+// citedBy is rebuilt from connections on load
+export interface SlimGraphNode {
+  id: number
+  order: number
+  connections: number[]
+}
+
+export interface SlimCache {
+  slim: true
+  nodes: SlimGraphNode[]
+}
+
 // Visual / Rendering Types
 
 export interface NodeVisuals {

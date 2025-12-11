@@ -7,8 +7,10 @@ import type {
   ViewportState,
   ViewportLimits,
   BuildProgress,
-  Colormap,
+  SlimCache,
+  PaperMetadata,
 } from '@/types'
+import { hydrateMetadata } from '@/lib/graphBuilder'
 
 export const useGraphStore = defineStore('graph', () => {
   // Graph data
@@ -48,6 +50,7 @@ export const useGraphStore = defineStore('graph', () => {
   const loading = ref(false)
   const loadingProgress = ref<BuildProgress | null>(null)
   const pendingBuildId = ref<string | null>(null)
+  const hydratingMetadata = ref(false)
 
   // Cache
   const CACHE_KEY = 'oignon_graph_cache'
@@ -164,6 +167,14 @@ export const useGraphStore = defineStore('graph', () => {
     viewport.value.animating = true
   }
 
+  function snapViewport() {
+    if (!viewport.value.animating) return
+    viewport.value.targetScale = viewport.value.scale
+    viewport.value.targetX = viewport.value.x
+    viewport.value.targetY = viewport.value.y
+    viewport.value.animating = false
+  }
+
   // UI actions
   function setColormap(colormap: number) {
     activeColormap.value = colormap
@@ -186,10 +197,30 @@ export const useGraphStore = defineStore('graph', () => {
     pendingBuildId.value = null
   }
 
+  // Convert OpenAlex ID to numeric (strip "W" prefix)
+  function toNumericId(id: string): number {
+    return parseInt(id.slice(1), 10)
+  }
+
+  // Convert numeric ID back to OpenAlex format
+  function toStringId(id: number): string {
+    return `W${id}`
+  }
+
   function saveToCache() {
     if (!graph.value) return
     try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(graph.value))
+      // Save slim version with numeric IDs (citedBy rebuilt on load)
+      const slimCache: SlimCache = {
+        slim: true,
+        nodes: graph.value.nodes.map((node) => ({
+          id: toNumericId(node.id),
+          order: node.order,
+          connections: node.connections.map(toNumericId),
+        })),
+      }
+      const json = JSON.stringify(slimCache)
+      localStorage.setItem(CACHE_KEY, json)
     } catch (e) {
       console.warn('Failed to cache graph:', e)
     }
@@ -200,14 +231,76 @@ export const useGraphStore = defineStore('graph', () => {
       const cached = localStorage.getItem(CACHE_KEY)
       if (!cached) return false
       const data = JSON.parse(cached)
-      if (data?.nodes) {
+      if (!data?.nodes) return false
+
+      if (data.slim) {
+        // Slim cache: convert numeric IDs back to strings, rebuild citedBy
+        const nodeMap = new Map<string, GraphNode>()
+
+        // First pass: create nodes with empty citedBy
+        for (const node of data.nodes as SlimCache['nodes']) {
+          const id = toStringId(node.id)
+          nodeMap.set(id, {
+            id,
+            order: node.order,
+            connections: node.connections.map(toStringId),
+            citedBy: [],
+            metadata: {
+              title: 'Loading...',
+              authors: [],
+              citationCount: 0,
+            },
+          })
+        }
+
+        // Second pass: rebuild citedBy from connections
+        for (const node of nodeMap.values()) {
+          for (const connId of node.connections) {
+            const targetNode = nodeMap.get(connId)
+            if (targetNode) {
+              targetNode.citedBy.push(node.id)
+            }
+          }
+        }
+
+        const fullNodes = Array.from(nodeMap.values())
+        loadGraph({ nodes: fullNodes })
+
+        // Hydrate metadata in background
+        const nodeIds = fullNodes.map((n) => n.id)
+        runMetadataHydration(nodeIds)
+      } else {
+        // Full cache (legacy): load directly
         loadGraph(data)
-        return true
       }
+      return true
     } catch (e) {
       console.warn('Failed to load cached graph:', e)
     }
     return false
+  }
+
+  async function runMetadataHydration(nodeIds: string[]) {
+    hydratingMetadata.value = true
+
+    try {
+      const metadata = await hydrateMetadata(nodeIds)
+
+      // Update visual nodes in the map (this is what the UI reads from)
+      for (const [id, node] of nodes.value) {
+        const meta = metadata[id]
+        if (meta) {
+          node.metadata = { ...node.metadata, ...meta }
+        }
+      }
+
+      // Trigger reactivity by reassigning the map
+      nodes.value = new Map(nodes.value)
+    } catch (e) {
+      console.warn('Failed to hydrate metadata:', e)
+    } finally {
+      hydratingMetadata.value = false
+    }
   }
 
   function clearCache() {
@@ -231,6 +324,7 @@ export const useGraphStore = defineStore('graph', () => {
     loading,
     loadingProgress,
     pendingBuildId,
+    hydratingMetadata,
 
     // Computed
     hasGraph,
@@ -247,6 +341,7 @@ export const useGraphStore = defineStore('graph', () => {
     setViewport,
     smoothZoom,
     smoothPan,
+    snapViewport,
     setColormap,
     toggleSidePanel,
     setLoading,

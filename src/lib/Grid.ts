@@ -1088,6 +1088,11 @@ export class Grid {
         return
       }
 
+      // Guard against destroyed graphics context
+      if (animGraphics.destroyed) {
+        return
+      }
+
       if (globalStartTime === null) {
         globalStartTime = performance.now()
       }

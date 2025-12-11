@@ -1,0 +1,67 @@
+/* ============================================
+   Shared Panel Styles
+   Common styles for collapsible panels
+   ============================================ */
+
+/* Panel wrapper - positions toggle button alongside panel */
+.panel-wrapper {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+}
+
+/* Base collapsible panel */
+.collapsible-panel {
+  background: var(--panel-bg);
+  backdrop-filter: blur(var(--panel-blur));
+  border-radius: var(--panel-radius);
+  border: 1px solid var(--panel-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition:
+    width var(--transition-smooth),
+    min-width var(--transition-smooth),
+    opacity var(--transition-smooth),
+    border-color var(--transition-smooth);
+}
+
+.collapsible-panel.collapsed {
+  width: 0;
+  min-width: 0;
+  opacity: 0;
+  border-color: transparent;
+  pointer-events: none;
+}
+
+/* Panel header */
+.panel-header {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--border-light);
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: var(--font-size-md);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Panel sections */
+.panel-section {
+  padding: var(--spacing-md) var(--spacing-lg);
+  white-space: nowrap;
+}
+
+.panel-section:not(:last-child) {
+  border-bottom: 1px solid var(--border-light);
+}
+
+.panel-section-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--spacing-sm);
+}

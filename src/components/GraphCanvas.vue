@@ -149,6 +149,9 @@ function setupInteraction() {
 }
 
 function onPointerDown(e: PointerEvent) {
+  // Stop any ongoing zoom/pan animation
+  store.snapViewport()
+
   dragStartX = e.clientX
   dragStartY = e.clientY
   lastX = e.clientX
