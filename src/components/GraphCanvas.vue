@@ -33,7 +33,7 @@ let hasMoved = false
 
 // Pinch-to-zoom using offset (cumulative change from gesture start)
 usePinch(
-  ({ offset: [d], origin: [ox, oy], first, active }) => {
+  ({ offset: [d], origin: [ox, oy], first, active, pinching }) => {
     if (!renderer) return
 
     if (first) {
@@ -41,7 +41,8 @@ usePinch(
       isPinching = true
     }
 
-    if (active) {
+    // Only zoom while actively pinching with two fingers
+    if (active && pinching) {
       // d is cumulative distance change in pixels (negative = pinch in, positive = pinch out)
       // Map to scale: 0 = no change, ±200px = half/double
       const scaleFactor = 1 + d / 200
