@@ -107,7 +107,7 @@ function selectColormap(index: number) {
   align-items: center;
   justify-content: center;
   padding: var(--spacing-lg);
-  gap: var(--spacing-lg);
+  gap: clamp(12px, 4vw, 24px);
 }
 
 .controls-group {
@@ -118,7 +118,7 @@ function selectColormap(index: number) {
 
 .colormap-buttons {
   display: flex;
-  gap: var(--spacing-xl);
+  gap: clamp(8px, 3vw, 16px);
 }
 
 .colormap-btn {
@@ -167,7 +167,7 @@ function selectColormap(index: number) {
 
 .zoom-buttons {
   display: flex;
-  gap: var(--spacing-xl);
+  gap: clamp(8px, 3vw, 16px);
 }
 
 .zoom-btn {

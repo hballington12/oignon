@@ -1,3 +1,4 @@
+// WARNING: Do not modify GLSL shader code without explicit user consent
 import { Filter, GlProgram } from 'pixi.js'
 
 const vertex = `
