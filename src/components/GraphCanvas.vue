@@ -20,6 +20,7 @@ const MAX_SCALE_FACTOR = 4
 
 // Gesture state
 let pinchStartScale = 1
+let pinchStartDistance = 0
 let isPinching = false
 
 // Drag threshold detection
@@ -38,11 +39,12 @@ usePinch(
 
     if (first) {
       pinchStartScale = renderer.getViewport().scale
+      pinchStartDistance = distance
       isPinching = true
     }
 
-    if (active && distance > 0) {
-      const scaleRatio = distance / 100 // Normalize distance
+    if (active && pinchStartDistance > 0) {
+      const scaleRatio = distance / pinchStartDistance
       const newScale = pinchStartScale * scaleRatio
       const clampedScale = clampScale(newScale)
       renderer.zoomAt(clampedScale, ox, oy)
@@ -236,19 +238,14 @@ function renderGraph() {
   console.log('[GraphCanvas] Grid created with', grid.nodes.size, 'nodes')
 }
 
-function fitToView() {
-  if (!renderer || !grid) return
-  baseScale = renderer.fitToView(grid)
-}
-
 let zoomAnimationId = 0
 
-function smoothZoom(targetScale: number, centerX: number, centerY: number, duration = 200) {
+function smoothZoomTo(targetScale: number, targetX: number, targetY: number, duration = 200) {
   if (!renderer) return
 
   zoomAnimationId++
   const animationId = zoomAnimationId
-  const startScale = renderer.getViewport().scale
+  const start = renderer.getViewport()
   const startTime = performance.now()
 
   const animate = () => {
@@ -259,8 +256,11 @@ function smoothZoom(targetScale: number, centerX: number, centerY: number, durat
     const progress = Math.min(1, elapsed / duration)
     const eased = 1 - Math.pow(1 - progress, 3) // ease-out cubic
 
-    const newScale = startScale + (targetScale - startScale) * eased
-    renderer.zoomAt(newScale, centerX, centerY)
+    const newScale = start.scale + (targetScale - start.scale) * eased
+    const newX = start.x + (targetX - start.x) * eased
+    const newY = start.y + (targetY - start.y) * eased
+
+    renderer.setViewport(newX, newY, newScale)
 
     if (progress < 1) {
       requestAnimationFrame(animate)
@@ -270,13 +270,34 @@ function smoothZoom(targetScale: number, centerX: number, centerY: number, durat
   requestAnimationFrame(animate)
 }
 
+function smoothZoom(targetScale: number, centerX: number, centerY: number, duration = 200) {
+  if (!renderer) return
+
+  const current = renderer.getViewport()
+  const worldX = (centerX - current.x) / current.scale
+  const worldY = (centerY - current.y) / current.scale
+
+  const targetX = centerX - worldX * targetScale
+  const targetY = centerY - worldY * targetScale
+
+  smoothZoomTo(targetScale, targetX, targetY, duration)
+}
+
+function fitToView() {
+  if (!renderer || !grid) return
+  const target = renderer.calculateFitToView(grid)
+  baseScale = target.scale
+  smoothZoomTo(target.scale, target.x, target.y, 300)
+}
+
 function zoomIn() {
   if (!renderer || !canvasContainer.value) return
   const rect = canvasContainer.value.getBoundingClientRect()
   const centerX = rect.width / 2
   const centerY = rect.height / 2
   const current = renderer.getViewport()
-  smoothZoom(current.scale * 1.2, centerX, centerY)
+  const targetScale = clampScale(current.scale * 1.2)
+  smoothZoom(targetScale, centerX, centerY)
 }
 
 function zoomOut() {
@@ -285,7 +306,8 @@ function zoomOut() {
   const centerX = rect.width / 2
   const centerY = rect.height / 2
   const current = renderer.getViewport()
-  smoothZoom(current.scale / 1.2, centerX, centerY)
+  const targetScale = clampScale(current.scale / 1.2)
+  smoothZoom(targetScale, centerX, centerY)
 }
 
 function cleanup() {

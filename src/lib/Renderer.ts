@@ -13,6 +13,7 @@ import type { VisualNode } from '@/types'
 import { BatchedCurveMesh } from './BatchedCurveMesh'
 import type { CurveData } from './BatchedCurveGeometry'
 import { ColorMapFilter } from './ColorMapFilter'
+import { GRID } from './constants'
 import {
   calculateCurveControlPoints,
   getNodeDrawDirection,
@@ -376,10 +377,9 @@ export class Renderer {
   }
 
   /**
-   * Scale and center the graph to fit within the screen with padding
-   * Returns the calculated scale for use as baseScale
+   * Calculate the scale and position needed to fit the graph in view
    */
-  fitToView(grid: Grid, padding = 20): number {
+  calculateFitToView(grid: Grid, padding = 20): { scale: number; x: number; y: number } {
     const screenWidth = this.app.screen.width
     const screenHeight = this.app.screen.height
 
@@ -387,9 +387,22 @@ export class Renderer {
     const scaleY = (screenHeight - padding * 2) / grid.canvasHeight
     const scale = Math.min(scaleX, scaleY)
 
+    const x = (screenWidth - grid.canvasWidth * scale) / 2
+    const y = (screenHeight - grid.canvasHeight * scale) / 2
+
+    return { scale, x, y }
+  }
+
+  /**
+   * Scale and center the graph to fit within the screen with padding
+   * Returns the calculated scale for use as baseScale
+   */
+  fitToView(grid: Grid, padding = 20): number {
+    const { scale, x, y } = this.calculateFitToView(grid, padding)
+
     this.container.scale.set(scale)
-    this.container.x = (screenWidth - grid.canvasWidth * scale) / 2
-    this.container.y = (screenHeight - grid.canvasHeight * scale) / 2
+    this.container.x = x
+    this.container.y = y
 
     return scale
   }
@@ -435,10 +448,14 @@ export class Renderer {
     const worldX = (screenX - this.container.x) / scale
     const worldY = (screenY - this.container.y) / scale
 
+    // Hit radius based on grid cell size, not node visual radius
+    const hitRadius = (0.9 * Math.min(GRID.xSpacing, GRID.ySpacing)) / 2
+    const hitRadiusSq = hitRadius * hitRadius
+
     for (const [id, node] of grid.nodes) {
       const dx = worldX - node.x
       const dy = worldY - node.y
-      if (dx * dx + dy * dy <= node.radius * node.radius) {
+      if (dx * dx + dy * dy <= hitRadiusSq) {
         return id
       }
     }
