@@ -19,8 +19,7 @@ const MIN_SCALE_FACTOR = 0.5
 const MAX_SCALE_FACTOR = 4
 
 // Gesture state
-let pinchStartScale = 1
-let pinchStartDistance = 0
+let pinchStartViewport = { x: 0, y: 0, scale: 1 }
 let isPinching = false
 
 // Drag threshold detection
@@ -32,20 +31,21 @@ let hasMoved = false
 
 // --- Gestures ---
 
-// Pinch-to-zoom
+// Pinch-to-zoom using offset (cumulative change from gesture start)
 usePinch(
-  ({ da: [distance], origin: [ox, oy], first, active }) => {
+  ({ offset: [d], origin: [ox, oy], first, active }) => {
     if (!renderer) return
 
     if (first) {
-      pinchStartScale = renderer.getViewport().scale
-      pinchStartDistance = distance
+      pinchStartViewport = renderer.getViewport()
       isPinching = true
     }
 
-    if (active && pinchStartDistance > 0) {
-      const scaleRatio = distance / pinchStartDistance
-      const newScale = pinchStartScale * scaleRatio
+    if (active) {
+      // d is cumulative distance change in pixels (negative = pinch in, positive = pinch out)
+      // Map to scale: 0 = no change, ±200px = half/double
+      const scaleFactor = 1 + d / 200
+      const newScale = pinchStartViewport.scale * scaleFactor
       const clampedScale = clampScale(newScale)
       renderer.zoomAt(clampedScale, ox, oy)
     }
