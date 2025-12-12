@@ -99,7 +99,7 @@ export class Renderer {
 
   // Node animation state
   private nodeAnimationId = 0 // Incremented to cancel running animations
-  private nodeSpriteOrder: { nodeId: string; sprite: Sprite; citationCount: number }[] = []
+  private nodeSpriteOrder: { nodeId: string; sprite: Container; citationCount: number }[] = []
   nodeFinishedMap: Map<string, number> = new Map() // nodeId -> finish timestamp
   nodeAnimationComplete = false
 
@@ -263,7 +263,7 @@ export class Renderer {
 
       for (const angle of angles) {
         for (let i = 0; i < sortedTargets.length; i++) {
-          const targetNode = sortedTargets[i]
+          const targetNode = sortedTargets[i]!
           const t = sortedTargets.length > 1 ? i / (sortedTargets.length - 1) : 0.5
           curves.push(this.createCurveData(sourceNode, targetNode, angle, t, this.curveParams))
 
@@ -492,8 +492,8 @@ export class Renderer {
       let allDone = true
 
       for (let i = 0; i < this.nodeSpriteOrder.length; i++) {
-        const { nodeId, sprite } = this.nodeSpriteOrder[i]
-        const nodeStartTime = startTimes[i]
+        const { nodeId, sprite } = this.nodeSpriteOrder[i]!
+        const nodeStartTime = startTimes[i]!
 
         // Skip if this node hasn't started yet
         if (elapsed < nodeStartTime) {
@@ -737,9 +737,10 @@ export class Renderer {
     // Find curves connected to selected nodes
     const selectionCurves: CurveData[] = []
     for (let i = 0; i < this.curveNodeMappings.length; i++) {
-      const mapping = this.curveNodeMappings[i]
-      if (nodeIds.has(mapping.sourceNodeId) || nodeIds.has(mapping.targetNodeId)) {
-        selectionCurves.push(this.curveDataCache[i])
+      const mapping = this.curveNodeMappings[i]!
+      const curveData = this.curveDataCache[i]
+      if (curveData && (nodeIds.has(mapping.sourceNodeId) || nodeIds.has(mapping.targetNodeId))) {
+        selectionCurves.push(curveData)
       }
     }
 

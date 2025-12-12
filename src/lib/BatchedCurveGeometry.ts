@@ -93,7 +93,7 @@ export function buildBatchedCurveGeometry(
   let baseVertex = 0
 
   for (let curveIdx = 0; curveIdx < curveCount; curveIdx++) {
-    const curve = curves[curveIdx]
+    const curve = curves[curveIdx]!
     const { start, cp1, cp2, end } = curve
     const width = curve.width ?? defaultWidth
 
