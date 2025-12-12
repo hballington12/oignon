@@ -151,7 +151,7 @@ export class BatchedCurveMesh extends Mesh<Geometry, Shader> {
   setProgressArray(values: number[]) {
     const count = Math.min(values.length, this._curveCount)
     for (let i = 0; i < count; i++) {
-      this.progressData[i * 4] = Math.floor(Math.max(0, Math.min(1, values[i])) * 255)
+      this.progressData[i * 4] = Math.floor(Math.max(0, Math.min(1, values[i] ?? 0)) * 255)
     }
   }
 
@@ -164,7 +164,7 @@ export class BatchedCurveMesh extends Mesh<Geometry, Shader> {
 
     const imageData = ctx.createImageData(this.textureWidth, 1)
     for (let i = 0; i < this.textureWidth; i++) {
-      imageData.data[i * 4] = this.progressData[i * 4] // R = progress
+      imageData.data[i * 4] = this.progressData[i * 4] ?? 0 // R = progress
       imageData.data[i * 4 + 1] = 0
       imageData.data[i * 4 + 2] = 0
       imageData.data[i * 4 + 3] = 255
