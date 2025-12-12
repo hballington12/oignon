@@ -96,13 +96,11 @@ function handleFitToView() {
 }
 
 function handleZoomIn() {
-  const v = store.viewport
-  store.smoothZoom(v.scale * 1.2, window.innerWidth / 2, window.innerHeight / 2)
+  graphCanvas.value?.zoomIn()
 }
 
 function handleZoomOut() {
-  const v = store.viewport
-  store.smoothZoom(v.scale / 1.2, window.innerWidth / 2, window.innerHeight / 2)
+  graphCanvas.value?.zoomOut()
 }
 
 function handleColormapChange(index: number) {
