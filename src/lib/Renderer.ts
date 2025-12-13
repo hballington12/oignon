@@ -23,6 +23,7 @@ import {
   type CurveParams,
   type DrawDirectionStrategy,
 } from './curvePositioning'
+import { ParticleSystem, type ParticleSystemOptions } from './ParticleSystem'
 
 const BASE_CIRCLE_RADIUS = 32
 
@@ -85,6 +86,7 @@ interface CurveNodeMapping {
 export class Renderer {
   private app: Application
   private viewport: Viewport | null = null
+  private particleSystem: ParticleSystem | null = null
   private curvesContainer: Container
   private selectionCurvesContainer: Container
   private nodesContainer: Container
@@ -149,7 +151,11 @@ export class Renderer {
     // Enable drag, pinch, wheel gestures
     this.viewport.drag().pinch().wheel().decelerate()
 
-    // Layer order: curves -> selection curves -> nodes
+    // Initialize particle system (config in ParticleSystem.ts DEFAULT_OPTIONS)
+    this.particleSystem = new ParticleSystem()
+
+    // Layer order: particles -> curves -> selection curves -> nodes
+    this.viewport.addChild(this.particleSystem.container)
     this.viewport.addChild(this.curvesContainer)
     this.viewport.addChild(this.selectionCurvesContainer)
     this.viewport.addChild(this.nodesContainer)
@@ -242,6 +248,7 @@ export class Renderer {
     this.clear()
     this.renderCurves(grid)
     this.renderNodes(grid)
+    this.initParticles(grid)
     this.centerOnScreen(grid)
     // Nodes start invisible (scale=0, alpha=0)
     // Call animateNodesIn() to start the animation
@@ -380,6 +387,20 @@ export class Renderer {
     container.addChild(overlay)
 
     return container
+  }
+
+  private initParticles(grid: Grid) {
+    if (!this.particleSystem) return
+    // Initialize with some padding beyond the graph bounds
+    const padding = 100
+    this.particleSystem.init(
+      this.app,
+      grid.canvasWidth + padding * 2,
+      grid.canvasHeight + padding * 2,
+    )
+    // Offset container to account for padding
+    this.particleSystem.container.x = -padding
+    this.particleSystem.container.y = -padding
   }
 
   private centerOnScreen(grid: Grid) {
@@ -886,10 +907,19 @@ export class Renderer {
     }
   }
 
+  /**
+   * Update particle system options dynamically
+   */
+  setParticleOptions(options: ParticleSystemOptions) {
+    this.particleSystem?.setOptions(options)
+  }
+
   destroy() {
     if (!this.initialized) return
 
     this.clear()
+    this.particleSystem?.destroy()
+    this.particleSystem = null
     this.shadowTexture?.destroy(true)
     this.shadowTexture = null
     this.fillTexture?.destroy(true)
