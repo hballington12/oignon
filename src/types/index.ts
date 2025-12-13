@@ -121,6 +121,7 @@ export interface GraphMetadata {
   edges_in_graph: number
   build_time_seconds: number
   timestamp: string
+  api_calls?: number
 }
 
 export interface RawGraph {

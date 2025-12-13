@@ -198,8 +198,25 @@ function formatPaper(work: OpenAlexWork): RawPaper {
   }
 }
 
+// API call counter
+let apiCallCount = 0
+
+function logApiCall(endpoint: string, detail?: string) {
+  apiCallCount++
+  console.log(`[API #${apiCallCount}] ${endpoint}${detail ? ` (${detail})` : ''}`)
+}
+
+function resetApiCallCount() {
+  apiCallCount = 0
+}
+
+function getApiCallCount() {
+  return apiCallCount
+}
+
 // API Fetching
 export async function fetchPaper(workId: string): Promise<RawPaper | null> {
+  logApiCall('/works/{id}', `single paper: ${workId.slice(0, 30)}`)
   try {
     const response = await fetch(`${OPENALEX_API}/works/${workId}`)
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
@@ -211,8 +228,8 @@ export async function fetchPaper(workId: string): Promise<RawPaper | null> {
   }
 }
 
-// Fields to fetch from OpenAlex API
-const OPENALEX_SELECT_FIELDS = [
+// Full fields for final papers (displayed in UI)
+const OPENALEX_FULL_FIELDS = [
   'id',
   'doi',
   'title',
@@ -233,13 +250,42 @@ const OPENALEX_SELECT_FIELDS = [
   'keywords',
 ].join(',')
 
-async function fetchBatch(batch: string[]): Promise<Record<string, RawPaper>> {
+// Slim fields for intermediate papers (only used for ranking)
+const OPENALEX_SLIM_FIELDS = ['id', 'publication_year', 'cited_by_count', 'referenced_works'].join(
+  ',',
+)
+
+// Slim paper type for ranking (minimal data)
+interface SlimPaper {
+  id: string
+  year: number
+  citationCount: number
+  references: string[]
+}
+
+function formatSlimPaper(work: {
+  id: string
+  publication_year?: number
+  cited_by_count?: number
+  referenced_works?: string[]
+}): SlimPaper {
+  return {
+    id: extractId(work.id),
+    year: work.publication_year || 0,
+    citationCount: work.cited_by_count || 0,
+    references: (work.referenced_works || []).map(extractId),
+  }
+}
+
+async function fetchBatchFull(batch: string[]): Promise<Record<string, RawPaper>> {
   const idFilter = batch.join('|')
   const params = new URLSearchParams({
     filter: `openalex:${idFilter}`,
-    select: OPENALEX_SELECT_FIELDS,
+    select: OPENALEX_FULL_FIELDS,
     per_page: OPENALEX_MAX_PER_PAGE.toString(),
   })
+
+  logApiCall('/works', `full batch: ${batch.length} ids`)
 
   try {
     const response = await fetch(`${OPENALEX_API}/works?${params}`)
@@ -258,7 +304,34 @@ async function fetchBatch(batch: string[]): Promise<Record<string, RawPaper>> {
   }
 }
 
-async function fetchPapersBulk(
+async function fetchBatchSlim(batch: string[]): Promise<Record<string, SlimPaper>> {
+  const idFilter = batch.join('|')
+  const params = new URLSearchParams({
+    filter: `openalex:${idFilter}`,
+    select: OPENALEX_SLIM_FIELDS,
+    per_page: OPENALEX_MAX_PER_PAGE.toString(),
+  })
+
+  logApiCall('/works', `slim batch: ${batch.length} ids`)
+
+  try {
+    const response = await fetch(`${OPENALEX_API}/works?${params}`)
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const data = await response.json()
+
+    const papers: Record<string, SlimPaper> = {}
+    for (const work of data.results || []) {
+      const paper = formatSlimPaper(work)
+      papers[paper.id] = paper
+    }
+    return papers
+  } catch (e) {
+    console.error('Slim batch fetch error:', e)
+    return {}
+  }
+}
+
+async function fetchPapersBulkFull(
   workIds: string[],
   onBatchComplete?: () => void,
 ): Promise<Record<string, RawPaper>> {
@@ -269,7 +342,34 @@ async function fetchPapersBulk(
 
   for (let i = 0; i < batches.length; i += MAX_PARALLEL_REQUESTS) {
     const batchGroup = batches.slice(i, i + MAX_PARALLEL_REQUESTS)
-    const results = await Promise.all(batchGroup.map(fetchBatch))
+    const results = await Promise.all(batchGroup.map(fetchBatchFull))
+
+    for (const result of results) {
+      Object.assign(papers, result)
+    }
+
+    if (onBatchComplete) {
+      for (let j = 0; j < batchGroup.length; j++) {
+        onBatchComplete()
+      }
+    }
+  }
+
+  return papers
+}
+
+async function fetchPapersBulkSlim(
+  workIds: string[],
+  onBatchComplete?: () => void,
+): Promise<Record<string, SlimPaper>> {
+  if (!workIds.length) return {}
+
+  const batches = chunk(workIds, OPENALEX_MAX_FILTER_IDS)
+  const papers: Record<string, SlimPaper> = {}
+
+  for (let i = 0; i < batches.length; i += MAX_PARALLEL_REQUESTS) {
+    const batchGroup = batches.slice(i, i + MAX_PARALLEL_REQUESTS)
+    const results = await Promise.all(batchGroup.map(fetchBatchSlim))
 
     for (const result of results) {
       Object.assign(papers, result)
@@ -292,6 +392,8 @@ async function fetchCitationsBatch(batch: string[]): Promise<Set<string>> {
     select: 'id',
     per_page: OPENALEX_MAX_PER_PAGE.toString(),
   })
+
+  logApiCall('/works', `citations batch: ${batch.length} ids`)
 
   try {
     const response = await fetch(`${OPENALEX_API}/works?${params}`)
@@ -345,6 +447,8 @@ async function fetchCitingPapers(
     per_page: limit.toString(),
   })
 
+  logApiCall('/works', `citing papers for ${workId.slice(0, 20)}, limit ${limit}`)
+
   try {
     const response = await fetch(`${OPENALEX_API}/works?${params}`)
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
@@ -366,9 +470,12 @@ interface RankInfo {
   citingCount?: number
 }
 
+// Common interface for ranking (works with both RawPaper and SlimPaper)
+type RankablePaper = { id?: string; references?: string[]; year?: number }
+
 function computeRootRanks(
-  rootSeeds: Record<string, RawPaper>,
-  rootPapers: Record<string, RawPaper>,
+  rootSeeds: Record<string, RankablePaper>,
+  rootPapers: Record<string, RankablePaper>,
 ): Record<string, RankInfo> {
   const allPapers = { ...rootSeeds, ...rootPapers }
   const seedIds = new Set(Object.keys(rootSeeds))
@@ -431,9 +538,9 @@ function computeRootRanks(
 }
 
 function computeBranchRanks(
-  source: RawPaper,
-  branchSeeds: Record<string, RawPaper>,
-  branchPapers: Record<string, RawPaper>,
+  source: RankablePaper,
+  branchSeeds: Record<string, RankablePaper>,
+  branchPapers: Record<string, RankablePaper>,
 ): Record<string, RankInfo> {
   const subjectRefs = new Set(source.references || [])
   const subjectId = extractId(source.id || '')
@@ -552,6 +659,10 @@ export async function buildGraph(
 ): Promise<RawGraph> {
   const { nRoots = DEFAULT_N_ROOTS, nBranches = DEFAULT_N_BRANCHES, onProgress } = options
 
+  // Reset API call counter
+  resetApiCallCount()
+  console.log('[GraphBuilder] Starting build...')
+
   const startTime = performance.now()
 
   let totalApiCalls = 1
@@ -610,7 +721,8 @@ export async function buildGraph(
   // Step 2: Build ROOTS
   reportProgress('Building roots...')
   const seedIds = source.references || []
-  const rootSeeds = await fetchPapersBulk(seedIds, onBatchComplete)
+  // Root seeds need slim data for ranking (refs), full data fetched later for final graph
+  const rootSeeds = await fetchPapersBulkSlim(seedIds, onBatchComplete)
 
   const allRootRefIds = new Set<string>()
   for (const seed of Object.values(rootSeeds)) {
@@ -632,7 +744,8 @@ export async function buildGraph(
     estBranchCitationBatches
 
   reportProgress(`Expanding roots: ${allRootRefIds.size} papers...`)
-  const rootPapers = await fetchPapersBulk([...allRootRefIds], onBatchComplete)
+  // Root papers only need slim data - used for ranking, not in final graph
+  const rootPapers = await fetchPapersBulkSlim([...allRootRefIds], onBatchComplete)
 
   // Step 3: Rank and select top roots
   reportProgress('Ranking roots...')
@@ -646,10 +759,11 @@ export async function buildGraph(
 
   const branchSeedBatches = Math.ceil(citingIds.length / OPENALEX_MAX_FILTER_IDS)
   reportProgress(`Fetching ${citingIds.length} branch seeds...`)
-  const branchSeedsRaw = await fetchPapersBulk(citingIds, onBatchComplete)
+  // Branch seeds need slim data for ranking
+  const branchSeedsRaw = await fetchPapersBulkSlim(citingIds, onBatchComplete)
 
   const minYear = (source.year || 0) + 1
-  const branchSeeds: Record<string, RawPaper> = {}
+  const branchSeeds: Record<string, SlimPaper> = {}
   for (const [pid, paper] of Object.entries(branchSeedsRaw)) {
     if ((paper.citationCount || 0) > 0 && (paper.year || 0) >= minYear) {
       branchSeeds[pid] = paper
@@ -675,22 +789,24 @@ export async function buildGraph(
   totalApiCalls = completedApiCalls + actualBranchRefBatches + actualBranchCitationBatches
 
   reportProgress(`Expanding branches: ${allBranchRefIds.size} refs...`)
-  const branchRefsRaw = await fetchPapersBulk([...allBranchRefIds], onBatchComplete)
+  // Branch refs only need slim data - used for ranking
+  const branchRefsRaw = await fetchPapersBulkSlim([...allBranchRefIds], onBatchComplete)
 
   reportProgress(`Fetching citations of ${branchSeedCount} seeds...`)
   const branchCitingIds = await fetchCitationsBulk(Object.keys(branchSeeds), onBatchComplete)
 
-  const branchPapersRaw: Record<string, RawPaper> = { ...branchRefsRaw }
+  const branchPapersRaw: Record<string, SlimPaper> = { ...branchRefsRaw }
 
   const missingCitingIds = [...branchCitingIds].filter((id) => !(id in branchPapersRaw))
   if (missingCitingIds.length > 0) {
     const missingBatches = Math.ceil(missingCitingIds.length / OPENALEX_MAX_FILTER_IDS)
     totalApiCalls += missingBatches
-    const missingPapers = await fetchPapersBulk(missingCitingIds, onBatchComplete)
+    // Missing citing papers also only need slim data
+    const missingPapers = await fetchPapersBulkSlim(missingCitingIds, onBatchComplete)
     Object.assign(branchPapersRaw, missingPapers)
   }
 
-  const branchPapers: Record<string, RawPaper> = {}
+  const branchPapers: Record<string, SlimPaper> = {}
   for (const [pid, paper] of Object.entries(branchPapersRaw)) {
     if ((paper.year || 0) >= minYear && (paper.citationCount || 0) > 0) {
       branchPapers[pid] = paper
@@ -702,23 +818,45 @@ export async function buildGraph(
   const branchRanks = computeBranchRanks(source, branchSeeds, branchPapers)
   const topBranchIds = getTopRanked(branchRanks, nBranches)
 
-  // Step 6: Combine and build edges
-  reportProgress('Building graph...')
+  // Step 6: Fetch full metadata for final papers
+  // Collect all IDs that need full metadata: top roots, top branches, and all seeds
+  const allSeedIds = [...Object.keys(rootSeeds), ...Object.keys(branchSeeds)]
+  const allTopIds = [...topRootIds, ...topBranchIds]
+  const idsNeedingFullData = [...new Set([...allSeedIds, ...allTopIds])]
+
+  reportProgress(`Fetching full metadata for ${idsNeedingFullData.length} papers...`)
+  const fullPapers = await fetchPapersBulkFull(idsNeedingFullData, onBatchComplete)
+
+  // Build topPapers with full data
   const topPapers: Record<string, RawPaper> = {}
   for (const pid of topRootIds) {
-    const paper = rootPapers[pid]
+    const paper = fullPapers[pid]
     if (paper) {
       topPapers[pid] = { ...paper, role: 'root' }
     }
   }
   for (const pid of topBranchIds) {
-    const paper = branchPapers[pid]
+    const paper = fullPapers[pid]
     if (paper) {
       topPapers[pid] = { ...paper, role: 'branch' }
     }
   }
 
-  const allSeeds = { ...rootSeeds, ...branchSeeds }
+  // Build seeds with full data
+  const fullRootSeeds: Record<string, RawPaper> = {}
+  for (const pid of Object.keys(rootSeeds)) {
+    if (fullPapers[pid]) {
+      fullRootSeeds[pid] = fullPapers[pid]
+    }
+  }
+  const fullBranchSeeds: Record<string, RawPaper> = {}
+  for (const pid of Object.keys(branchSeeds)) {
+    if (fullPapers[pid]) {
+      fullBranchSeeds[pid] = fullPapers[pid]
+    }
+  }
+
+  const allSeeds = { ...fullRootSeeds, ...fullBranchSeeds }
   const edges = buildEdges(source, allSeeds, topPapers)
 
   const allRanks = { ...rootRanks, ...branchRanks }
@@ -739,12 +877,15 @@ export async function buildGraph(
     edges_in_graph: edges.length,
     build_time_seconds: parseFloat(elapsed),
     timestamp: new Date().toISOString(),
+    api_calls: getApiCallCount(),
   }
+
+  console.log(`[GraphBuilder] Complete: ${getApiCallCount()} API calls in ${elapsed}s`)
 
   return {
     source_paper: source,
-    root_seeds: Object.values(rootSeeds),
-    branch_seeds: Object.values(branchSeeds),
+    root_seeds: Object.values(fullRootSeeds),
+    branch_seeds: Object.values(fullBranchSeeds),
     papers: [...topRootIds, ...topBranchIds]
       .filter((pid) => pid in topPapers)
       .map((pid) => ({ ...topPapers[pid]!, ...allRanks[pid] })),
@@ -766,7 +907,7 @@ export async function hydrateMetadata(
 
   for (let i = 0; i < batches.length; i += MAX_PARALLEL_REQUESTS) {
     const batchGroup = batches.slice(i, i + MAX_PARALLEL_REQUESTS)
-    const batchResults = await Promise.all(batchGroup.map(fetchBatch))
+    const batchResults = await Promise.all(batchGroup.map(fetchBatchFull))
 
     for (const paperMap of batchResults) {
       for (const [id, paper] of Object.entries(paperMap)) {
