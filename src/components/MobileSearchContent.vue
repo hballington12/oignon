@@ -40,6 +40,7 @@ function handleSubmit() {
         class="search-input"
         placeholder="DOI or OpenAlex ID"
         :disabled="store.loading"
+        :readonly="store.tutorialStatus === 'pending'"
       />
       <div class="btn-wrapper" :class="{ loading: store.loading }">
         <div

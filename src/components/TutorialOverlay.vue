@@ -67,6 +67,7 @@ const steps: DriveStep[] = [
       title: 'Building...',
       description:
         'Oignon searches several thousand related publications to build a graph. This might take a moment, hang tight!',
+      showButtons: [],
     },
   },
   {
