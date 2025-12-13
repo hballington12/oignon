@@ -315,6 +315,11 @@ onMounted(async () => {
     renderGraph()
   }
 
+  // Apply initial year axis visibility
+  if (renderer) {
+    renderer.setYearAxisVisible(props.showYearAxis ?? true)
+  }
+
   // Cleanup on page refresh/close (onUnmounted doesn't fire fast enough)
   window.addEventListener('beforeunload', cleanup)
 })
