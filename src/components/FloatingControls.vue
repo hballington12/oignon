@@ -146,7 +146,11 @@ const emit = defineEmits<{
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   -webkit-tap-highlight-color: transparent;
-  transition: all var(--transition-fast);
+  transition:
+    background var(--transition-smooth),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 @media (hover: hover) {
