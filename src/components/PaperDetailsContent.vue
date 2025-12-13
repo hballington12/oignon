@@ -18,6 +18,7 @@ const {
   primaryTopic,
   keywords,
   sdgsFormatted,
+  badges,
   openDoi,
   openOpenAlex,
   handleBuild,
@@ -45,10 +46,15 @@ const {
         <!-- Header with label, badges, and action buttons -->
         <div class="panel-header-row">
           <span class="panel-label">{{ labelText }}</span>
-          <span v-if="isSource" class="source-badge">SRC</span>
-          <span v-if="displayNode.metadata.openAccess" class="oa-badge" title="Open Access"
-            >OA</span
+          <span
+            v-for="(badge, i) in badges"
+            :key="i"
+            class="header-badge"
+            :style="{ backgroundColor: badge.color, color: badge.textColor }"
+            :title="badge.title"
           >
+            {{ badge.text }}
+          </span>
           <div class="header-actions">
             <button
               v-if="!isSource"
@@ -315,26 +321,19 @@ const {
   color: var(--text-dim);
 }
 
-.source-badge {
+.header-badge {
   font-size: 10px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--bg-container);
-  background: var(--accent-green);
+  letter-spacing: 0.3px;
   padding: 2px 5px;
   border-radius: 3px;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.oa-badge {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #1a1a2e;
-  background: #f59e0b;
-  padding: 2px 5px;
-  border-radius: 3px;
+.header-badge:active {
+  filter: brightness(1.15);
+  transform: scale(1.05);
 }
 
 .header-actions {

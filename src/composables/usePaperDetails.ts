@@ -1,6 +1,14 @@
-import { computed, ref, watch, type Ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useGraphStore } from '@/stores/graph'
-import { getDarkerBackgroundColorHex, COLORMAPS } from '@/lib/colormap'
+import { getDarkerBackgroundColorHex, getColormapColorHex, COLORMAPS } from '@/lib/colormap'
+
+// Badge type for header badges
+export interface Badge {
+  text: string
+  color: string // background color
+  textColor: string // text color
+  title: string // tooltip
+}
 
 export function usePaperDetails() {
   const store = useGraphStore()
@@ -110,6 +118,75 @@ export function usePaperDetails() {
     return sdgs.map((s) => s.name).join(' | ')
   })
 
+  // Header badges array
+  const badges = computed<Badge[]>(() => {
+    const result: Badge[] = []
+    const meta = displayNode.value?.metadata
+    if (!meta) return result
+
+    const colormap = COLORMAPS[store.activeColormap]
+
+    // Source badge
+    if (meta.isSource) {
+      result.push({
+        text: 'Source',
+        color: '#22c55e', // green
+        textColor: '#0d0d17',
+        title: 'Source paper of this graph',
+      })
+    }
+
+    // Access badge (Open or Closed)
+    if (meta.openAccess === true) {
+      result.push({
+        text: 'Open',
+        color: '#22c55e', // green
+        textColor: '#0d0d17',
+        title: 'Open Access',
+      })
+    } else if (meta.openAccess === false) {
+      result.push({
+        text: 'Closed',
+        color: '#6b7280', // gray
+        textColor: '#ffffff',
+        title: 'Closed Access',
+      })
+    }
+
+    // Percentile badge (mutually exclusive, show highest)
+    const percentile = meta.citationPercentile
+    if (percentile) {
+      if (percentile.isInTop1Percent) {
+        result.push({
+          text: 'Top 1%',
+          color: colormap ? getColormapColorHex(0.95, colormap) : '#f59e0b',
+          textColor: '#0d0d17',
+          title: 'Top 1% citation percentile (by year/subfield)',
+        })
+      } else if (percentile.isInTop10Percent) {
+        result.push({
+          text: 'Top 10%',
+          color: colormap ? getColormapColorHex(0.7, colormap) : '#f59e0b',
+          textColor: '#0d0d17',
+          title: 'Top 10% citation percentile (by year/subfield)',
+        })
+      }
+    }
+
+    // Language badge (only show if not English)
+    const lang = meta.language
+    if (lang && lang !== 'en') {
+      result.push({
+        text: lang.toUpperCase(),
+        color: '#374151', // dark gray
+        textColor: '#e5e7eb',
+        title: `Language: ${lang.toUpperCase()}`,
+      })
+    }
+
+    return result
+  })
+
   // Open DOI link in new tab
   function openDoi(doi: string | undefined) {
     if (doi) window.open(doi, '_blank')
@@ -174,6 +251,7 @@ export function usePaperDetails() {
     primaryTopic,
     keywords,
     sdgsFormatted,
+    badges,
     // Store access
     store,
     // Methods

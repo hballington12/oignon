@@ -151,10 +151,11 @@ function formatPaper(work: OpenAlexWork): RawPaper {
   // Parse citation percentile
   let citationPercentile: CitationPercentile | undefined
   if (work.citation_normalized_percentile?.value !== undefined) {
+    const value = work.citation_normalized_percentile.value
     citationPercentile = {
-      value: work.citation_normalized_percentile.value,
-      isInTop1Percent: work.citation_normalized_percentile.is_in_top_1_percent || false,
-      isInTop10Percent: work.citation_normalized_percentile.is_in_top_10_percent || false,
+      value,
+      isInTop1Percent: work.citation_normalized_percentile.is_in_top_1_percent || value >= 99,
+      isInTop10Percent: work.citation_normalized_percentile.is_in_top_10_percent || value >= 90,
     }
   }
 

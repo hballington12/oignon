@@ -142,3 +142,11 @@ export function getBrighterColor(color: number, amount = 40): number {
   const b = Math.min(255, (color & 0xff) + amount)
   return (r << 16) | (g << 8) | b
 }
+
+/**
+ * Get a colormap color at position t as a CSS hex string
+ */
+export function getColormapColorHex(t: number, colormap: Colormap): string {
+  const color = getColormapColor(t, colormap.stops)
+  return '#' + color.toString(16).padStart(6, '0')
+}
