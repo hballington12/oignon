@@ -138,7 +138,7 @@ const emit = defineEmits<{
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-panel-solid);
+  background: var(--bg-panel-colormap, var(--bg-panel-solid));
   border: 1px solid var(--border-light);
   border-radius: 12px;
   color: var(--text-secondary);

@@ -81,6 +81,16 @@ const backgroundColor = computed(() => {
   const colormap = COLORMAPS[store.activeColormap]
   return colormap ? getBackgroundColorHex(colormap) : '#000000'
 })
+
+// Dynamic CSS variables based on colormap
+const colormapStyles = computed(() => {
+  const bg = backgroundColor.value
+  return {
+    '--bg-colormap': bg,
+    '--bg-panel-colormap': `${bg}f2`, // 95% opacity
+    '--bg-panel-colormap-light': `${bg}cc`, // 80% opacity
+  }
+})
 const graphCanvas = ref<InstanceType<typeof GraphCanvas> | null>(null)
 
 // Load cached graph on startup (before mount)
@@ -205,7 +215,11 @@ function handleColormapChange(index: number) {
 </script>
 
 <template>
-  <div class="app" :class="{ mobile: isMobile }" :style="{ background: backgroundColor }">
+  <div
+    class="app"
+    :class="{ mobile: isMobile }"
+    :style="{ background: backgroundColor, ...colormapStyles }"
+  >
     <!-- Canvas area (shared between layouts) -->
     <div class="canvas-area">
       <GraphCanvas ref="graphCanvas" :show-year-axis="showYearAxis" />
