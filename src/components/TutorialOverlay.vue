@@ -355,7 +355,8 @@ function startTour() {
 }
 
 .welcome-card {
-  background: var(--bg-panel-solid);
+  background: var(--bg-panel-colormap, var(--bg-panel-solid));
+  transition: background var(--transition-smooth);
   border: 1px solid var(--border-light);
   border-radius: var(--panel-radius);
   padding: var(--spacing-xl);
@@ -422,7 +423,8 @@ function startTour() {
   bottom: calc(var(--spacing-lg) + env(safe-area-inset-bottom));
   right: var(--spacing-lg);
   z-index: 1000001;
-  background: var(--bg-panel-solid);
+  background: var(--bg-panel-colormap, var(--bg-panel-solid));
+  transition: background var(--transition-smooth);
   border: 1px solid var(--border-light);
   border-radius: var(--btn-radius);
   color: var(--text-muted);
