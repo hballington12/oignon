@@ -9,6 +9,7 @@ import PaperDetailsPanel from '@/components/PaperDetailsPanel.vue'
 import LibraryPanel from '@/components/LibraryPanel.vue'
 import MobileTabBar from '@/components/MobileTabBar.vue'
 import MobileInfoPanel from '@/components/MobileInfoPanel.vue'
+import FloatingControls from '@/components/FloatingControls.vue'
 import { TAB_HEIGHTS, TAB_BAR_HEIGHT, type TabId } from '@/types/mobile'
 import { useGraphStore } from '@/stores/graph'
 import { useMobile } from '@/composables/useMobile'
@@ -131,6 +132,12 @@ function handleColormapChange(index: number) {
     <!-- Canvas area (shared between layouts) -->
     <div class="canvas-area">
       <GraphCanvas ref="graphCanvas" />
+      <FloatingControls
+        v-if="isMobile"
+        @zoom-in="handleZoomIn"
+        @zoom-out="handleZoomOut"
+        @fit-to-view="handleFitToView"
+      />
     </div>
 
     <!-- Desktop panels -->
@@ -159,9 +166,6 @@ function handleColormapChange(index: number) {
         @colormap-change="handleColormapChange"
         @search="handleSearch"
         @show-details="activeTab = 'details'"
-        @zoom-in="handleZoomIn"
-        @zoom-out="handleZoomOut"
-        @fit-to-view="handleFitToView"
         @height-change="handlePanelHeightChange"
         @drag-start="handlePanelDragStart"
         @drag-end="handlePanelDragEnd"
