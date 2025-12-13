@@ -18,10 +18,26 @@ import { getBackgroundColorHex, COLORMAPS } from '@/lib/colormap'
 const store = useGraphStore()
 const { isMobile } = useMobile()
 const activeTab = ref<TabId | null>(null)
+const customPanelHeights = ref<Partial<Record<TabId, number>>>({})
+const isPanelDragging = ref(false)
 
 function handleTabSelect(tab: TabId) {
   // Toggle off if tapping the same tab
   activeTab.value = activeTab.value === tab ? null : tab
+}
+
+function handlePanelHeightChange(height: number) {
+  if (activeTab.value) {
+    customPanelHeights.value[activeTab.value] = height
+  }
+}
+
+function handlePanelDragStart() {
+  isPanelDragging.value = true
+}
+
+function handlePanelDragEnd() {
+  isPanelDragging.value = false
 }
 
 // Switch to search tab on mobile when a build is triggered
@@ -46,7 +62,8 @@ watch(
 
 const bottomAreaHeight = computed(() => {
   if (!activeTab.value) return TAB_BAR_HEIGHT
-  return TAB_BAR_HEIGHT + TAB_HEIGHTS[activeTab.value]
+  const panelHeight = customPanelHeights.value[activeTab.value] ?? TAB_HEIGHTS[activeTab.value]
+  return TAB_BAR_HEIGHT + panelHeight
 })
 
 const backgroundColor = computed(() => {
@@ -131,7 +148,12 @@ function handleColormapChange(index: number) {
     </template>
 
     <!-- Mobile bottom area -->
-    <div v-if="isMobile" class="mobile-bottom-area" :style="{ height: bottomAreaHeight + 'px' }">
+    <div
+      v-if="isMobile"
+      class="mobile-bottom-area"
+      :class="{ dragging: isPanelDragging }"
+      :style="{ height: bottomAreaHeight + 'px' }"
+    >
       <MobileInfoPanel
         :active-tab="activeTab"
         @colormap-change="handleColormapChange"
@@ -140,6 +162,9 @@ function handleColormapChange(index: number) {
         @zoom-in="handleZoomIn"
         @zoom-out="handleZoomOut"
         @fit-to-view="handleFitToView"
+        @height-change="handlePanelHeightChange"
+        @drag-start="handlePanelDragStart"
+        @drag-end="handlePanelDragEnd"
       />
       <MobileTabBar :active-tab="activeTab" @select="handleTabSelect" />
     </div>
@@ -190,5 +215,9 @@ body,
   flex-shrink: 0;
   transition: height var(--transition-smooth);
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+.mobile-bottom-area.dragging {
+  transition: none;
 }
 </style>

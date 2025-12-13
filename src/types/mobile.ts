@@ -12,3 +12,7 @@ export const TAB_HEIGHTS: Record<TabId, number> = {
   library: 260,
   controls: 60,
 }
+
+// Resize constraints
+export const PANEL_MIN_HEIGHT = 60
+export const PANEL_MAX_HEIGHT = 400
