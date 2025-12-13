@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { useDrag, usePinch, useWheel, useMove } from '@vueuse/gesture'
+import { useDrag, useWheel, useMove } from '@vueuse/gesture'
 import { useGraphStore } from '@/stores/graph'
 import { Grid } from '@/lib/Grid'
 import { Renderer } from '@/lib/Renderer'
@@ -18,9 +18,12 @@ let baseScale = 1
 const MIN_SCALE_FACTOR = 0.5
 const MAX_SCALE_FACTOR = 4
 
-// Gesture state
-let pinchStartViewport = { x: 0, y: 0, scale: 1 }
+// Pinch gesture state (raw touch handling)
 let isPinching = false
+let initialTouches: { x1: number; y1: number; x2: number; y2: number } | null = null
+let initialDistance = 0
+let initialMidpoint = { x: 0, y: 0 }
+let initialViewport = { x: 0, y: 0, scale: 1 }
 
 // Drag threshold detection
 const DRAG_THRESHOLD = 5
@@ -31,34 +34,88 @@ let hasMoved = false
 
 // --- Gestures ---
 
-// Pinch-to-zoom using offset (cumulative change from gesture start)
-usePinch(
-  ({ offset: [d], origin: [ox, oy], first, active }) => {
-    if (!renderer) return
+// Pinch gesture helpers
+function getTouchDistance(t1: Touch, t2: Touch): number {
+  return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY)
+}
 
-    if (first) {
-      pinchStartViewport = renderer.getViewport()
-      isPinching = true
-    }
+function getTouchMidpoint(t1: Touch, t2: Touch): { x: number; y: number } {
+  return {
+    x: (t1.clientX + t2.clientX) / 2,
+    y: (t1.clientY + t2.clientY) / 2,
+  }
+}
 
-    if (active) {
-      // d is cumulative distance change in pixels (negative = pinch in, positive = pinch out)
-      // Map to scale: 0 = no change, ±200px = half/double
-      const scaleFactor = 1 + d / 200
-      const newScale = pinchStartViewport.scale * scaleFactor
-      const clampedScale = clampScale(newScale)
-      renderer.zoomAt(clampedScale, ox, oy)
-    }
+// Raw touch event handlers for pinch-to-zoom
+function onTouchStart(e: TouchEvent) {
+  if (e.touches.length === 2) {
+    e.preventDefault()
+    isPinching = true
 
-    if (!active) {
-      isPinching = false
+    const t1 = e.touches[0]!
+    const t2 = e.touches[1]!
+
+    initialTouches = {
+      x1: t1.clientX,
+      y1: t1.clientY,
+      x2: t2.clientX,
+      y2: t2.clientY,
     }
-  },
-  {
-    domTarget: canvasContainer,
-    eventOptions: { passive: false },
-  },
-)
+    initialDistance = getTouchDistance(t1, t2)
+    initialMidpoint = getTouchMidpoint(t1, t2)
+
+    if (renderer) {
+      initialViewport = renderer.getViewport()
+    }
+  }
+}
+
+function onTouchMove(e: TouchEvent) {
+  if (!isPinching || !initialTouches || e.touches.length !== 2) return
+  if (!renderer) return
+
+  e.preventDefault()
+
+  const t1 = e.touches[0]!
+  const t2 = e.touches[1]!
+
+  // Calculate current distance and midpoint
+  const currentDistance = getTouchDistance(t1, t2)
+  const currentMidpoint = getTouchMidpoint(t1, t2)
+
+  // Scale is ratio of current to initial distance
+  const scaleRatio = currentDistance / initialDistance
+  const newScale = clampScale(initialViewport.scale * scaleRatio)
+
+  // Translation from midpoint movement
+  const dx = currentMidpoint.x - initialMidpoint.x
+  const dy = currentMidpoint.y - initialMidpoint.y
+
+  // Get rect for screen-to-local conversion
+  const rect = canvasContainer.value?.getBoundingClientRect()
+  if (!rect) return
+
+  // Convert initial midpoint to local coordinates
+  const localMidX = initialMidpoint.x - rect.left
+  const localMidY = initialMidpoint.y - rect.top
+
+  // Calculate world point at initial midpoint
+  const worldX = (localMidX - initialViewport.x) / initialViewport.scale
+  const worldY = (localMidY - initialViewport.y) / initialViewport.scale
+
+  // New viewport position: keep world point under current midpoint + translation
+  const newX = currentMidpoint.x - rect.left - worldX * newScale
+  const newY = currentMidpoint.y - rect.top - worldY * newScale
+
+  renderer.setViewport(newX, newY, newScale)
+}
+
+function onTouchEnd(e: TouchEvent) {
+  if (e.touches.length < 2) {
+    isPinching = false
+    initialTouches = null
+  }
+}
 
 // Wheel zoom
 useWheel(
@@ -181,6 +238,12 @@ async function init() {
 
   renderer = new Renderer()
   await renderer.init(canvasContainer.value)
+
+  // Attach raw touch event listeners for pinch gesture
+  canvasContainer.value.addEventListener('touchstart', onTouchStart, { passive: false })
+  canvasContainer.value.addEventListener('touchmove', onTouchMove, { passive: false })
+  canvasContainer.value.addEventListener('touchend', onTouchEnd)
+  canvasContainer.value.addEventListener('touchcancel', onTouchEnd)
 
   // Handle resize - PixiJS auto-resizes via resizeTo, no need to refit view
   resizeObserver = new ResizeObserver(() => {
@@ -311,6 +374,14 @@ function zoomOut() {
 }
 
 function cleanup() {
+  // Remove touch event listeners
+  if (canvasContainer.value) {
+    canvasContainer.value.removeEventListener('touchstart', onTouchStart)
+    canvasContainer.value.removeEventListener('touchmove', onTouchMove)
+    canvasContainer.value.removeEventListener('touchend', onTouchEnd)
+    canvasContainer.value.removeEventListener('touchcancel', onTouchEnd)
+  }
+
   if (resizeObserver) {
     resizeObserver.disconnect()
     resizeObserver = null
