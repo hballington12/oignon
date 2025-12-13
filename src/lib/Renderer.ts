@@ -1024,6 +1024,13 @@ export class Renderer {
   }
 
   /**
+   * Show or hide the year axis overlay
+   */
+  setYearAxisVisible(visible: boolean) {
+    this.yearAxisContainer.visible = visible
+  }
+
+  /**
    * Update year axis positions based on viewport transform
    */
   private updateYearAxis() {

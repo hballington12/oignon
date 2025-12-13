@@ -22,6 +22,7 @@ const { isMobile } = useMobile()
 const activeTab = ref<TabId | null>(null)
 const customPanelHeights = ref<Partial<Record<TabId, number>>>({})
 const isPanelDragging = ref(false)
+const showYearAxis = ref(true)
 
 function handleTabSelect(tab: TabId) {
   // Toggle off if tapping the same tab
@@ -198,13 +199,15 @@ function handleColormapChange(index: number) {
   <div class="app" :class="{ mobile: isMobile }" :style="{ background: backgroundColor }">
     <!-- Canvas area (shared between layouts) -->
     <div class="canvas-area">
-      <GraphCanvas ref="graphCanvas" />
+      <GraphCanvas ref="graphCanvas" :show-year-axis="showYearAxis" />
       <FloatingControls
         v-if="isMobile"
+        :show-year-axis="showYearAxis"
         @zoom-in="handleZoomIn"
         @zoom-out="handleZoomOut"
         @fit-to-view="handleFitToView"
         @restart-tutorial="handleRestartTutorial"
+        @toggle-year-axis="showYearAxis = !showYearAxis"
       />
     </div>
 

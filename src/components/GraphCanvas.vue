@@ -5,6 +5,10 @@ import { Grid } from '@/lib/Grid'
 import { Renderer } from '@/lib/Renderer'
 import { COLORMAPS, getCanvasBackgroundColor } from '@/lib/colormap'
 
+const props = defineProps<{
+  showYearAxis?: boolean
+}>()
+
 const store = useGraphStore()
 const canvasContainer = ref<HTMLDivElement | null>(null)
 
@@ -293,6 +297,16 @@ watch(
     }
   },
   { deep: true },
+)
+
+// Watch for year axis visibility changes
+watch(
+  () => props.showYearAxis,
+  (show) => {
+    if (renderer) {
+      renderer.setYearAxisVisible(show ?? true)
+    }
+  },
 )
 
 onMounted(async () => {
