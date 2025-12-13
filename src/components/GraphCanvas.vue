@@ -14,9 +14,9 @@ let resizeObserver: ResizeObserver | null = null
 let resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null
 let baseScale = 1
 
-// Viewport limits (used for zoom buttons)
-const MIN_SCALE_FACTOR = 0.5
-const MAX_SCALE_FACTOR = 4
+// Viewport limits
+const MIN_SCALE_FACTOR = 0.75
+const MAX_SCALE_FACTOR = 10
 
 // Tap detection state
 let pointerDownTime = 0
@@ -201,6 +201,7 @@ function fitToView() {
   if (!renderer || !grid) return
   const target = renderer.calculateFitToView(grid)
   baseScale = target.scale
+  renderer.setZoomLimits(baseScale)
   smoothZoomTo(target.scale, target.x, target.y, 300)
 }
 

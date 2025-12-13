@@ -27,6 +27,10 @@ import { ParticleSystem, type ParticleSystemOptions } from './ParticleSystem'
 
 const BASE_CIRCLE_RADIUS = 32
 
+// Viewport zoom limits (relative to base/fit scale)
+const MIN_SCALE_FACTOR = 0.75
+const MAX_SCALE_FACTOR = 10
+
 // Node visual constants (matching legacy)
 const NODE_SHADOW = {
   outerOffset: { x: 2, y: 3 },
@@ -86,6 +90,7 @@ interface CurveNodeMapping {
 export class Renderer {
   private app: Application
   private viewport: Viewport | null = null
+  private baseScale = 1
   private particleSystem: ParticleSystem | null = null
   private curvesContainer: Container
   private selectionCurvesContainer: Container
@@ -440,7 +445,25 @@ export class Renderer {
     this.viewport.x = x
     this.viewport.y = y
 
+    // Store base scale and apply zoom limits
+    this.baseScale = scale
+    this.applyZoomLimits()
+
     return scale
+  }
+
+  /** Set zoom limits based on a base scale */
+  setZoomLimits(baseScale: number) {
+    this.baseScale = baseScale
+    this.applyZoomLimits()
+  }
+
+  private applyZoomLimits() {
+    if (!this.viewport) return
+    this.viewport.clampZoom({
+      minScale: this.baseScale * MIN_SCALE_FACTOR,
+      maxScale: this.baseScale * MAX_SCALE_FACTOR,
+    })
   }
 
   // --- Viewport manipulation ---
