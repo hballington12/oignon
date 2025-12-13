@@ -927,6 +927,7 @@ export class Renderer {
     this.curveAnimationId++
     this.curveAlphaAnimationId++
     this.selectionCurveAnimationId++
+    this.yearAxisAnimationId++
 
     this.nodesContainer.removeChildren()
     this.curvesContainer.removeChildren()
@@ -939,6 +940,10 @@ export class Renderer {
     this.curveNodeMappings = []
     this.curveDataCache = []
     this.yearAxisData = []
+    this.yearAxisVisible = true
+    this.yearAxisContainer.x = 0
+    this.yearAxisContainer.alpha = 1
+    this.yearAxisContainer.visible = true
     this.selectedNodeIds.clear()
 
     if (this.batchedCurves) {
@@ -1023,11 +1028,49 @@ export class Renderer {
     this.updateYearAxis()
   }
 
+  // Year axis animation state
+  private yearAxisAnimationId = 0
+  private yearAxisVisible = true
+
   /**
-   * Show or hide the year axis overlay
+   * Show or hide the year axis overlay with slide animation
    */
-  setYearAxisVisible(visible: boolean) {
-    this.yearAxisContainer.visible = visible
+  setYearAxisVisible(visible: boolean, duration = 250) {
+    if (visible === this.yearAxisVisible) return
+
+    this.yearAxisVisible = visible
+    this.yearAxisAnimationId++
+    const animationId = this.yearAxisAnimationId
+
+    // Ensure container is visible during animation
+    this.yearAxisContainer.visible = true
+
+    const startX = this.yearAxisContainer.x
+    const startAlpha = this.yearAxisContainer.alpha
+    const targetX = visible ? 0 : -60
+    const targetAlpha = visible ? 1 : 0
+    const startTime = performance.now()
+
+    const animate = () => {
+      if (animationId !== this.yearAxisAnimationId) return
+
+      const elapsed = performance.now() - startTime
+      const progress = Math.min(1, elapsed / duration)
+      // Ease out cubic
+      const eased = 1 - Math.pow(1 - progress, 3)
+
+      this.yearAxisContainer.x = startX + (targetX - startX) * eased
+      this.yearAxisContainer.alpha = startAlpha + (targetAlpha - startAlpha) * eased
+
+      if (progress < 1) {
+        requestAnimationFrame(animate)
+      } else if (!visible) {
+        // Hide completely when animation finishes
+        this.yearAxisContainer.visible = false
+      }
+    }
+
+    requestAnimationFrame(animate)
   }
 
   /**
