@@ -79,7 +79,7 @@ const emit = defineEmits<{
 <style scoped>
 .floating-controls {
   position: absolute;
-  bottom: var(--spacing-lg);
+  top: var(--spacing-lg);
   right: var(--spacing-lg);
   display: flex;
   flex-direction: column;
@@ -119,7 +119,7 @@ const emit = defineEmits<{
 
 .help-btn {
   position: absolute;
-  bottom: var(--spacing-lg);
+  top: var(--spacing-lg);
   left: var(--spacing-lg);
   width: 44px;
   height: 44px;

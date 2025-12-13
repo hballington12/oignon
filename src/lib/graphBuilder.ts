@@ -16,9 +16,18 @@ import type {
 
 // Configuration
 const OPENALEX_API = 'https://api.openalex.org'
+const OPENALEX_EMAIL = 'ballington@uni-wuppertal.de'
+const OPENALEX_USER_AGENT = 'CitationGraphBuilder/1.0 (mailto:ballington@uni-wuppertal.de)'
 const OPENALEX_MAX_PER_PAGE = 200
 const OPENALEX_MAX_FILTER_IDS = 100
 const MAX_PARALLEL_REQUESTS = 10
+
+// Shared fetch options for OpenAlex API
+const OPENALEX_FETCH_OPTIONS: RequestInit = {
+  headers: {
+    'User-Agent': OPENALEX_USER_AGENT,
+  },
+}
 
 const DEFAULT_N_ROOTS = 25
 const DEFAULT_N_BRANCHES = 25
@@ -222,7 +231,10 @@ function getApiCallCount() {
 export async function fetchPaper(workId: string): Promise<RawPaper | null> {
   logApiCall('/works/{id}', `single paper: ${workId.slice(0, 30)}`)
   try {
-    const response = await fetch(`${OPENALEX_API}/works/${workId}`)
+    const response = await fetch(
+      `${OPENALEX_API}/works/${workId}?mailto=${OPENALEX_EMAIL}`,
+      OPENALEX_FETCH_OPTIONS,
+    )
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const work = await response.json()
     return formatPaper(work)
@@ -287,12 +299,13 @@ async function fetchBatchFull(batch: string[]): Promise<Record<string, RawPaper>
     filter: `openalex:${idFilter}`,
     select: OPENALEX_FULL_FIELDS,
     per_page: OPENALEX_MAX_PER_PAGE.toString(),
+    mailto: OPENALEX_EMAIL,
   })
 
   logApiCall('/works', `full batch: ${batch.length} ids`)
 
   try {
-    const response = await fetch(`${OPENALEX_API}/works?${params}`)
+    const response = await fetch(`${OPENALEX_API}/works?${params}`, OPENALEX_FETCH_OPTIONS)
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const data = await response.json()
 
@@ -314,12 +327,13 @@ async function fetchBatchSlim(batch: string[]): Promise<Record<string, SlimPaper
     filter: `openalex:${idFilter}`,
     select: OPENALEX_SLIM_FIELDS,
     per_page: OPENALEX_MAX_PER_PAGE.toString(),
+    mailto: OPENALEX_EMAIL,
   })
 
   logApiCall('/works', `slim batch: ${batch.length} ids`)
 
   try {
-    const response = await fetch(`${OPENALEX_API}/works?${params}`)
+    const response = await fetch(`${OPENALEX_API}/works?${params}`, OPENALEX_FETCH_OPTIONS)
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const data = await response.json()
 
@@ -395,12 +409,13 @@ async function fetchCitationsBatch(batch: string[]): Promise<Set<string>> {
     filter: `cites:${citesFilter}`,
     select: 'id',
     per_page: OPENALEX_MAX_PER_PAGE.toString(),
+    mailto: OPENALEX_EMAIL,
   })
 
   logApiCall('/works', `citations batch: ${batch.length} ids`)
 
   try {
-    const response = await fetch(`${OPENALEX_API}/works?${params}`)
+    const response = await fetch(`${OPENALEX_API}/works?${params}`, OPENALEX_FETCH_OPTIONS)
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const data = await response.json()
 
@@ -449,12 +464,13 @@ async function fetchCitingPapers(
     filter: `cites:${workId}`,
     select: 'id',
     per_page: limit.toString(),
+    mailto: OPENALEX_EMAIL,
   })
 
   logApiCall('/works', `citing papers for ${workId.slice(0, 20)}, limit ${limit}`)
 
   try {
-    const response = await fetch(`${OPENALEX_API}/works?${params}`)
+    const response = await fetch(`${OPENALEX_API}/works?${params}`, OPENALEX_FETCH_OPTIONS)
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const data = await response.json()
 
