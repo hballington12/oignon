@@ -286,20 +286,20 @@ export class Renderer {
       // Sort targets by Y position for consistent t values
       const sortedTargets = [...targets].sort((a, b) => b.y - a.y)
 
-      for (const angle of angles) {
-        for (let i = 0; i < sortedTargets.length; i++) {
-          const targetNode = sortedTargets[i]!
-          const t = sortedTargets.length > 1 ? i / (sortedTargets.length - 1) : 0.5
-          curves.push(this.createCurveData(sourceNode, targetNode, angle, t, this.curveParams))
+      // For symmetric nodes, alternate angles across targets (not duplicate per target)
+      for (let i = 0; i < sortedTargets.length; i++) {
+        const targetNode = sortedTargets[i]!
+        const angle = angles[i % angles.length]!
+        const t = sortedTargets.length > 1 ? i / (sortedTargets.length - 1) : 0.5
+        curves.push(this.createCurveData(sourceNode, targetNode, angle, t, this.curveParams))
 
-          // Track mapping for per-curve timing
-          this.curveNodeMappings.push({
-            curveIndex,
-            sourceNodeId: sourceNode.id,
-            targetNodeId: targetNode.id,
-          })
-          curveIndex++
-        }
+        // Track mapping for per-curve timing
+        this.curveNodeMappings.push({
+          curveIndex,
+          sourceNodeId: sourceNode.id,
+          targetNodeId: targetNode.id,
+        })
+        curveIndex++
       }
     }
 
