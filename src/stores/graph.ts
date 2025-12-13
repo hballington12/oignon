@@ -47,7 +47,7 @@ export const useGraphStore = defineStore('graph', () => {
   const hoveredNodeId = ref<string | null>(null)
 
   // UI state
-  const activeColormap = ref<number>(6) // Slate
+  const activeColormap = ref<number>(7) // Ocean
   const sidePanelCollapsed = ref(true)
   const searchPanelCollapsed = ref(false)
   const detailsPanelCollapsed = ref(false)
