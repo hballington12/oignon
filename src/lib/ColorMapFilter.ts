@@ -1,5 +1,5 @@
-// WARNING: Do not modify GLSL shader code without explicit user consent
 import { Filter, GlProgram } from 'pixi.js'
+import { COLORMAPS, type Colormap } from './colormap'
 
 const vertex = `
   in vec2 aPosition;
@@ -26,91 +26,73 @@ const vertex = `
   }
 `
 
-const fragment = `
+/**
+ * Generate GLSL function for a single colormap
+ */
+function generateColormapFunction(colormap: Colormap, index: number): string {
+  const fnName = `colormap${index}`
+  const stops = colormap.stops
+
+  // Generate vec4 declarations for each stop
+  const stopDecls = stops
+    .map(
+      (s, i) =>
+        `    vec4 c${i} = vec4(${s.r.toFixed(4)}, ${s.g.toFixed(4)}, ${s.b.toFixed(4)}, ${s.t.toFixed(2)});`,
+    )
+    .join('\n')
+
+  // Generate mix chain for interpolation
+  const mixChain = stops
+    .slice(0, -1)
+    .map((s, i) => {
+      const next = stops[i + 1]!
+      if (i === stops.length - 2) {
+        return `    return mix(c${i}, c${i + 1}, (t - ${s.t.toFixed(2)}) / ${(next.t - s.t).toFixed(2)});`
+      }
+      return `    if (t < ${next.t.toFixed(2)}) return mix(c${i}, c${i + 1}, (t - ${s.t.toFixed(2)}) / ${(next.t - s.t).toFixed(2)});`
+    })
+    .join('\n')
+
+  return `
+  // ${colormap.name}
+  vec4 ${fnName}(float t) {
+${stopDecls}
+
+${mixChain}
+  }`
+}
+
+/**
+ * Generate the getColormapById switch function
+ */
+function generateColormapSwitch(count: number): string {
+  const cases = Array.from(
+    { length: count },
+    (_, i) => `    if (cm == ${i}) return colormap${i}(t);`,
+  ).join('\n')
+
+  return `
+  vec4 getColormapById(int cm, float t) {
+${cases}
+    return colormap0(t);
+  }`
+}
+
+/**
+ * Generate complete fragment shader from COLORMAPS
+ */
+function generateFragmentShader(): string {
+  const colormapFunctions = COLORMAPS.map((cm, i) => generateColormapFunction(cm, i)).join('\n')
+  const colormapSwitch = generateColormapSwitch(COLORMAPS.length)
+
+  return `
   in vec2 vTextureCoord;
   out vec4 finalColor;
 
   uniform sampler2D uTexture;
   uniform float uColormap;
-
-  // Freeze colormap (dark, icy blues)
-  vec4 freeze(float t) {
-    vec4 c0 = vec4(0.0, 0.0, 0.0, 0.0);
-    vec4 c1 = vec4(0.2157, 0.1804, 0.4039, 0.25);
-    vec4 c2 = vec4(0.1529, 0.4431, 0.8784, 0.5);
-    vec4 c3 = vec4(0.4235, 0.7569, 0.8392, 0.75);
-    vec4 c4 = vec4(1.0, 1.0, 1.0, 1.0);
-
-    if (t < 0.25) return mix(c0, c1, t / 0.25);
-    if (t < 0.5) return mix(c1, c2, (t - 0.25) / 0.25);
-    if (t < 0.75) return mix(c2, c3, (t - 0.5) / 0.25);
-    return mix(c3, c4, (t - 0.75) / 0.25);
-  }
-
-  // Lavender colormap (dark, purple to green)
-  vec4 lavender(float t) {
-    vec4 c0 = vec4(0.0, 0.0, 0.0, 0.0);
-    vec4 c1 = vec4(0.2745, 0.0078, 0.3647, 0.25);
-    vec4 c2 = vec4(0.2314, 0.3529, 0.5725, 0.5);
-    vec4 c3 = vec4(0.1333, 0.6196, 0.5451, 0.75);
-    vec4 c4 = vec4(0.4667, 0.8588, 0.2745, 1.0);
-
-    if (t < 0.25) return mix(c0, c1, t / 0.25);
-    if (t < 0.5) return mix(c1, c2, (t - 0.25) / 0.25);
-    if (t < 0.75) return mix(c2, c3, (t - 0.5) / 0.25);
-    return mix(c3, c4, (t - 0.75) / 0.25);
-  }
-
-  // Voltage colormap (dark, purple electric)
-  vec4 voltage(float t) {
-    vec4 c0 = vec4(0.0, 0.0, 0.0, 0.0);
-    vec4 c1 = vec4(0.3451, 0.0784, 0.349, 0.25);
-    vec4 c2 = vec4(0.5098, 0.3137, 0.8941, 0.5);
-    vec4 c3 = vec4(0.4745, 0.7255, 0.9725, 0.75);
-    vec4 c4 = vec4(1.0, 1.0, 1.0, 1.0);
-
-    if (t < 0.25) return mix(c0, c1, t / 0.25);
-    if (t < 0.5) return mix(c1, c2, (t - 0.25) / 0.25);
-    if (t < 0.75) return mix(c2, c3, (t - 0.5) / 0.25);
-    return mix(c3, c4, (t - 0.75) / 0.25);
-  }
-
-  // Ember colormap (dark, fire)
-  vec4 ember(float t) {
-    vec4 c0 = vec4(0.0, 0.0, 0.0, 0.0);
-    vec4 c1 = vec4(0.3059, 0.102, 0.2392, 0.25);
-    vec4 c2 = vec4(0.7255, 0.0471, 0.2078, 0.5);
-    vec4 c3 = vec4(0.9255, 0.4627, 0.0039, 0.75);
-    vec4 c4 = vec4(0.9451, 0.8824, 0.2431, 1.0);
-
-    if (t < 0.25) return mix(c0, c1, t / 0.25);
-    if (t < 0.5) return mix(c1, c2, (t - 0.25) / 0.25);
-    if (t < 0.75) return mix(c2, c3, (t - 0.5) / 0.25);
-    return mix(c3, c4, (t - 0.75) / 0.25);
-  }
-
-  // Torch colormap (dark, purple to orange)
-  vec4 torch(float t) {
-    vec4 c0 = vec4(0.0, 0.0, 0.0, 0.0);
-    vec4 c1 = vec4(0.1647, 0.1412, 0.5882, 0.25);
-    vec4 c2 = vec4(0.6353, 0.3098, 0.5294, 0.5);
-    vec4 c3 = vec4(1.0, 0.5529, 0.3059, 0.75);
-    vec4 c4 = vec4(1.0, 1.0, 1.0, 1.0);
-
-    if (t < 0.25) return mix(c0, c1, t / 0.25);
-    if (t < 0.5) return mix(c1, c2, (t - 0.25) / 0.25);
-    if (t < 0.75) return mix(c2, c3, (t - 0.5) / 0.25);
-    return mix(c3, c4, (t - 0.75) / 0.25);
-  }
-
-  vec4 getColormapById(int cm, float t) {
-    if (cm == 0) return freeze(t);
-    if (cm == 1) return lavender(t);
-    if (cm == 2) return voltage(t);
-    if (cm == 3) return ember(t);
-    if (cm == 4) return torch(t);
-    return freeze(t);
-  }
+${colormapFunctions}
+${colormapSwitch}
 
   vec4 colormap(float t) {
     t = clamp(t, 0.0, 1.0);
@@ -119,6 +101,9 @@ const fragment = `
     int cmLow = int(floor(uColormap));
     int cmHigh = int(ceil(uColormap));
     float blend = fract(uColormap);
+
+    // Wrap around for smooth looping
+    cmHigh = cmHigh >= ${COLORMAPS.length} ? 0 : cmHigh;
 
     // If no blend needed, just return the colormap
     if (blend < 0.001) {
@@ -152,6 +137,9 @@ const fragment = `
     finalColor = colormap(intensity);
   }
 `
+}
+
+const fragment = generateFragmentShader()
 
 export class ColorMapFilter extends Filter {
   constructor() {

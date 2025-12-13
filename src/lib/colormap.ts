@@ -74,8 +74,66 @@ const TORCH: Colormap = {
   ],
 }
 
+const INK: Colormap = {
+  name: 'Ink',
+  isDark: true,
+  stops: [
+    { t: 0.0, r: 0.0, g: 0.0, b: 0.0 },
+    { t: 0.25, r: 0.1, g: 0.12, b: 0.18 },
+    { t: 0.5, r: 0.25, g: 0.32, b: 0.42 },
+    { t: 0.75, r: 0.55, g: 0.62, b: 0.72 },
+    { t: 1.0, r: 1.0, g: 1.0, b: 1.0 },
+  ],
+}
+
+const SLATE: Colormap = {
+  name: 'Slate',
+  isDark: true,
+  stops: [
+    { t: 0.0, r: 0.0, g: 0.0, b: 0.0 },
+    { t: 0.25, r: 0.15, g: 0.15, b: 0.15 },
+    { t: 0.5, r: 0.35, g: 0.35, b: 0.35 },
+    { t: 0.75, r: 0.65, g: 0.65, b: 0.65 },
+    { t: 1.0, r: 1.0, g: 1.0, b: 1.0 },
+  ],
+}
+
+const OCEAN: Colormap = {
+  name: 'Ocean',
+  isDark: true,
+  stops: [
+    { t: 0.0, r: 0.0, g: 0.0, b: 0.0 },
+    { t: 0.25, r: 0.0, g: 0.1, b: 0.22 },
+    { t: 0.5, r: 0.0, g: 0.3, b: 0.55 },
+    { t: 0.75, r: 0.4, g: 0.65, b: 0.85 },
+    { t: 1.0, r: 1.0, g: 1.0, b: 1.0 },
+  ],
+}
+
+const FOREST: Colormap = {
+  name: 'Forest',
+  isDark: true,
+  stops: [
+    { t: 0.0, r: 0.0, g: 0.0, b: 0.0 },
+    { t: 0.25, r: 0.05, g: 0.15, b: 0.08 },
+    { t: 0.5, r: 0.1, g: 0.4, b: 0.2 },
+    { t: 0.75, r: 0.4, g: 0.7, b: 0.45 },
+    { t: 1.0, r: 1.0, g: 1.0, b: 1.0 },
+  ],
+}
+
 // Available colormaps
-export const COLORMAPS: Colormap[] = [FREEZE, LAVENDER, VOLTAGE, EMBER, TORCH]
+export const COLORMAPS: Colormap[] = [
+  FREEZE,
+  LAVENDER,
+  VOLTAGE,
+  EMBER,
+  TORCH,
+  INK,
+  SLATE,
+  OCEAN,
+  FOREST,
+]
 
 export function getColormapByIndex(index: number): Colormap {
   return COLORMAPS[index % COLORMAPS.length]!
