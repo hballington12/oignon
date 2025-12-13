@@ -281,6 +281,9 @@ function handleSkipTour() {
 }
 
 function startTour() {
+  // Reset to clean state before starting
+  emit('cleanup')
+
   showWelcome.value = false
   currentStepIndex.value = 0
 

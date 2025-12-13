@@ -95,7 +95,8 @@ export const useGraphStore = defineStore('graph', () => {
         activeColormap.value = parseInt(colormap, 10)
       }
       const tutorial = localStorage.getItem(TUTORIAL_KEY)
-      if (tutorial !== null && !import.meta.env.VITE_FORCE_NEW_USER) {
+      const loadTutorialStatus = import.meta.env.VITE_FORCE_NEW_USER !== 'true'
+      if (tutorial !== null && loadTutorialStatus) {
         tutorialStatus.value = tutorial as 'pending' | 'completed' | 'skipped'
       }
     } catch (e) {
@@ -137,7 +138,9 @@ export const useGraphStore = defineStore('graph', () => {
   function resetTutorial() {
     tutorialSkipWelcome.value = true
     tutorialStatus.value = 'pending'
-    localStorage.removeItem(TUTORIAL_KEY)
+    // Keep localStorage as 'completed' or 'skipped' - user has seen tutorial before
+    // On next page load, they won't see welcome message
+    // We just reset in-memory state so they can replay the tutorial this session
   }
 
   // Initialize library on store creation
