@@ -9,6 +9,7 @@ const emit = defineEmits<{
   fitToView: []
   restartTutorial: []
   toggleYearAxis: []
+  zoomToSource: []
 }>()
 </script>
 
@@ -97,6 +98,22 @@ const emit = defineEmits<{
         <path d="M16 2v4" />
         <rect width="18" height="18" x="3" y="4" rx="2" />
         <path d="M3 10h18" />
+      </svg>
+    </button>
+    <button class="float-btn" @click="emit('zoomToSource')" title="Go to source">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <circle cx="12" cy="12" r="6" />
+        <circle cx="12" cy="12" r="2" />
       </svg>
     </button>
   </div>

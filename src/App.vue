@@ -217,6 +217,7 @@ function handleColormapChange(index: number) {
         @fit-to-view="handleFitToView"
         @restart-tutorial="handleRestartTutorial"
         @toggle-year-axis="toggleYearAxis"
+        @zoom-to-source="handleZoomToSource"
       />
     </div>
 
