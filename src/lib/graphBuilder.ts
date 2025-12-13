@@ -9,6 +9,9 @@ import type {
   BuildProgress,
   ProgressCallback,
   PaperMetadata,
+  PrimaryTopic,
+  SDG,
+  CitationPercentile,
 } from '@/types'
 
 // Configuration
@@ -70,6 +73,29 @@ interface OpenAlexWork {
     }
   }
   abstract_inverted_index?: Record<string, number[]>
+  // Extended fields
+  fwci?: number
+  citation_normalized_percentile?: {
+    value?: number
+    is_in_top_1_percent?: boolean
+    is_in_top_10_percent?: boolean
+  }
+  primary_topic?: {
+    id?: string
+    display_name?: string
+    subfield?: { id?: string; display_name?: string }
+    field?: { id?: string; display_name?: string }
+    domain?: { id?: string; display_name?: string }
+  }
+  sustainable_development_goals?: Array<{
+    id?: string
+    display_name?: string
+    score?: number
+  }>
+  keywords?: Array<{
+    keyword?: string
+    score?: number
+  }>
 }
 
 function reconstructAbstract(invertedIndex: Record<string, number[]> | undefined): string {
@@ -101,6 +127,51 @@ function formatPaper(work: OpenAlexWork): RawPaper {
     return authorInfo
   })
 
+  // Parse primary topic hierarchy
+  let primaryTopic: PrimaryTopic | undefined
+  if (work.primary_topic?.display_name) {
+    primaryTopic = {
+      id: work.primary_topic.id || '',
+      name: work.primary_topic.display_name,
+      subfield: {
+        id: work.primary_topic.subfield?.id || '',
+        name: work.primary_topic.subfield?.display_name || '',
+      },
+      field: {
+        id: work.primary_topic.field?.id || '',
+        name: work.primary_topic.field?.display_name || '',
+      },
+      domain: {
+        id: work.primary_topic.domain?.id || '',
+        name: work.primary_topic.domain?.display_name || '',
+      },
+    }
+  }
+
+  // Parse citation percentile
+  let citationPercentile: CitationPercentile | undefined
+  if (work.citation_normalized_percentile?.value !== undefined) {
+    citationPercentile = {
+      value: work.citation_normalized_percentile.value,
+      isInTop1Percent: work.citation_normalized_percentile.is_in_top_1_percent || false,
+      isInTop10Percent: work.citation_normalized_percentile.is_in_top_10_percent || false,
+    }
+  }
+
+  // Parse SDGs
+  const sdgs: SDG[] | undefined = work.sustainable_development_goals
+    ?.filter((sdg) => sdg.display_name && sdg.score !== undefined)
+    .map((sdg) => ({
+      id: sdg.id || '',
+      name: sdg.display_name || '',
+      score: sdg.score || 0,
+    }))
+
+  // Parse keywords (just the strings)
+  const keywords: string[] | undefined = work.keywords
+    ?.filter((kw) => kw.keyword)
+    .map((kw) => kw.keyword || '')
+
   return {
     id: work.id,
     doi: work.doi,
@@ -117,6 +188,12 @@ function formatPaper(work: OpenAlexWork): RawPaper {
     openAccess: work.open_access?.is_oa,
     language: work.language,
     abstract: reconstructAbstract(work.abstract_inverted_index),
+    // Extended metadata
+    fwci: work.fwci,
+    citationPercentile,
+    primaryTopic,
+    sdgs: sdgs?.length ? sdgs : undefined,
+    keywords: keywords?.length ? keywords : undefined,
   }
 }
 
@@ -133,12 +210,33 @@ export async function fetchPaper(workId: string): Promise<RawPaper | null> {
   }
 }
 
+// Fields to fetch from OpenAlex API
+const OPENALEX_SELECT_FIELDS = [
+  'id',
+  'doi',
+  'title',
+  'authorships',
+  'publication_year',
+  'cited_by_count',
+  'referenced_works',
+  'type',
+  'language',
+  'open_access',
+  'primary_location',
+  'abstract_inverted_index',
+  // Extended metadata
+  'fwci',
+  'citation_normalized_percentile',
+  'primary_topic',
+  'sustainable_development_goals',
+  'keywords',
+].join(',')
+
 async function fetchBatch(batch: string[]): Promise<Record<string, RawPaper>> {
   const idFilter = batch.join('|')
   const params = new URLSearchParams({
     filter: `openalex:${idFilter}`,
-    select:
-      'id,doi,title,authorships,publication_year,cited_by_count,referenced_works,type,language,open_access,primary_location,abstract_inverted_index',
+    select: OPENALEX_SELECT_FIELDS,
     per_page: OPENALEX_MAX_PER_PAGE.toString(),
   })
 
@@ -689,6 +787,12 @@ export async function hydrateMetadata(
           openAccess: paper.openAccess,
           language: paper.language,
           abstract: paper.abstract,
+          // Extended metadata
+          fwci: paper.fwci,
+          citationPercentile: paper.citationPercentile,
+          primaryTopic: paper.primaryTopic,
+          sdgs: paper.sdgs,
+          keywords: paper.keywords,
         }
       }
       completedBatches++
@@ -784,6 +888,12 @@ export function preprocessGraph(graph: RawGraph): ProcessedGraph {
       openAccess: paper.openAccess,
       language: paper.language,
       abstract: paper.abstract,
+      // Extended metadata
+      fwci: paper.fwci,
+      citationPercentile: paper.citationPercentile,
+      primaryTopic: paper.primaryTopic,
+      sdgs: paper.sdgs,
+      keywords: paper.keywords,
     }
 
     nodes.push({

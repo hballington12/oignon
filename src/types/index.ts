@@ -9,6 +9,34 @@ export interface Author {
 
 // Paper / Node Types
 
+// Topic classification from OpenAlex
+export interface TopicClassification {
+  id: string
+  name: string
+}
+
+export interface PrimaryTopic {
+  id: string
+  name: string
+  subfield: TopicClassification
+  field: TopicClassification
+  domain: TopicClassification
+}
+
+// Sustainable Development Goal
+export interface SDG {
+  id: string
+  name: string
+  score: number
+}
+
+// Citation percentile info
+export interface CitationPercentile {
+  value: number
+  isInTop1Percent: boolean
+  isInTop10Percent: boolean
+}
+
 export interface PaperMetadata {
   title: string
   authors: string[]
@@ -25,6 +53,12 @@ export interface PaperMetadata {
   openAccess?: boolean
   language?: string
   abstract?: string
+  // Extended metadata
+  fwci?: number // Field-Weighted Citation Impact
+  citationPercentile?: CitationPercentile
+  primaryTopic?: PrimaryTopic
+  sdgs?: SDG[] // Sustainable Development Goals
+  keywords?: string[]
 }
 
 export interface GraphNode {
@@ -61,6 +95,12 @@ export interface RawPaper {
   openAccess?: boolean
   language?: string
   abstract?: string
+  // Extended metadata
+  fwci?: number
+  citationPercentile?: CitationPercentile
+  primaryTopic?: PrimaryTopic
+  sdgs?: SDG[]
+  keywords?: string[]
 }
 
 export interface GraphEdge {

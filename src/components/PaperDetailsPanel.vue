@@ -1,124 +1,33 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { useGraphStore } from '@/stores/graph'
-import { getDarkerBackgroundColorHex, COLORMAPS } from '@/lib/colormap'
+import { usePaperDetails } from '@/composables/usePaperDetails'
 import CollapsiblePanel from '@/components/CollapsiblePanel.vue'
 import ExpandableAbstract from '@/components/ExpandableAbstract.vue'
+import openAlexIcon from '@/assets/tricon-outlined.png'
 
-const store = useGraphStore()
-
-const abstractExpanded = ref(false)
-const detailsContent = ref<HTMLElement | null>(null)
-
-const backgroundColor = computed(() => {
-  const colormap = COLORMAPS[store.activeColormap]
-  return colormap ? getDarkerBackgroundColorHex(colormap) : '#0d0d17'
-})
-
-const displayNode = computed(() => {
-  // Priority: standalone paper > selected node > source node
-  if (store.standalonePaper) {
-    return store.standalonePaper
-  }
-  if (store.selectedNodes.length === 1) {
-    return store.selectedNodes[0] ?? null
-  }
-  return store.sourceNode ?? null
-})
-
-// Close abstract overlay and reset scroll when node changes
-watch(
-  () => displayNode.value?.id,
-  () => {
-    abstractExpanded.value = false
-    detailsContent.value?.scrollTo({ top: 0, behavior: 'smooth' })
-  },
-)
-
-const isStandalone = computed(() => store.standalonePaper !== null)
-
-const isSource = computed(() => {
-  return displayNode.value?.metadata.isSource ?? false
-})
-
-const isMetadataLoading = computed(() => {
-  return store.hydratingMetadata && displayNode.value?.metadata.title === 'Loading...'
-})
-
-const labelText = computed(() => {
-  if (isStandalone.value) {
-    return 'Bookmarked'
-  }
-  if (store.selectedNodes.length === 1) {
-    return isSource.value ? 'Source' : 'Selected'
-  }
-  return 'Source'
-})
-
-// In-graph citations (papers in our graph that cite this paper)
-const inGraphCitations = computed(() => {
-  return displayNode.value?.citedBy.length ?? 0
-})
-
-// Format work type for display
-const workType = computed(() => {
-  const type = displayNode.value?.metadata.type
-  if (!type) return null
-  // Capitalize and clean up
-  return type.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-})
-
-// Format source info
-const sourceInfo = computed(() => {
-  const meta = displayNode.value?.metadata
-  if (!meta?.sourceName) return null
-  const typeLabel =
-    meta.sourceType === 'journal'
-      ? 'Journal'
-      : meta.sourceType === 'conference'
-        ? 'Conference'
-        : meta.sourceType === 'repository'
-          ? 'Repository'
-          : 'Source'
-  return { type: typeLabel, name: meta.sourceName }
-})
-
-function openDoi(doi: string | undefined) {
-  if (doi) window.open(doi, '_blank')
-}
-
-function openOpenAlex(url: string | undefined) {
-  if (url) window.open(url, '_blank')
-}
-
-function handleBuild() {
-  if (displayNode.value) {
-    store.triggerBuild(displayNode.value.id)
-  }
-}
-
-const isBookmarked = computed(() => {
-  if (!displayNode.value) return false
-  return store.isBookmarked(displayNode.value.id)
-})
-
-function toggleBookmark() {
-  if (!displayNode.value) return
-  const node = displayNode.value
-  if (isBookmarked.value) {
-    store.removeBookmark(node.id)
-  } else {
-    store.addBookmark({
-      id: node.id,
-      title: node.metadata.title,
-      firstAuthor: node.metadata.authors?.[0],
-      year: node.order,
-      citations: node.metadata.citationCount,
-      doi: node.metadata.doi,
-      openAlexUrl: node.metadata.openAlexUrl,
-    })
-  }
-}
+const {
+  abstractExpanded,
+  detailsContent,
+  backgroundColor,
+  displayNode,
+  isStandalone,
+  isSource,
+  isMetadataLoading,
+  labelText,
+  inGraphCitations,
+  workType,
+  sourceInfo,
+  isBookmarked,
+  primaryTopic,
+  keywords,
+  sdgsFormatted,
+  store,
+  openDoi,
+  openOpenAlex,
+  handleBuild,
+  toggleBookmark,
+  expandAbstract,
+  collapseAbstract,
+} = usePaperDetails()
 </script>
 
 <template>
@@ -140,21 +49,90 @@ function toggleBookmark() {
             </div>
 
             <template v-else>
-              <!-- Header with label and badge -->
+              <!-- Header with label, badges, and action buttons -->
               <div class="panel-header-row">
                 <span class="panel-label">{{ labelText }}</span>
                 <span v-if="isSource" class="source-badge">SRC</span>
-                <button
-                  v-else
-                  class="build-badge"
-                  @click="handleBuild"
-                  title="Build graph from this paper"
-                >
-                  Build
-                </button>
                 <span v-if="displayNode.metadata.openAccess" class="oa-badge" title="Open Access"
                   >OA</span
                 >
+                <div class="header-actions">
+                  <button
+                    v-if="!isSource"
+                    class="header-action build"
+                    @click="handleBuild"
+                    title="Build graph from this paper"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path
+                        d="M15 12l-8.5 8.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L12 9"
+                      />
+                      <path d="M17.64 15L22 10.64" />
+                      <path
+                        d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25v-.86L16.01 4.6a5.56 5.56 0 0 0-3.94-1.64H9l.92.82A6.18 6.18 0 0 1 12 8.4v1.56l2 2h2.47l2.26 1.91"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    v-if="displayNode.metadata.doi"
+                    class="header-action"
+                    @click="openDoi(displayNode.metadata.doi)"
+                    title="Open DOI"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <circle cx="11" cy="11" r="8" />
+                      <path d="m21 21-4.3-4.3" />
+                    </svg>
+                  </button>
+                  <button
+                    v-if="displayNode.metadata.openAlexUrl"
+                    class="header-action"
+                    @click="openOpenAlex(displayNode.metadata.openAlexUrl)"
+                    title="Open in OpenAlex"
+                  >
+                    <img :src="openAlexIcon" alt="OpenAlex" width="14" height="14" />
+                  </button>
+                  <button
+                    class="header-action bookmark"
+                    :class="{ bookmarked: isBookmarked }"
+                    @click="toggleBookmark"
+                    :title="isBookmarked ? 'Remove bookmark' : 'Add bookmark'"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      :fill="isBookmarked ? 'currentColor' : 'none'"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
               <!-- Title -->
@@ -215,49 +193,35 @@ function toggleBookmark() {
                 :abstract="displayNode.metadata.abstract"
                 :truncate-length="300"
                 class="paper-abstract"
-                @expand="abstractExpanded = true"
+                @expand="expandAbstract"
               />
 
-              <!-- Links -->
-              <div class="paper-links">
-                <a
-                  v-if="displayNode.metadata.doi"
-                  class="paper-link"
-                  :href="displayNode.metadata.doi"
-                  target="_blank"
-                  @click.prevent="openDoi(displayNode.metadata.doi)"
-                >
-                  DOI
-                </a>
-                <a
-                  v-if="displayNode.metadata.openAlexUrl"
-                  class="paper-link"
-                  :href="displayNode.metadata.openAlexUrl"
-                  target="_blank"
-                  @click.prevent="openOpenAlex(displayNode.metadata.openAlexUrl)"
-                >
-                  OpenAlex
-                </a>
-                <button
-                  class="bookmark-btn"
-                  :class="{ bookmarked: isBookmarked }"
-                  @click="toggleBookmark"
-                  :title="isBookmarked ? 'Remove bookmark' : 'Add bookmark'"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    :fill="isBookmarked ? 'currentColor' : 'none'"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-                  </svg>
-                </button>
+              <!-- Classification -->
+              <div v-if="primaryTopic || sdgsFormatted || keywords" class="paper-stats">
+                <div v-if="primaryTopic?.name" class="stat-row text-row">
+                  <span class="stat-label">Topic</span>
+                  <span class="stat-value text-value">{{ primaryTopic.name }}</span>
+                </div>
+                <div v-if="primaryTopic?.subfield?.name" class="stat-row text-row">
+                  <span class="stat-label">Subfield</span>
+                  <span class="stat-value text-value">{{ primaryTopic.subfield.name }}</span>
+                </div>
+                <div v-if="primaryTopic?.field?.name" class="stat-row text-row">
+                  <span class="stat-label">Field</span>
+                  <span class="stat-value text-value">{{ primaryTopic.field.name }}</span>
+                </div>
+                <div v-if="primaryTopic?.domain?.name" class="stat-row text-row">
+                  <span class="stat-label">Domain</span>
+                  <span class="stat-value text-value">{{ primaryTopic.domain.name }}</span>
+                </div>
+                <div v-if="sdgsFormatted" class="stat-row text-row">
+                  <span class="stat-label">SDGs</span>
+                  <span class="stat-value text-value">{{ sdgsFormatted }}</span>
+                </div>
+                <div v-if="keywords" class="stat-row text-row">
+                  <span class="stat-label">Keywords</span>
+                  <span class="stat-value text-value">{{ keywords.join(', ') }}</span>
+                </div>
               </div>
             </template>
           </div>
@@ -268,10 +232,10 @@ function toggleBookmark() {
           <div
             v-if="abstractExpanded && displayNode?.metadata.abstract"
             class="abstract-overlay"
-            @click="abstractExpanded = false"
+            @click="collapseAbstract"
           >
             <div class="abstract-expanded" :style="{ backgroundColor }" @click.stop>
-              <button class="close-btn" @click="abstractExpanded = false" title="Close">
+              <button class="close-btn" @click="collapseAbstract" title="Close">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="14"
@@ -373,25 +337,6 @@ function toggleBookmark() {
   border-radius: 4px;
 }
 
-.build-badge {
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-primary);
-  background: var(--accent-blue);
-  padding: 3px 8px;
-  border-radius: 4px;
-  border: none;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.build-badge:hover {
-  background: var(--accent-blue-light);
-  transform: scale(1.05);
-}
-
 .oa-badge {
   font-size: var(--font-size-xs);
   font-weight: 600;
@@ -401,7 +346,63 @@ function toggleBookmark() {
   background: #f59e0b;
   padding: 2px 6px;
   border-radius: 4px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   margin-left: auto;
+}
+
+.header-action {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-item);
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.header-action:hover {
+  background: var(--bg-item-hover);
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
+}
+
+.header-action.build {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+}
+
+.header-action.build:hover {
+  background: var(--accent-blue-light);
+  border-color: var(--accent-blue-light);
+}
+
+.header-action.bookmark:hover {
+  border-color: #f97316;
+  color: #f97316;
+}
+
+.header-action.bookmark.bookmarked {
+  background: rgba(249, 115, 22, 0.15);
+  border-color: #f97316;
+  color: #f97316;
+}
+
+.header-action img {
+  opacity: 0.7;
+}
+
+.header-action:hover img {
+  opacity: 1;
 }
 
 .paper-title {
@@ -457,6 +458,11 @@ function toggleBookmark() {
   border-bottom: 1px solid var(--border-subtle);
 }
 
+.stat-row.text-row {
+  justify-content: flex-start;
+  gap: var(--spacing-sm);
+}
+
 .stat-label {
   font-size: var(--font-size-sm);
   color: var(--text-dim);
@@ -475,56 +481,13 @@ function toggleBookmark() {
   text-transform: capitalize;
 }
 
+.stat-value.text-value {
+  font-family: var(--font-family);
+  font-weight: 500;
+}
+
 .paper-abstract {
   margin-bottom: var(--spacing-md);
-}
-
-.paper-links {
-  display: flex;
-  gap: var(--spacing-sm);
-}
-
-.paper-link {
-  font-size: var(--font-size-sm);
-  color: var(--accent-link);
-  text-decoration: none;
-  padding: 4px 10px;
-  background: var(--accent-link-bg);
-  border-radius: 4px;
-  transition: all var(--transition-fast);
-  cursor: pointer;
-}
-
-.paper-link:hover {
-  background: var(--accent-link-bg-hover);
-  color: var(--text-primary);
-}
-
-.bookmark-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  color: var(--text-dim);
-  background: var(--bg-item);
-  border: 1px solid var(--border-light);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  margin-left: auto;
-}
-
-.bookmark-btn:hover {
-  background: var(--bg-item-hover);
-  border-color: #f97316;
-  color: #f97316;
-}
-
-.bookmark-btn.bookmarked {
-  background: rgba(249, 115, 22, 0.15);
-  border-color: #f97316;
-  color: #f97316;
 }
 
 /* Transition for content swap */
