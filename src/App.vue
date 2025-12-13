@@ -10,6 +10,7 @@ import LibraryPanel from '@/components/LibraryPanel.vue'
 import MobileTabBar from '@/components/MobileTabBar.vue'
 import MobileInfoPanel from '@/components/MobileInfoPanel.vue'
 import FloatingControls from '@/components/FloatingControls.vue'
+import TutorialOverlay from '@/components/TutorialOverlay.vue'
 import { TAB_HEIGHTS, TAB_BAR_HEIGHT, type TabId } from '@/types/mobile'
 import { useGraphStore } from '@/stores/graph'
 import { useMobile } from '@/composables/useMobile'
@@ -76,7 +77,28 @@ const graphCanvas = ref<InstanceType<typeof GraphCanvas> | null>(null)
 // Load cached graph on startup (before mount)
 store.loadFromCache()
 
+function normalizeDoi(input: string): string {
+  // Strip common DOI URL prefixes
+  return input
+    .replace(/^https?:\/\/doi\.org\//i, '')
+    .replace(/^https?:\/\/dx\.doi\.org\//i, '')
+    .trim()
+}
+
 async function handleSearch(query: string) {
+  const normalizedQuery = normalizeDoi(query)
+
+  // Check if we have this graph cached (by sourceId or DOI)
+  const cached = store.recentGraphs.find(
+    (g) =>
+      g.sourceId === normalizedQuery ||
+      (g.doi && normalizeDoi(g.doi).toLowerCase() === normalizedQuery.toLowerCase()),
+  )
+  if (cached) {
+    store.loadRecentGraph(cached.sourceId)
+    return
+  }
+
   store.setLoading(true, { message: 'Starting...', percent: 0, completed: 0, total: 1 })
 
   try {
@@ -117,6 +139,46 @@ function handleZoomIn() {
   graphCanvas.value?.zoomIn()
 }
 
+function handleZoomToSource() {
+  const sourceNode = store.sourceNode
+  if (sourceNode) {
+    store.selectNode(sourceNode.id)
+    graphCanvas.value?.zoomToNode(sourceNode.id)
+  }
+}
+
+function handleScrollDetailsToTop() {
+  const detailsPanel = document.getElementById('details-panel')
+  if (detailsPanel) {
+    detailsPanel.scrollTop = 0
+  }
+}
+
+function handleBookmarkSource() {
+  const sourceNode = store.sourceNode
+  if (sourceNode && !store.isBookmarked(sourceNode.id)) {
+    store.addBookmark({
+      id: sourceNode.id,
+      title: sourceNode.metadata.title || 'Untitled',
+      firstAuthor: sourceNode.metadata.authors?.[0],
+      year: sourceNode.order,
+      citations: sourceNode.metadata.citationCount || 0,
+      doi: sourceNode.metadata.doi,
+      openAlexUrl: sourceNode.metadata.openAlexUrl,
+    })
+  }
+}
+
+function handleTutorialCleanup() {
+  store.clearSelection()
+  activeTab.value = null
+  graphCanvas.value?.fitToView()
+}
+
+function handleRestartTutorial() {
+  store.resetTutorial()
+}
+
 function handleZoomOut() {
   graphCanvas.value?.zoomOut()
 }
@@ -137,6 +199,7 @@ function handleColormapChange(index: number) {
         @zoom-in="handleZoomIn"
         @zoom-out="handleZoomOut"
         @fit-to-view="handleFitToView"
+        @restart-tutorial="handleRestartTutorial"
       />
     </div>
 
@@ -173,6 +236,20 @@ function handleColormapChange(index: number) {
       />
       <MobileTabBar :active-tab="activeTab" @select="handleTabSelect" />
     </div>
+
+    <!-- Tutorial overlay -->
+    <TutorialOverlay
+      :visible="isMobile && store.tutorialStatus === 'pending'"
+      :active-tab="activeTab"
+      :skip-welcome="store.tutorialSkipWelcome"
+      @start="store.completeTutorial()"
+      @skip="store.skipTutorial()"
+      @zoom-to-source="handleZoomToSource"
+      @scroll-details-to-top="handleScrollDetailsToTop"
+      @bookmark-source="handleBookmarkSource"
+      @open-details-tab="activeTab = 'details'"
+      @cleanup="handleTutorialCleanup"
+    />
   </div>
 </template>
 

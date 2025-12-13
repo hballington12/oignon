@@ -34,6 +34,7 @@ function handleTap(id: TabId) {
     >
       <TabIcon :tab="tab.id" />
       <span class="tab-indicator" />
+      <span :id="`${tab.id}-tab`" class="tab-target" />
     </button>
   </div>
 </template>
@@ -86,5 +87,15 @@ function handleTap(id: TabId) {
 
 .tab-button.active .tab-indicator {
   transform: translateX(-50%) scaleX(1);
+}
+
+.tab-target {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 36px;
+  pointer-events: none;
 }
 </style>

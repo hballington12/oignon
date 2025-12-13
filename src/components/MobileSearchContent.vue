@@ -3,7 +3,7 @@ import { ref, watch, onMounted } from 'vue'
 import { useGraphStore } from '@/stores/graph'
 
 const store = useGraphStore()
-const query = ref('')
+const query = ref('10.1007/BF02834980')
 
 const emit = defineEmits<{
   search: [query: string]
@@ -32,8 +32,8 @@ function handleSubmit() {
 </script>
 
 <template>
-  <div class="search-content">
-    <form class="search-form" @submit.prevent="handleSubmit">
+  <div id="search-content" class="search-content">
+    <form id="search-form" class="search-form" @submit.prevent="handleSubmit">
       <input
         v-model="query"
         type="text"

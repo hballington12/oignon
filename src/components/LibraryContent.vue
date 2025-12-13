@@ -66,7 +66,7 @@ function openOpenAlex(url?: string) {
 </script>
 
 <template>
-  <div class="library-content">
+  <div id="library-panel" class="library-content">
     <!-- Tab switcher -->
     <div class="tab-switcher">
       <button

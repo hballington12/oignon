@@ -3,6 +3,7 @@ const emit = defineEmits<{
   zoomIn: []
   zoomOut: []
   fitToView: []
+  restartTutorial: []
 }>()
 </script>
 
@@ -56,6 +57,23 @@ const emit = defineEmits<{
       </svg>
     </button>
   </div>
+
+  <button class="help-btn" @click="emit('restartTutorial')" title="Tutorial">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  </button>
 </template>
 
 <style scoped>
@@ -95,6 +113,40 @@ const emit = defineEmits<{
 }
 
 .float-btn:active {
+  transform: scale(0.92);
+  background: var(--bg-item-active);
+}
+
+.help-btn {
+  position: absolute;
+  bottom: var(--spacing-lg);
+  left: var(--spacing-lg);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-panel-solid);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  -webkit-tap-highlight-color: transparent;
+  transition: all var(--transition-fast);
+  z-index: var(--z-floating);
+}
+
+@media (hover: hover) {
+  .help-btn:hover {
+    background: var(--bg-item-hover);
+    color: var(--text-primary);
+    border-color: var(--border-medium);
+  }
+}
+
+.help-btn:active {
   transform: scale(0.92);
   background: var(--bg-item-active);
 }

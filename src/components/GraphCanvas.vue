@@ -224,6 +224,26 @@ function zoomOut() {
   smoothZoom(targetScale, centerX, centerY)
 }
 
+function zoomToNode(nodeId: string, scale?: number) {
+  if (!renderer || !grid || !canvasContainer.value) return
+
+  const node = grid.nodes.get(nodeId)
+  if (!node) return
+
+  const rect = canvasContainer.value.getBoundingClientRect()
+  const centerX = rect.width / 2
+  const centerY = rect.height / 2
+
+  // Target scale: use provided scale or zoom in a bit from base
+  const targetScale = scale ?? clampScale(baseScale * 2)
+
+  // Calculate viewport position to center the node
+  const targetX = centerX - node.x * targetScale
+  const targetY = centerY - node.y * targetScale
+
+  smoothZoomTo(targetScale, targetX, targetY, 500)
+}
+
 function cleanup() {
   // Remove pointer event listeners
   if (canvasContainer.value) {
@@ -304,12 +324,13 @@ defineExpose({
   fitToView,
   zoomIn,
   zoomOut,
+  zoomToNode,
   setColormap: handleColormapChange,
 })
 </script>
 
 <template>
-  <div ref="canvasContainer" class="graph-canvas"></div>
+  <div id="graph-canvas" ref="canvasContainer" class="graph-canvas"></div>
 </template>
 
 <style scoped>

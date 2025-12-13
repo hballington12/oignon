@@ -30,7 +30,7 @@ const {
 
 <template>
   <div class="details-wrapper">
-    <div ref="detailsContent" class="details-content">
+    <div id="details-panel" ref="detailsContent" class="details-content">
       <!-- Empty state -->
       <div v-if="!displayNode" class="empty-state">
         <span>No paper selected</span>
@@ -55,7 +55,7 @@ const {
           >
             {{ badge.text }}
           </span>
-          <div class="header-actions">
+          <div id="details-actions" class="header-actions">
             <button
               v-if="!isSource"
               class="header-action build"

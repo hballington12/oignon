@@ -60,11 +60,15 @@ export const useGraphStore = defineStore('graph', () => {
   const standalonePaper = ref<VisualNode | null>(null)
   const loadingStandalone = ref(false)
 
+  // Tutorial state: 'pending' | 'completed' | 'skipped'
+  const tutorialStatus = ref<'pending' | 'completed' | 'skipped'>('pending')
+
   // Cache keys
   const CACHE_KEY = 'oignon_graph_cache'
   const BOOKMARKS_KEY = 'oignon_bookmarks'
   const RECENT_GRAPHS_KEY = 'oignon_recent_graphs'
   const COLORMAP_KEY = 'oignon_colormap'
+  const TUTORIAL_KEY = 'oignon_tutorial'
   const MAX_RECENT_GRAPHS = 10
 
   // Library state
@@ -90,6 +94,10 @@ export const useGraphStore = defineStore('graph', () => {
       if (colormap !== null) {
         activeColormap.value = parseInt(colormap, 10)
       }
+      const tutorial = localStorage.getItem(TUTORIAL_KEY)
+      if (tutorial !== null && !import.meta.env.VITE_FORCE_NEW_USER) {
+        tutorialStatus.value = tutorial as 'pending' | 'completed' | 'skipped'
+      }
     } catch (e) {
       console.warn('Failed to load library data:', e)
     }
@@ -110,6 +118,26 @@ export const useGraphStore = defineStore('graph', () => {
     } catch (e) {
       console.warn('Failed to save recent graphs:', e)
     }
+  }
+
+  function completeTutorial() {
+    tutorialStatus.value = 'completed'
+    tutorialSkipWelcome.value = false
+    localStorage.setItem(TUTORIAL_KEY, 'completed')
+  }
+
+  function skipTutorial() {
+    tutorialStatus.value = 'skipped'
+    tutorialSkipWelcome.value = false
+    localStorage.setItem(TUTORIAL_KEY, 'skipped')
+  }
+
+  const tutorialSkipWelcome = ref(false)
+
+  function resetTutorial() {
+    tutorialSkipWelcome.value = true
+    tutorialStatus.value = 'pending'
+    localStorage.removeItem(TUTORIAL_KEY)
   }
 
   // Initialize library on store creation
@@ -266,10 +294,13 @@ export const useGraphStore = defineStore('graph', () => {
 
   function triggerBuild(nodeId: string) {
     // Check if we already have this graph in the recent graphs cache
-    const cached = recentGraphs.value.find((g) => g.sourceId === nodeId)
+    // Match by sourceId or by DOI
+    const cached = recentGraphs.value.find(
+      (g) => g.sourceId === nodeId || (g.doi && g.doi === nodeId),
+    )
     if (cached) {
       // Load from cache instead of rebuilding
-      loadRecentGraph(nodeId)
+      loadRecentGraph(cached.sourceId)
       return
     }
 
@@ -648,5 +679,12 @@ export const useGraphStore = defineStore('graph', () => {
     loadRecentGraph,
     removeRecentGraph,
     clearRecentGraphs,
+
+    // Tutorial
+    tutorialStatus,
+    tutorialSkipWelcome,
+    completeTutorial,
+    skipTutorial,
+    resetTutorial,
   }
 })
