@@ -198,6 +198,12 @@ const panelHeight = computed(() => {
   return customHeights.value[props.activeTab] ?? TAB_HEIGHTS[props.activeTab]
 })
 
+function resetHeights() {
+  customHeights.value = {}
+}
+
+defineExpose({ resetHeights })
+
 const activeComponent = computed(() => {
   if (!props.activeTab) return null
   return contentComponents[props.activeTab] ?? null

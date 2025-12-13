@@ -92,6 +92,7 @@ const colormapStyles = computed(() => {
   }
 })
 const graphCanvas = ref<InstanceType<typeof GraphCanvas> | null>(null)
+const mobileInfoPanel = ref<InstanceType<typeof MobileInfoPanel> | null>(null)
 
 // Load cached graph on startup (before mount)
 store.loadFromCache()
@@ -192,6 +193,8 @@ function handleTutorialCleanup() {
   store.clearSelection()
   activeTab.value = null
   showYearAxis.value = true
+  customPanelHeights.value = {}
+  mobileInfoPanel.value?.resetHeights()
   graphCanvas.value?.fitToView()
 }
 
@@ -257,6 +260,7 @@ function handleColormapChange(index: number) {
       :style="{ height: bottomAreaHeight + 'px' }"
     >
       <MobileInfoPanel
+        ref="mobileInfoPanel"
         :active-tab="activeTab"
         @colormap-change="handleColormapChange"
         @search="handleSearch"
