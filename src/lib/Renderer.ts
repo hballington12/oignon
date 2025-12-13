@@ -940,10 +940,6 @@ export class Renderer {
     this.curveNodeMappings = []
     this.curveDataCache = []
     this.yearAxisData = []
-    this.yearAxisVisible = true
-    this.yearAxisContainer.x = 0
-    this.yearAxisContainer.alpha = 1
-    this.yearAxisContainer.visible = true
     this.selectedNodeIds.clear()
 
     if (this.batchedCurves) {
