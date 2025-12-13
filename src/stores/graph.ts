@@ -345,9 +345,11 @@ export const useGraphStore = defineStore('graph', () => {
     const fullNodes = Array.from(nodeMap.values())
     loadGraph({ nodes: fullNodes })
 
-    // Hydrate metadata in background
-    const nodeIds = fullNodes.map((n) => n.id)
-    runMetadataHydration(nodeIds)
+    // Hydrate metadata in background (skip in dev if flag is set)
+    if (import.meta.env.VITE_DEV_SKIP_HYDRATION !== 'true') {
+      const nodeIds = fullNodes.map((n) => n.id)
+      runMetadataHydration(nodeIds)
+    }
   }
 
   function saveToCache() {
