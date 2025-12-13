@@ -345,7 +345,9 @@ defineExpose({
 </script>
 
 <template>
-  <div id="graph-canvas" ref="canvasContainer" class="graph-canvas"></div>
+  <div id="graph-canvas" ref="canvasContainer" class="graph-canvas">
+    <div id="year-axis-target" class="year-axis-target"></div>
+  </div>
 </template>
 
 <style scoped>
@@ -354,5 +356,15 @@ defineExpose({
   height: 100%;
   overflow: hidden;
   touch-action: none;
+  position: relative;
+}
+
+.year-axis-target {
+  position: absolute;
+  left: 0;
+  top: 10%;
+  width: 60px;
+  height: 80%;
+  pointer-events: none;
 }
 </style>

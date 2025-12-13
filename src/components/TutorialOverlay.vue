@@ -101,6 +101,21 @@ const steps: DriveStep[] = [
     },
   },
   {
+    element: '#year-axis-target',
+    popover: {
+      side: 'right',
+      title: 'Year Axis',
+      description:
+        'Year axis labels show the year of publication. Years without publications in the graph are skipped.',
+      showButtons: ['next'],
+      nextBtnText: 'Next',
+      onNextClick: () => {
+        currentStepIndex.value++
+        driverInstance?.moveNext()
+      },
+    },
+  },
+  {
     element: '#details-panel',
     popover: {
       side: 'top',
@@ -210,8 +225,8 @@ watch(
       }, 100)
     }
 
-    // Step 7: waiting for library tab to open
-    if (currentStepIndex.value === 7 && newTab === 'library') {
+    // Step 8: waiting for library tab to open
+    if (currentStepIndex.value === 8 && newTab === 'library') {
       // Wait longer for panel animation to complete
       setTimeout(() => {
         advanceStep()
@@ -244,8 +259,8 @@ watch(
   (selectedNode) => {
     if (!driverInstance || !props.visible) return
 
-    // Step 9: waiting for user to select a different node
-    if (currentStepIndex.value === 9 && selectedNode) {
+    // Step 10: waiting for user to select a different node
+    if (currentStepIndex.value === 10 && selectedNode) {
       const sourceId = store.sourceNode?.id
       if (selectedNode.id !== sourceId) {
         emit('openDetailsTab')
