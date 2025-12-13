@@ -175,6 +175,11 @@ function handleTutorialCleanup() {
   graphCanvas.value?.fitToView()
 }
 
+function handleSkipTutorial() {
+  store.skipTutorial()
+  handleTutorialCleanup()
+}
+
 function handleRestartTutorial() {
   store.resetTutorial()
 }
@@ -243,7 +248,7 @@ function handleColormapChange(index: number) {
       :active-tab="activeTab"
       :skip-welcome="store.tutorialSkipWelcome"
       @start="store.completeTutorial()"
-      @skip="store.skipTutorial()"
+      @skip="handleSkipTutorial"
       @zoom-to-source="handleZoomToSource"
       @scroll-details-to-top="handleScrollDetailsToTop"
       @bookmark-source="handleBookmarkSource"
