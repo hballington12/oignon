@@ -4,6 +4,8 @@ import {
   Graphics,
   Sprite,
   Texture,
+  Text,
+  TextStyle,
   AlphaFilter,
   type ContainerChild,
 } from 'pixi.js'
@@ -95,6 +97,7 @@ export class Renderer {
   private curvesContainer: Container
   private selectionCurvesContainer: Container
   private nodesContainer: Container
+  private yearAxisContainer: Container
   private shadowTexture: Texture | null = null // Shadows - drawn under fill
   private fillTexture: Texture | null = null // Plain white circle, tinted per-node
   private overlayTexture: Texture | null = null // Stroke, highlights - untinted, on top
@@ -126,11 +129,15 @@ export class Renderer {
   private selectionCurveAnimationId = 0
   private curveDataCache: CurveData[] = [] // Store curve data for selection rebuilding
 
+  // Year axis state
+  private yearAxisData: { year: number; worldY: number }[] = []
+
   constructor() {
     this.app = new Application()
     this.curvesContainer = new Container()
     this.selectionCurvesContainer = new Container()
     this.nodesContainer = new Container()
+    this.yearAxisContainer = new Container()
   }
 
   async init(element: HTMLElement) {
@@ -165,6 +172,10 @@ export class Renderer {
     this.viewport.addChild(this.selectionCurvesContainer)
     this.viewport.addChild(this.nodesContainer)
     this.app.stage.addChild(this.viewport)
+
+    // Year axis overlay (outside viewport, on top)
+    this.app.stage.addChild(this.yearAxisContainer)
+    this.viewport.on('moved', () => this.updateYearAxis())
 
     // Apply colormap, bloom, and alpha filters to curves container
     this.colorMapFilter = new ColorMapFilter()
@@ -247,7 +258,7 @@ export class Renderer {
     this.textureRadius = r // Store for scaling calculations
   }
 
-  render(grid: Grid) {
+  render(grid: Grid, orderToRow?: Record<number, number>) {
     if (!this.initialized) return
 
     this.clear()
@@ -255,6 +266,7 @@ export class Renderer {
     this.renderNodes(grid)
     this.initParticles(grid)
     this.centerOnScreen(grid)
+    this.buildYearAxis(grid, orderToRow)
     // Nodes start invisible (scale=0, alpha=0)
     // Call animateNodesIn() to start the animation
   }
@@ -484,6 +496,7 @@ export class Renderer {
     this.viewport.x = x
     this.viewport.y = y
     this.viewport.scale.set(scale)
+    this.viewport.emit('moved', { viewport: this.viewport, type: 'animate' })
   }
 
   /** Pan viewport by delta */
@@ -918,12 +931,14 @@ export class Renderer {
     this.nodesContainer.removeChildren()
     this.curvesContainer.removeChildren()
     this.selectionCurvesContainer.removeChildren()
+    this.yearAxisContainer.removeChildren()
     this.nodeContainers.clear()
     this.nodeSpriteOrder = []
     this.nodeFinishedMap.clear()
     this.nodeAnimationComplete = false
     this.curveNodeMappings = []
     this.curveDataCache = []
+    this.yearAxisData = []
     this.selectedNodeIds.clear()
 
     if (this.batchedCurves) {
@@ -942,6 +957,104 @@ export class Renderer {
    */
   setParticleOptions(options: ParticleSystemOptions) {
     this.particleSystem?.setOptions(options)
+  }
+
+  /**
+   * Build year axis data from grid and orderToRow mapping
+   */
+  private buildYearAxis(grid: Grid, orderToRow?: Record<number, number>) {
+    this.yearAxisContainer.removeChildren()
+    this.yearAxisData = []
+
+    if (!orderToRow) return
+
+    // Build year -> worldY mapping
+    for (const [yearStr, row] of Object.entries(orderToRow)) {
+      const year = Number(yearStr)
+      if (isNaN(year)) continue
+      const worldY = GRID.padding + row * GRID.ySpacing
+      this.yearAxisData.push({ year, worldY })
+    }
+
+    // Sort by year descending (oldest at top)
+    this.yearAxisData.sort((a, b) => b.year - a.year)
+
+    // Create text labels and tick marks
+    const axisX = 12 // Left margin
+    const tickWidth = 8
+    const textStyle = new TextStyle({
+      fontSize: 11,
+      fill: 0xaaaaaa,
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      dropShadow: {
+        color: 0x000000,
+        blur: 3,
+        distance: 0,
+        alpha: 0.6,
+      },
+    })
+
+    // Create labels for each year
+    for (const { year } of this.yearAxisData) {
+      // Background rectangle
+      const bg = new Graphics()
+      bg.roundRect(-4, -8, 42, 16, 3)
+      bg.fill({ color: 0x000000, alpha: 0.4 })
+      bg.x = axisX + tickWidth + 6
+      bg.label = `bg-${year}`
+      this.yearAxisContainer.addChild(bg)
+
+      const label = new Text({ text: String(year), style: textStyle })
+      label.anchor.set(0, 0.5)
+      label.x = axisX + tickWidth + 6
+      label.label = `year-${year}` // For lookup during update
+      this.yearAxisContainer.addChild(label)
+
+      // Tick mark
+      const tick = new Graphics()
+      tick.moveTo(0, 0)
+      tick.lineTo(tickWidth, 0)
+      tick.stroke({ width: 1, color: 0x444444 })
+      tick.label = `tick-${year}`
+      tick.x = axisX
+      this.yearAxisContainer.addChild(tick)
+    }
+
+    this.updateYearAxis()
+  }
+
+  /**
+   * Update year axis positions based on viewport transform
+   */
+  private updateYearAxis() {
+    if (!this.viewport || this.yearAxisData.length === 0) return
+
+    const screenHeight = this.app.screen.height
+
+    for (const { year, worldY } of this.yearAxisData) {
+      // Transform world Y to screen Y
+      const screenY = this.viewport.toScreen(0, worldY).y
+
+      // Find label, tick, and background
+      const label = this.yearAxisContainer.getChildByLabel(`year-${year}`)
+      const tick = this.yearAxisContainer.getChildByLabel(`tick-${year}`)
+      const bg = this.yearAxisContainer.getChildByLabel(`bg-${year}`)
+
+      const visible = screenY > -20 && screenY < screenHeight + 20 ? 1 : 0
+
+      if (label) {
+        label.y = screenY
+        label.alpha = visible
+      }
+      if (tick) {
+        tick.y = screenY
+        tick.alpha = visible
+      }
+      if (bg) {
+        bg.y = screenY
+        bg.alpha = visible
+      }
+    }
   }
 
   destroy() {

@@ -137,7 +137,7 @@ function renderGraph() {
   // Set colormap, background, and tell renderer to draw
   renderer.setColormap(store.activeColormap)
   renderer.setBackgroundColor(getCanvasBackgroundColor(COLORMAPS[store.activeColormap]!))
-  renderer.render(grid)
+  renderer.render(grid, store.orderToRow)
 
   // Animate in: start both, curves wait for both source and target nodes
   renderer.animateNodesIn({ totalDuration: 4000, nodeDuration: 1000 })
