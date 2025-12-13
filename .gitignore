@@ -34,3 +34,6 @@ coverage
 
 # Vitest
 __screenshots__/
+analysis/build_dump.json
+analysis/fresh_dump.json
+analysis/__pycache__/
