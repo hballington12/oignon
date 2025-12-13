@@ -1044,6 +1044,15 @@ export class Renderer {
     if (visible === this.yearAxisVisible) return
 
     this.yearAxisVisible = visible
+
+    // If year axis hasn't been built yet, just update state (no animation)
+    if (this.yearAxisData.length === 0) {
+      this.yearAxisContainer.visible = visible
+      this.yearAxisContainer.alpha = visible ? 1 : 0
+      this.yearAxisContainer.x = visible ? 0 : -60
+      return
+    }
+
     this.yearAxisAnimationId++
     const animationId = this.yearAxisAnimationId
 
