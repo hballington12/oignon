@@ -22,7 +22,15 @@ const { isMobile } = useMobile()
 const activeTab = ref<TabId | null>(null)
 const customPanelHeights = ref<Partial<Record<TabId, number>>>({})
 const isPanelDragging = ref(false)
-const showYearAxis = ref(true)
+
+// Year axis visibility (persisted)
+const YEAR_AXIS_KEY = 'oignon:showYearAxis'
+const showYearAxis = ref(localStorage.getItem(YEAR_AXIS_KEY) !== 'false')
+
+function toggleYearAxis() {
+  showYearAxis.value = !showYearAxis.value
+  localStorage.setItem(YEAR_AXIS_KEY, String(showYearAxis.value))
+}
 
 function handleTabSelect(tab: TabId) {
   // Toggle off if tapping the same tab
@@ -207,7 +215,7 @@ function handleColormapChange(index: number) {
         @zoom-out="handleZoomOut"
         @fit-to-view="handleFitToView"
         @restart-tutorial="handleRestartTutorial"
-        @toggle-year-axis="showYearAxis = !showYearAxis"
+        @toggle-year-axis="toggleYearAxis"
       />
     </div>
 
