@@ -1026,6 +1026,11 @@ export class Renderer {
     }
 
     this.updateYearAxis()
+
+    // Apply current visibility state immediately (no animation)
+    this.yearAxisContainer.visible = this.yearAxisVisible
+    this.yearAxisContainer.alpha = this.yearAxisVisible ? 1 : 0
+    this.yearAxisContainer.x = this.yearAxisVisible ? 0 : -60
   }
 
   // Year axis animation state

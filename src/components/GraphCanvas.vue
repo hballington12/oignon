@@ -138,9 +138,10 @@ function renderGraph() {
     store.setNode(id, node)
   }
 
-  // Set colormap, background, and tell renderer to draw
+  // Set colormap, background, year axis visibility, and tell renderer to draw
   renderer.setColormap(store.activeColormap)
   renderer.setBackgroundColor(getCanvasBackgroundColor(COLORMAPS[store.activeColormap]!))
+  renderer.setYearAxisVisible(props.showYearAxis ?? true)
   renderer.render(grid, store.orderToRow)
 
   // Animate in: start both, curves wait for both source and target nodes
@@ -313,11 +314,6 @@ onMounted(async () => {
   await init()
   if (store.graph) {
     renderGraph()
-  }
-
-  // Apply initial year axis visibility
-  if (renderer) {
-    renderer.setYearAxisVisible(props.showYearAxis ?? true)
   }
 
   // Cleanup on page refresh/close (onUnmounted doesn't fire fast enough)
