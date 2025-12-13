@@ -362,9 +362,9 @@ defineExpose({
 .year-axis-target {
   position: absolute;
   left: 0;
-  top: 10%;
-  width: 60px;
-  height: 80%;
+  top: 0;
+  width: 80px;
+  height: 100%;
   pointer-events: none;
 }
 </style>
