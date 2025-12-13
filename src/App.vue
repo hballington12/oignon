@@ -165,6 +165,7 @@ function handleColormapChange(index: number) {
         @height-change="handlePanelHeightChange"
         @drag-start="handlePanelDragStart"
         @drag-end="handlePanelDragEnd"
+        @collapse="activeTab = null"
       />
       <MobileTabBar :active-tab="activeTab" @select="handleTabSelect" />
     </div>

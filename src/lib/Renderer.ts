@@ -726,6 +726,13 @@ export class Renderer {
   }
 
   /**
+   * Set the canvas background color
+   */
+  setBackgroundColor(color: number) {
+    this.app.renderer.background.color = color
+  }
+
+  /**
    * Update node sprite tints from their current fillColor values
    * Call this after Grid.updateNodeColors() to sync the visuals
    */

@@ -89,6 +89,13 @@ export function getBackgroundColor(colormap: Colormap): number {
 }
 
 /**
+ * Get the canvas background color for a colormap (darker, at t=0.05)
+ */
+export function getCanvasBackgroundColor(colormap: Colormap): number {
+  return getColormapColor(0.05, colormap.stops)
+}
+
+/**
  * Get the background color as a CSS hex string
  */
 export function getBackgroundColorHex(colormap: Colormap): string {

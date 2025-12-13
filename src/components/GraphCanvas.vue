@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useGraphStore } from '@/stores/graph'
 import { Grid } from '@/lib/Grid'
 import { Renderer } from '@/lib/Renderer'
+import { COLORMAPS, getCanvasBackgroundColor } from '@/lib/colormap'
 
 const store = useGraphStore()
 const canvasContainer = ref<HTMLDivElement | null>(null)
@@ -133,8 +134,9 @@ function renderGraph() {
     store.setNode(id, node)
   }
 
-  // Set colormap and tell renderer to draw
+  // Set colormap, background, and tell renderer to draw
   renderer.setColormap(store.activeColormap)
+  renderer.setBackgroundColor(getCanvasBackgroundColor(COLORMAPS[store.activeColormap]!))
   renderer.render(grid)
 
   // Animate in: start both, curves wait for both source and target nodes
@@ -294,6 +296,7 @@ function handleColormapChange(index: number) {
   grid.updateNodeColors()
   renderer.setColormap(index)
   renderer.updateNodeColors(grid)
+  renderer.setBackgroundColor(getCanvasBackgroundColor(COLORMAPS[index]!))
 }
 
 // Expose for parent components
