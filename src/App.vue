@@ -181,6 +181,7 @@ function handleBookmarkSource() {
 function handleTutorialCleanup() {
   store.clearSelection()
   activeTab.value = null
+  showYearAxis.value = true
   graphCanvas.value?.fitToView()
 }
 
