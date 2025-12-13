@@ -18,12 +18,10 @@ let baseScale = 1
 const MIN_SCALE_FACTOR = 0.5
 const MAX_SCALE_FACTOR = 4
 
-// Pinch gesture state (raw touch handling)
+// Pinch gesture state (raw touch handling with frame-to-frame deltas)
 let isPinching = false
-let initialTouches: { x1: number; y1: number; x2: number; y2: number } | null = null
-let initialDistance = 0
-let initialMidpoint = { x: 0, y: 0 }
-let initialViewport = { x: 0, y: 0, scale: 1 }
+let lastDistance = 0
+let lastMidpoint = { x: 0, y: 0 }
 
 // Drag threshold detection
 const DRAG_THRESHOLD = 5
@@ -46,7 +44,7 @@ function getTouchMidpoint(t1: Touch, t2: Touch): { x: number; y: number } {
   }
 }
 
-// Raw touch event handlers for pinch-to-zoom
+// Raw touch event handlers for pinch-to-zoom (frame-to-frame deltas)
 function onTouchStart(e: TouchEvent) {
   if (e.touches.length === 2) {
     e.preventDefault()
@@ -55,23 +53,13 @@ function onTouchStart(e: TouchEvent) {
     const t1 = e.touches[0]!
     const t2 = e.touches[1]!
 
-    initialTouches = {
-      x1: t1.clientX,
-      y1: t1.clientY,
-      x2: t2.clientX,
-      y2: t2.clientY,
-    }
-    initialDistance = getTouchDistance(t1, t2)
-    initialMidpoint = getTouchMidpoint(t1, t2)
-
-    if (renderer) {
-      initialViewport = renderer.getViewport()
-    }
+    lastDistance = getTouchDistance(t1, t2)
+    lastMidpoint = getTouchMidpoint(t1, t2)
   }
 }
 
 function onTouchMove(e: TouchEvent) {
-  if (!isPinching || !initialTouches || e.touches.length !== 2) return
+  if (!isPinching || e.touches.length !== 2) return
   if (!renderer) return
 
   e.preventDefault()
@@ -83,37 +71,44 @@ function onTouchMove(e: TouchEvent) {
   const currentDistance = getTouchDistance(t1, t2)
   const currentMidpoint = getTouchMidpoint(t1, t2)
 
-  // Scale is ratio of current to initial distance
-  const scaleRatio = currentDistance / initialDistance
-  const newScale = clampScale(initialViewport.scale * scaleRatio)
+  // Frame-to-frame scale ratio (not from gesture start)
+  const scaleRatio = currentDistance / lastDistance
 
-  // Translation from midpoint movement
-  const dx = currentMidpoint.x - initialMidpoint.x
-  const dy = currentMidpoint.y - initialMidpoint.y
+  // Frame-to-frame midpoint delta for panning
+  const dx = currentMidpoint.x - lastMidpoint.x
+  const dy = currentMidpoint.y - lastMidpoint.y
 
-  // Get rect for screen-to-local conversion
+  // Get current viewport
+  const viewport = renderer.getViewport()
+
+  // Apply incremental scale around current midpoint
   const rect = canvasContainer.value?.getBoundingClientRect()
   if (!rect) return
 
-  // Convert initial midpoint to local coordinates
-  const localMidX = initialMidpoint.x - rect.left
-  const localMidY = initialMidpoint.y - rect.top
+  const localMidX = currentMidpoint.x - rect.left
+  const localMidY = currentMidpoint.y - rect.top
 
-  // Calculate world point at initial midpoint
-  const worldX = (localMidX - initialViewport.x) / initialViewport.scale
-  const worldY = (localMidY - initialViewport.y) / initialViewport.scale
+  // Calculate world point at current midpoint
+  const worldX = (localMidX - viewport.x) / viewport.scale
+  const worldY = (localMidY - viewport.y) / viewport.scale
 
-  // New viewport position: keep world point under current midpoint + translation
-  const newX = currentMidpoint.x - rect.left - worldX * newScale
-  const newY = currentMidpoint.y - rect.top - worldY * newScale
+  // New scale (clamped)
+  const newScale = clampScale(viewport.scale * scaleRatio)
+
+  // New position: keep world point under midpoint + apply pan delta
+  const newX = localMidX - worldX * newScale + dx
+  const newY = localMidY - worldY * newScale + dy
 
   renderer.setViewport(newX, newY, newScale)
+
+  // Update last values for next frame
+  lastDistance = currentDistance
+  lastMidpoint = currentMidpoint
 }
 
 function onTouchEnd(e: TouchEvent) {
   if (e.touches.length < 2) {
     isPinching = false
-    initialTouches = null
   }
 }
 
