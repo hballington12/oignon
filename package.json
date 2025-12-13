@@ -19,6 +19,7 @@
     "@vueuse/gesture": "^2.0.0",
     "pinia": "^3.0.4",
     "pixi-filters": "^6.1.5",
+    "pixi-viewport": "^6.0.3",
     "pixi.js": "^8.14.3",
     "vue": "^3.5.25"
   },

@@ -7,6 +7,7 @@ import {
   AlphaFilter,
   type ContainerChild,
 } from 'pixi.js'
+import { Viewport } from 'pixi-viewport'
 import { BloomFilter } from 'pixi-filters'
 import type { Grid } from './Grid'
 import type { VisualNode } from '@/types'
@@ -83,7 +84,7 @@ interface CurveNodeMapping {
 
 export class Renderer {
   private app: Application
-  private container: Container
+  private viewport: Viewport | null = null
   private curvesContainer: Container
   private selectionCurvesContainer: Container
   private nodesContainer: Container
@@ -120,7 +121,6 @@ export class Renderer {
 
   constructor() {
     this.app = new Application()
-    this.container = new Container()
     this.curvesContainer = new Container()
     this.selectionCurvesContainer = new Container()
     this.nodesContainer = new Container()
@@ -137,11 +137,23 @@ export class Renderer {
 
     element.appendChild(this.app.canvas)
 
+    // Create viewport with pixi-viewport for smooth pinch/zoom/pan
+    this.viewport = new Viewport({
+      screenWidth: this.app.screen.width,
+      screenHeight: this.app.screen.height,
+      worldWidth: 1000, // Will be updated when graph is rendered
+      worldHeight: 1000,
+      events: this.app.renderer.events,
+    })
+
+    // Enable drag, pinch, wheel gestures
+    this.viewport.drag().pinch().wheel().decelerate()
+
     // Layer order: curves -> selection curves -> nodes
-    this.container.addChild(this.curvesContainer)
-    this.container.addChild(this.selectionCurvesContainer)
-    this.container.addChild(this.nodesContainer)
-    this.app.stage.addChild(this.container)
+    this.viewport.addChild(this.curvesContainer)
+    this.viewport.addChild(this.selectionCurvesContainer)
+    this.viewport.addChild(this.nodesContainer)
+    this.app.stage.addChild(this.viewport)
 
     // Apply colormap, bloom, and alpha filters to curves container
     this.colorMapFilter = new ColorMapFilter()
@@ -371,9 +383,10 @@ export class Renderer {
   }
 
   private centerOnScreen(grid: Grid) {
+    if (!this.viewport) return
     // Just center without scaling (used during initial render)
-    this.container.x = (this.app.screen.width - grid.canvasWidth) / 2
-    this.container.y = (this.app.screen.height - grid.canvasHeight) / 2
+    this.viewport.x = (this.app.screen.width - grid.canvasWidth) / 2
+    this.viewport.y = (this.app.screen.height - grid.canvasHeight) / 2
   }
 
   /**
@@ -398,11 +411,13 @@ export class Renderer {
    * Returns the calculated scale for use as baseScale
    */
   fitToView(grid: Grid, padding = 20): number {
+    if (!this.viewport) return 1
+
     const { scale, x, y } = this.calculateFitToView(grid, padding)
 
-    this.container.scale.set(scale)
-    this.container.x = x
-    this.container.y = y
+    this.viewport.scale.set(scale)
+    this.viewport.x = x
+    this.viewport.y = y
 
     return scale
   }
@@ -411,42 +426,47 @@ export class Renderer {
 
   /** Get current viewport state */
   getViewport() {
+    if (!this.viewport) return { x: 0, y: 0, scale: 1 }
     return {
-      x: this.container.x,
-      y: this.container.y,
-      scale: this.container.scale.x,
+      x: this.viewport.x,
+      y: this.viewport.y,
+      scale: this.viewport.scale.x,
     }
   }
 
   /** Set viewport position and scale directly */
   setViewport(x: number, y: number, scale: number) {
-    this.container.x = x
-    this.container.y = y
-    this.container.scale.set(scale)
+    if (!this.viewport) return
+    this.viewport.x = x
+    this.viewport.y = y
+    this.viewport.scale.set(scale)
   }
 
   /** Pan viewport by delta */
   pan(dx: number, dy: number) {
-    this.container.x += dx
-    this.container.y += dy
+    if (!this.viewport) return
+    this.viewport.x += dx
+    this.viewport.y += dy
   }
 
   /** Zoom toward a point (in screen coordinates) */
   zoomAt(newScale: number, screenX: number, screenY: number) {
-    const oldScale = this.container.scale.x
-    const worldX = (screenX - this.container.x) / oldScale
-    const worldY = (screenY - this.container.y) / oldScale
+    if (!this.viewport) return
+    const oldScale = this.viewport.scale.x
+    const worldX = (screenX - this.viewport.x) / oldScale
+    const worldY = (screenY - this.viewport.y) / oldScale
 
-    this.container.scale.set(newScale)
-    this.container.x = screenX - worldX * newScale
-    this.container.y = screenY - worldY * newScale
+    this.viewport.scale.set(newScale)
+    this.viewport.x = screenX - worldX * newScale
+    this.viewport.y = screenY - worldY * newScale
   }
 
   /** Hit test: find node at screen coordinates */
   hitTestNode(screenX: number, screenY: number, grid: Grid): string | null {
-    const scale = this.container.scale.x
-    const worldX = (screenX - this.container.x) / scale
-    const worldY = (screenY - this.container.y) / scale
+    if (!this.viewport) return null
+    const scale = this.viewport.scale.x
+    const worldX = (screenX - this.viewport.x) / scale
+    const worldY = (screenY - this.viewport.y) / scale
 
     // Hit radius based on grid cell size, not node visual radius
     const hitRadius = (0.9 * Math.min(GRID.xSpacing, GRID.ySpacing)) / 2

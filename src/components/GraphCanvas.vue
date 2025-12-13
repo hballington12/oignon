@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { useDrag, useWheel, useMove } from '@vueuse/gesture'
 import { useGraphStore } from '@/stores/graph'
 import { Grid } from '@/lib/Grid'
 import { Renderer } from '@/lib/Renderer'
@@ -14,209 +13,65 @@ let resizeObserver: ResizeObserver | null = null
 let resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null
 let baseScale = 1
 
-// Viewport limits
+// Viewport limits (used for zoom buttons)
 const MIN_SCALE_FACTOR = 0.5
 const MAX_SCALE_FACTOR = 4
 
-// Pinch gesture state (raw touch handling with frame-to-frame deltas)
-let isPinching = false
-let lastDistance = 0
-let lastMidpoint = { x: 0, y: 0 }
+// Tap detection state
+let pointerDownTime = 0
+let pointerDownX = 0
+let pointerDownY = 0
+const TAP_THRESHOLD = 10 // max movement for a tap
+const TAP_TIMEOUT = 300 // max time for a tap (ms)
 
-// Drag threshold detection
-const DRAG_THRESHOLD = 5
-let dragStartX = 0
-let dragStartY = 0
-let isDragging = false
-let hasMoved = false
+// --- Event Handlers ---
 
-// --- Gestures ---
-
-// Pinch gesture helpers
-function getTouchDistance(t1: Touch, t2: Touch): number {
-  return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY)
+function onPointerDown(e: PointerEvent) {
+  pointerDownTime = performance.now()
+  pointerDownX = e.clientX
+  pointerDownY = e.clientY
 }
 
-function getTouchMidpoint(t1: Touch, t2: Touch): { x: number; y: number } {
-  return {
-    x: (t1.clientX + t2.clientX) / 2,
-    y: (t1.clientY + t2.clientY) / 2,
+function onPointerUp(e: PointerEvent) {
+  if (!renderer || !grid) return
+
+  const elapsed = performance.now() - pointerDownTime
+  const dx = e.clientX - pointerDownX
+  const dy = e.clientY - pointerDownY
+  const distance = Math.sqrt(dx * dx + dy * dy)
+
+  // Check if this was a tap (short time, small movement)
+  if (elapsed < TAP_TIMEOUT && distance < TAP_THRESHOLD) {
+    const rect = canvasContainer.value?.getBoundingClientRect()
+    if (!rect) return
+
+    const screenX = e.clientX - rect.left
+    const screenY = e.clientY - rect.top
+
+    const nodeId = renderer.hitTestNode(screenX, screenY, grid)
+    if (nodeId) {
+      store.selectNode(nodeId)
+    } else {
+      store.clearSelection()
+    }
   }
 }
 
-// Raw touch event handlers for pinch-to-zoom (frame-to-frame deltas)
-function onTouchStart(e: TouchEvent) {
-  if (e.touches.length === 2) {
-    e.preventDefault()
-    isPinching = true
+function onPointerMove(e: PointerEvent) {
+  if (!renderer || !grid) return
 
-    const t1 = e.touches[0]!
-    const t2 = e.touches[1]!
+  // Skip if not a mouse (touch hover doesn't make sense)
+  if (e.pointerType !== 'mouse') return
 
-    lastDistance = getTouchDistance(t1, t2)
-    lastMidpoint = getTouchMidpoint(t1, t2)
-  }
-}
-
-function onTouchMove(e: TouchEvent) {
-  if (!isPinching || e.touches.length !== 2) return
-  if (!renderer) return
-
-  e.preventDefault()
-
-  const t1 = e.touches[0]!
-  const t2 = e.touches[1]!
-
-  // Calculate current distance and midpoint
-  const currentDistance = getTouchDistance(t1, t2)
-  const currentMidpoint = getTouchMidpoint(t1, t2)
-
-  // Frame-to-frame scale ratio (not from gesture start)
-  const scaleRatio = currentDistance / lastDistance
-
-  // Frame-to-frame midpoint delta for panning
-  const dx = currentMidpoint.x - lastMidpoint.x
-  const dy = currentMidpoint.y - lastMidpoint.y
-
-  // Get current viewport
-  const viewport = renderer.getViewport()
-
-  // Apply incremental scale around current midpoint
   const rect = canvasContainer.value?.getBoundingClientRect()
   if (!rect) return
 
-  const localMidX = currentMidpoint.x - rect.left
-  const localMidY = currentMidpoint.y - rect.top
+  const screenX = e.clientX - rect.left
+  const screenY = e.clientY - rect.top
 
-  // Calculate world point at current midpoint
-  const worldX = (localMidX - viewport.x) / viewport.scale
-  const worldY = (localMidY - viewport.y) / viewport.scale
-
-  // New scale (clamped)
-  const newScale = clampScale(viewport.scale * scaleRatio)
-
-  // New position: keep world point under midpoint + apply pan delta
-  const newX = localMidX - worldX * newScale + dx
-  const newY = localMidY - worldY * newScale + dy
-
-  renderer.setViewport(newX, newY, newScale)
-
-  // Update last values for next frame
-  lastDistance = currentDistance
-  lastMidpoint = currentMidpoint
+  const nodeId = renderer.hitTestNode(screenX, screenY, grid)
+  store.setHoveredNode(nodeId)
 }
-
-function onTouchEnd(e: TouchEvent) {
-  if (e.touches.length < 2) {
-    isPinching = false
-  }
-}
-
-// Wheel zoom
-useWheel(
-  ({ delta: [, dy], event }) => {
-    if (!renderer || isPinching) return
-
-    const rect = canvasContainer.value?.getBoundingClientRect()
-    if (!rect) return
-
-    const mouseX = event.clientX - rect.left
-    const mouseY = event.clientY - rect.top
-
-    const currentScale = renderer.getViewport().scale
-    const zoomFactor = dy > 0 ? 0.9 : 1.1
-    const newScale = clampScale(currentScale * zoomFactor)
-
-    renderer.zoomAt(newScale, mouseX, mouseY)
-  },
-  {
-    domTarget: canvasContainer,
-    eventOptions: { passive: false },
-  },
-)
-
-// Drag to pan + tap detection
-let lastDragX = 0
-let lastDragY = 0
-
-useDrag(
-  ({ xy: [x, y], initial: [ix, iy], first, last, movement: [mx, my] }) => {
-    if (!renderer || isPinching) return
-
-    const rect = canvasContainer.value?.getBoundingClientRect()
-    if (!rect) return
-
-    if (first) {
-      dragStartX = ix
-      dragStartY = iy
-      lastDragX = x
-      lastDragY = y
-      isDragging = false
-      hasMoved = false
-    }
-
-    // Check if we've exceeded drag threshold
-    const distance = Math.sqrt(mx * mx + my * my)
-    if (distance > DRAG_THRESHOLD) {
-      hasMoved = true
-      isDragging = true
-    }
-
-    // Pan while dragging (use delta from last frame)
-    if (isDragging) {
-      const dx = x - lastDragX
-      const dy = y - lastDragY
-      renderer.pan(dx, dy)
-    }
-
-    lastDragX = x
-    lastDragY = y
-
-    // Handle tap (click without drag)
-    if (last) {
-      if (!hasMoved && grid) {
-        const screenX = ix - rect.left
-        const screenY = iy - rect.top
-
-        const nodeId = renderer.hitTestNode(screenX, screenY, grid)
-        if (nodeId) {
-          store.selectNode(nodeId)
-        } else {
-          store.clearSelection()
-        }
-      }
-
-      isDragging = false
-      hasMoved = false
-    }
-  },
-  {
-    domTarget: canvasContainer,
-    eventOptions: { passive: false },
-  },
-)
-
-// Mouse move for hover detection (desktop only)
-useMove(
-  ({ xy: [x, y], event }) => {
-    if (!renderer || !grid || isPinching || isDragging) return
-
-    // Skip touch events for hover
-    if (event instanceof TouchEvent) return
-
-    const rect = canvasContainer.value?.getBoundingClientRect()
-    if (!rect) return
-
-    const screenX = x - rect.left
-    const screenY = y - rect.top
-
-    const nodeId = renderer.hitTestNode(screenX, screenY, grid)
-    store.setHoveredNode(nodeId)
-  },
-  {
-    domTarget: canvasContainer,
-  },
-)
 
 // --- Helpers ---
 
@@ -234,11 +89,10 @@ async function init() {
   renderer = new Renderer()
   await renderer.init(canvasContainer.value)
 
-  // Attach raw touch event listeners for pinch gesture
-  canvasContainer.value.addEventListener('touchstart', onTouchStart, { passive: false })
-  canvasContainer.value.addEventListener('touchmove', onTouchMove, { passive: false })
-  canvasContainer.value.addEventListener('touchend', onTouchEnd)
-  canvasContainer.value.addEventListener('touchcancel', onTouchEnd)
+  // Attach pointer event listeners for tap detection and hover
+  canvasContainer.value.addEventListener('pointerdown', onPointerDown)
+  canvasContainer.value.addEventListener('pointerup', onPointerUp)
+  canvasContainer.value.addEventListener('pointermove', onPointerMove)
 
   // Handle resize - PixiJS auto-resizes via resizeTo, no need to refit view
   resizeObserver = new ResizeObserver(() => {
@@ -369,12 +223,11 @@ function zoomOut() {
 }
 
 function cleanup() {
-  // Remove touch event listeners
+  // Remove pointer event listeners
   if (canvasContainer.value) {
-    canvasContainer.value.removeEventListener('touchstart', onTouchStart)
-    canvasContainer.value.removeEventListener('touchmove', onTouchMove)
-    canvasContainer.value.removeEventListener('touchend', onTouchEnd)
-    canvasContainer.value.removeEventListener('touchcancel', onTouchEnd)
+    canvasContainer.value.removeEventListener('pointerdown', onPointerDown)
+    canvasContainer.value.removeEventListener('pointerup', onPointerUp)
+    canvasContainer.value.removeEventListener('pointermove', onPointerMove)
   }
 
   if (resizeObserver) {
