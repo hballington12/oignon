@@ -419,7 +419,7 @@ function startTour() {
 
 .skip-tutorial-btn {
   position: fixed;
-  top: var(--spacing-lg);
+  bottom: calc(var(--spacing-lg) + env(safe-area-inset-bottom));
   right: var(--spacing-lg);
   z-index: 1000001;
   background: var(--bg-panel-solid);
