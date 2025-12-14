@@ -24,7 +24,7 @@ import { AnimationRunner, animateProgress } from './AnimationRunner'
 import { easeInOutCubic, easeOutElastic, easeOutQuad } from './easing'
 
 // Viewport zoom limits (relative to base/fit scale)
-const MIN_SCALE_FACTOR = 0.75
+const MIN_SCALE_FACTOR = 1
 const MAX_SCALE_FACTOR = 10
 
 export interface NodeAnimationOptions {
