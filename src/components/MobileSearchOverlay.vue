@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, nextTick, computed } from 'vue'
+import { ref, watch, nextTick, computed, onMounted, onUnmounted } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { fetchAutocomplete, type AutocompleteResult } from '@/lib/graph/openAlexApi'
 import { useGraphStore } from '@/stores/graph'
@@ -8,6 +8,7 @@ const store = useGraphStore()
 
 const props = defineProps<{
   open: boolean
+  colormapColor?: string
 }>()
 
 const emit = defineEmits<{
@@ -23,6 +24,11 @@ const selectedPaper = ref<AutocompleteResult | null>(null)
 
 // Show building screen when store is loading
 const isBuilding = computed(() => store.loading)
+
+// Pass colormap color as CSS variable for Teleport
+const overlayStyle = computed(() => ({
+  '--bg-colormap': props.colormapColor || '#000000',
+}))
 const buildProgress = computed(() => store.loadingProgress)
 
 // Focus input when overlay opens
@@ -48,6 +54,21 @@ watch(
     }
   },
 )
+
+// Handle Escape key to close overlay
+function onKeyDown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && props.open && !isBuilding.value) {
+    emit('close')
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', onKeyDown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKeyDown)
+})
 
 const searchPapers = useDebounceFn(async (q: string) => {
   if (!q || q.length === 0) {
@@ -105,7 +126,7 @@ function formatCitations(count: number): string {
 <template>
   <Teleport to="body">
     <Transition name="overlay">
-      <div v-if="open" class="search-overlay" @click="onBackdropClick">
+      <div v-if="open" class="search-overlay" :style="overlayStyle" @click="onBackdropClick">
         <!-- Building state -->
         <div v-if="isBuilding" class="building-container">
           <div class="building-card">
@@ -159,7 +180,7 @@ function formatCitations(count: number): string {
           <!-- Results list -->
           <div class="results-container">
             <!-- Loading state -->
-            <div v-if="loading && results.length === 0" class="results-loading">
+            <div v-if="loading && results.length === 0" class="results-status">
               <div class="spinner" />
               <span>Searching...</span>
             </div>
@@ -172,7 +193,22 @@ function formatCitations(count: number): string {
                 class="result-item"
                 @click="onSelect(result)"
               >
-                <div class="result-title">{{ result.display_name }}</div>
+                <div class="result-header">
+                  <svg
+                    class="result-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <polyline points="10 9 9 9 8 9" />
+                  </svg>
+                  <div class="result-title">{{ result.display_name }}</div>
+                </div>
                 <div class="result-meta">
                   <span v-if="result.hint" class="result-hint">{{ result.hint }}</span>
                   <span v-if="result.cited_by_count" class="result-citations">
@@ -183,12 +219,12 @@ function formatCitations(count: number): string {
             </div>
 
             <!-- Empty state (typed but no results) -->
-            <div v-else-if="query && !loading" class="results-empty">
+            <div v-else-if="query && !loading" class="results-status">
               <span>No papers found</span>
             </div>
 
             <!-- Initial state -->
-            <div v-else class="results-hint">
+            <div v-else class="results-status results-status--hint">
               <span>Search by title, author, or DOI</span>
             </div>
           </div>
@@ -199,25 +235,36 @@ function formatCitations(count: number): string {
 </template>
 
 <style scoped>
+/* Overlay transparency levels */
+.search-overlay {
+  --overlay-subtle: rgba(255, 255, 255, 0.1);
+  --overlay-border: rgba(255, 255, 255, 0.15);
+  --overlay-hover: rgba(255, 255, 255, 0.2);
+  --overlay-focus: rgba(255, 255, 255, 0.3);
+  --panel-opacity: 70%;
+  --panel-bg: color-mix(in srgb, var(--bg-colormap) var(--panel-opacity), transparent);
+}
+
 .search-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: var(--bg-panel-colormap-light, rgba(0, 0, 0, 0.3));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 1000;
   display: flex;
   flex-direction: column;
 }
 
+/* Search container */
 .search-container {
   display: flex;
   flex-direction: column;
   width: 100%;
   max-width: 600px;
   margin: 0 auto;
-  padding: var(--spacing-md);
-  padding-top: env(safe-area-inset-top, var(--spacing-md));
+  padding: var(--spacing-lg);
+  padding-top: calc(env(safe-area-inset-top, 0px) + var(--spacing-lg));
 }
 
 /* Search bar */
@@ -225,10 +272,17 @@ function formatCitations(count: number): string {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  background: var(--bg-container);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-lg);
-  padding: 12px 16px;
+  background: var(--panel-bg);
+  border: 1px solid var(--overlay-border);
+  border-radius: 50px;
+  padding: 14px 20px;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.search-bar:focus-within {
+  border-color: var(--overlay-focus);
 }
 
 .search-icon {
@@ -257,37 +311,41 @@ function formatCitations(count: number): string {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  background: var(--bg-input);
+  width: 28px;
+  height: 28px;
+  background: var(--overlay-subtle);
   border: none;
   border-radius: 50%;
   color: var(--text-muted);
   cursor: pointer;
   flex-shrink: 0;
   -webkit-tap-highlight-color: transparent;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .clear-btn:active {
-  background: var(--bg-input-focus);
+  background: var(--overlay-hover);
+  color: var(--text-secondary);
 }
 
 .clear-btn svg {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
 }
 
 /* Results */
 .results-container {
-  margin-top: var(--spacing-md);
+  margin-top: var(--spacing-lg);
 }
 
 .results-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  background: var(--bg-container);
-  border-radius: var(--radius-lg);
+  background: var(--panel-bg);
+  border: 1px solid var(--overlay-border);
+  border-radius: 20px;
   overflow: hidden;
 }
 
@@ -295,24 +353,43 @@ function formatCitations(count: number): string {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 14px 16px;
+  padding: 12px 20px;
   background: transparent;
   border: none;
+  border-bottom: 1px solid var(--overlay-subtle);
   text-align: left;
   cursor: pointer;
   transition: background var(--transition-fast);
   -webkit-tap-highlight-color: transparent;
 }
 
+.result-item:last-child {
+  border-bottom: none;
+}
+
 .result-item:active {
-  background: var(--bg-input-focus);
+  background: var(--overlay-subtle);
+}
+
+.result-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.result-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  margin-top: 1px;
 }
 
 .result-title {
-  font-size: var(--font-size-base);
+  font-size: 14px;
   font-weight: 500;
   color: var(--text-primary);
-  line-height: 1.3;
+  line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -323,7 +400,7 @@ function formatCitations(count: number): string {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  font-size: var(--font-size-sm);
+  font-size: 12px;
   color: var(--text-muted);
 }
 
@@ -340,23 +417,25 @@ function formatCitations(count: number): string {
   color: var(--text-dim);
 }
 
-/* States */
-.results-loading,
-.results-empty,
-.results-hint {
+/* Status states */
+.results-status {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--spacing-sm);
-  padding: var(--spacing-xl);
+  padding: var(--spacing-xl) var(--spacing-lg);
   color: var(--text-muted);
-  font-size: var(--font-size-base);
+  font-size: 15px;
+}
+
+.results-status--hint {
+  color: var(--text-dim);
 }
 
 .spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid var(--border-medium);
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--overlay-hover);
   border-top-color: var(--text-muted);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -368,41 +447,42 @@ function formatCitations(count: number): string {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-lg);
+  padding: var(--spacing-xl);
 }
 
 .building-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--spacing-md);
-  background: var(--bg-container);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-xl) var(--spacing-lg);
+  gap: var(--spacing-lg);
+  background: var(--panel-bg);
+  border: 1px solid var(--overlay-border);
+  border-radius: 24px;
+  padding: var(--spacing-xl) var(--spacing-xl);
   max-width: 320px;
   width: 100%;
   text-align: center;
 }
 
 .building-spinner {
-  width: 48px;
-  height: 48px;
-  border: 3px solid var(--border-medium);
+  width: 56px;
+  height: 56px;
+  border: 3px solid var(--overlay-hover);
   border-top-color: var(--progress-fill);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
 .building-title {
-  font-size: var(--font-size-lg);
+  font-size: 18px;
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .building-paper {
-  font-size: var(--font-size-sm);
+  font-size: 14px;
   color: var(--text-muted);
-  line-height: 1.4;
+  line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -413,25 +493,26 @@ function formatCitations(count: number): string {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
+  gap: var(--spacing-sm);
 }
 
 .progress-bar {
-  height: 4px;
+  height: 6px;
   background: var(--progress-bg);
-  border-radius: 2px;
+  border-radius: 3px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
   background: var(--progress-fill);
-  border-radius: 2px;
+  border-radius: 3px;
   transition: width var(--transition-smooth);
+  box-shadow: var(--shadow-glow-green);
 }
 
 .progress-message {
-  font-size: var(--font-size-xs);
+  font-size: 13px;
   color: var(--text-dim);
 }
 

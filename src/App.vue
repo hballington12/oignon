@@ -287,6 +287,7 @@ function handleColormapChange(index: number) {
     <MobileSearchOverlay
       v-if="isMobile"
       :open="searchOverlayOpen"
+      :colormap-color="backgroundColor"
       @close="searchOverlayOpen = false"
       @build="handleSearch"
     />
