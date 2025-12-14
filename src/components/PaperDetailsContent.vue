@@ -31,198 +31,200 @@ const {
 <template>
   <div class="details-wrapper">
     <div id="details-panel" ref="detailsContent" class="details-content">
-      <!-- Empty state -->
-      <div v-if="!displayNode" class="empty-state">
-        <span>No paper selected</span>
-      </div>
+      <Transition name="paper-fade" mode="out-in">
+        <!-- Empty state -->
+        <div v-if="!displayNode" key="empty" class="empty-state">
+          <span>No paper selected</span>
+        </div>
 
-      <!-- Loading state -->
-      <div v-else-if="isMetadataLoading" class="metadata-loading">
-        <div class="loading-spinner"></div>
-        <span>Loading metadata...</span>
-      </div>
+        <!-- Loading state -->
+        <div v-else-if="isMetadataLoading" key="loading" class="metadata-loading">
+          <div class="loading-spinner"></div>
+          <span>Loading metadata...</span>
+        </div>
 
-      <template v-else>
-        <!-- Header with label, badges, and action buttons -->
-        <div class="panel-header-row">
-          <span class="panel-label">{{ labelText }}</span>
-          <span
-            v-for="(badge, i) in badges"
-            :key="i"
-            class="header-badge"
-            :style="{ backgroundColor: badge.color, color: badge.textColor }"
-            :title="badge.title"
-          >
-            {{ badge.text }}
-          </span>
-          <div id="details-actions" class="header-actions">
-            <button
-              v-if="!isSource"
-              class="header-action build"
-              @click="handleBuild"
-              title="Build graph from this paper"
+        <div v-else :key="displayNode.id" class="paper-content">
+          <!-- Header with label, badges, and action buttons -->
+          <div class="panel-header-row">
+            <span class="panel-label">{{ labelText }}</span>
+            <span
+              v-for="(badge, i) in badges"
+              :key="i"
+              class="header-badge"
+              :style="{ backgroundColor: badge.color, color: badge.textColor }"
+              :title="badge.title"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+              {{ badge.text }}
+            </span>
+            <div id="details-actions" class="header-actions">
+              <button
+                v-if="!isSource"
+                class="header-action build"
+                @click="handleBuild"
+                title="Build graph from this paper"
               >
-                <path
-                  d="M15 12l-8.5 8.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L12 9"
-                />
-                <path d="M17.64 15L22 10.64" />
-                <path
-                  d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25v-.86L16.01 4.6a5.56 5.56 0 0 0-3.94-1.64H9l.92.82A6.18 6.18 0 0 1 12 8.4v1.56l2 2h2.47l2.26 1.91"
-                />
-              </svg>
-            </button>
-            <button
-              v-if="displayNode.metadata.doi"
-              class="header-action"
-              @click="openDoi(displayNode.metadata.doi)"
-              title="Open DOI"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M15 12l-8.5 8.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L12 9"
+                  />
+                  <path d="M17.64 15L22 10.64" />
+                  <path
+                    d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25v-.86L16.01 4.6a5.56 5.56 0 0 0-3.94-1.64H9l.92.82A6.18 6.18 0 0 1 12 8.4v1.56l2 2h2.47l2.26 1.91"
+                  />
+                </svg>
+              </button>
+              <button
+                v-if="displayNode.metadata.doi"
+                class="header-action"
+                @click="openDoi(displayNode.metadata.doi)"
+                title="Open DOI"
               >
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.3-4.3" />
-              </svg>
-            </button>
-            <button
-              v-if="displayNode.metadata.openAlexUrl"
-              class="header-action"
-              @click="openOpenAlex(displayNode.metadata.openAlexUrl)"
-              title="Open in OpenAlex"
-            >
-              <img :src="openAlexIcon" alt="OpenAlex" width="12" height="12" />
-            </button>
-            <button
-              class="header-action bookmark"
-              :class="{ bookmarked: isBookmarked }"
-              @click="toggleBookmark"
-              :title="isBookmarked ? 'Remove bookmark' : 'Add bookmark'"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                :fill="isBookmarked ? 'currentColor' : 'none'"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.3-4.3" />
+                </svg>
+              </button>
+              <button
+                v-if="displayNode.metadata.openAlexUrl"
+                class="header-action"
+                @click="openOpenAlex(displayNode.metadata.openAlexUrl)"
+                title="Open in OpenAlex"
               >
-                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-              </svg>
-            </button>
+                <img :src="openAlexIcon" alt="OpenAlex" width="12" height="12" />
+              </button>
+              <button
+                class="header-action bookmark"
+                :class="{ bookmarked: isBookmarked }"
+                @click="toggleBookmark"
+                :title="isBookmarked ? 'Remove bookmark' : 'Add bookmark'"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  :fill="isBookmarked ? 'currentColor' : 'none'"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Title -->
+          <h3 class="paper-title">{{ displayNode.metadata.title }}</h3>
+
+          <!-- Source/Venue -->
+          <div v-if="sourceInfo" class="paper-source">
+            <span class="source-type">{{ sourceInfo.type }}:</span>
+            <span class="source-name">{{ sourceInfo.name }}</span>
+          </div>
+
+          <!-- Authors -->
+          <div v-if="displayNode.metadata.authors.length" class="paper-authors">
+            <span
+              v-for="(author, i) in displayNode.metadata.authors.slice(0, 5)"
+              :key="i"
+              class="paper-author"
+            >
+              {{ author
+              }}<span v-if="i < Math.min(displayNode.metadata.authors.length, 5) - 1">, </span>
+            </span>
+            <span v-if="displayNode.metadata.authors.length > 5" class="paper-author more">
+              +{{ displayNode.metadata.authors.length - 5 }} more
+            </span>
+          </div>
+
+          <!-- Stats -->
+          <div class="paper-stats">
+            <div class="stat-row">
+              <span class="stat-label">Year</span>
+              <span class="stat-value">{{ displayNode.order }}</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Global Citations</span>
+              <span class="stat-value">{{
+                displayNode.metadata.citationCount.toLocaleString()
+              }}</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">In-Graph Citations</span>
+              <span class="stat-value">{{ inGraphCitations.toLocaleString() }}</span>
+            </div>
+            <div v-if="displayNode.metadata.referencesCount" class="stat-row">
+              <span class="stat-label">References</span>
+              <span class="stat-value">{{
+                displayNode.metadata.referencesCount.toLocaleString()
+              }}</span>
+            </div>
+            <div v-if="workType" class="stat-row">
+              <span class="stat-label">Type</span>
+              <span class="stat-value type-value">{{ workType }}</span>
+            </div>
+          </div>
+
+          <!-- Abstract -->
+          <ExpandableAbstract
+            v-if="displayNode.metadata.abstract"
+            :abstract="displayNode.metadata.abstract"
+            :truncate-length="200"
+            class="paper-abstract"
+            @expand="expandAbstract"
+          />
+
+          <!-- Classification -->
+          <div v-if="primaryTopic || sdgsFormatted || keywords" class="paper-stats">
+            <div v-if="primaryTopic?.name" class="stat-row text-row">
+              <span class="stat-label">Topic</span>
+              <span class="stat-value text-value">{{ primaryTopic.name }}</span>
+            </div>
+            <div v-if="primaryTopic?.subfield?.name" class="stat-row text-row">
+              <span class="stat-label">Subfield</span>
+              <span class="stat-value text-value">{{ primaryTopic.subfield.name }}</span>
+            </div>
+            <div v-if="primaryTopic?.field?.name" class="stat-row text-row">
+              <span class="stat-label">Field</span>
+              <span class="stat-value text-value">{{ primaryTopic.field.name }}</span>
+            </div>
+            <div v-if="primaryTopic?.domain?.name" class="stat-row text-row">
+              <span class="stat-label">Domain</span>
+              <span class="stat-value text-value">{{ primaryTopic.domain.name }}</span>
+            </div>
+            <div v-if="sdgsFormatted" class="stat-row text-row">
+              <span class="stat-label">SDGs</span>
+              <span class="stat-value text-value">{{ sdgsFormatted }}</span>
+            </div>
+            <div v-if="keywords" class="stat-row text-row">
+              <span class="stat-label">Keywords</span>
+              <span class="stat-value text-value">{{ keywords.join(', ') }}</span>
+            </div>
           </div>
         </div>
-
-        <!-- Title -->
-        <h3 class="paper-title">{{ displayNode.metadata.title }}</h3>
-
-        <!-- Source/Venue -->
-        <div v-if="sourceInfo" class="paper-source">
-          <span class="source-type">{{ sourceInfo.type }}:</span>
-          <span class="source-name">{{ sourceInfo.name }}</span>
-        </div>
-
-        <!-- Authors -->
-        <div v-if="displayNode.metadata.authors.length" class="paper-authors">
-          <span
-            v-for="(author, i) in displayNode.metadata.authors.slice(0, 5)"
-            :key="i"
-            class="paper-author"
-          >
-            {{ author
-            }}<span v-if="i < Math.min(displayNode.metadata.authors.length, 5) - 1">, </span>
-          </span>
-          <span v-if="displayNode.metadata.authors.length > 5" class="paper-author more">
-            +{{ displayNode.metadata.authors.length - 5 }} more
-          </span>
-        </div>
-
-        <!-- Stats -->
-        <div class="paper-stats">
-          <div class="stat-row">
-            <span class="stat-label">Year</span>
-            <span class="stat-value">{{ displayNode.order }}</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Global Citations</span>
-            <span class="stat-value">{{
-              displayNode.metadata.citationCount.toLocaleString()
-            }}</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">In-Graph Citations</span>
-            <span class="stat-value">{{ inGraphCitations.toLocaleString() }}</span>
-          </div>
-          <div v-if="displayNode.metadata.referencesCount" class="stat-row">
-            <span class="stat-label">References</span>
-            <span class="stat-value">{{
-              displayNode.metadata.referencesCount.toLocaleString()
-            }}</span>
-          </div>
-          <div v-if="workType" class="stat-row">
-            <span class="stat-label">Type</span>
-            <span class="stat-value type-value">{{ workType }}</span>
-          </div>
-        </div>
-
-        <!-- Abstract -->
-        <ExpandableAbstract
-          v-if="displayNode.metadata.abstract"
-          :abstract="displayNode.metadata.abstract"
-          :truncate-length="200"
-          class="paper-abstract"
-          @expand="expandAbstract"
-        />
-
-        <!-- Classification -->
-        <div v-if="primaryTopic || sdgsFormatted || keywords" class="paper-stats">
-          <div v-if="primaryTopic?.name" class="stat-row text-row">
-            <span class="stat-label">Topic</span>
-            <span class="stat-value text-value">{{ primaryTopic.name }}</span>
-          </div>
-          <div v-if="primaryTopic?.subfield?.name" class="stat-row text-row">
-            <span class="stat-label">Subfield</span>
-            <span class="stat-value text-value">{{ primaryTopic.subfield.name }}</span>
-          </div>
-          <div v-if="primaryTopic?.field?.name" class="stat-row text-row">
-            <span class="stat-label">Field</span>
-            <span class="stat-value text-value">{{ primaryTopic.field.name }}</span>
-          </div>
-          <div v-if="primaryTopic?.domain?.name" class="stat-row text-row">
-            <span class="stat-label">Domain</span>
-            <span class="stat-value text-value">{{ primaryTopic.domain.name }}</span>
-          </div>
-          <div v-if="sdgsFormatted" class="stat-row text-row">
-            <span class="stat-label">SDGs</span>
-            <span class="stat-value text-value">{{ sdgsFormatted }}</span>
-          </div>
-          <div v-if="keywords" class="stat-row text-row">
-            <span class="stat-label">Keywords</span>
-            <span class="stat-value text-value">{{ keywords.join(', ') }}</span>
-          </div>
-        </div>
-      </template>
+      </Transition>
     </div>
 
     <!-- Abstract overlay -->
@@ -535,7 +537,7 @@ const {
   margin: 0;
 }
 
-/* Fade transition */
+/* Fade transition for abstract overlay */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity var(--transition-normal);
@@ -543,6 +545,20 @@ const {
 
 .fade-enter-from,
 .fade-leave-to {
+  opacity: 0;
+}
+
+/* Paper content fade transition */
+.paper-fade-enter-active {
+  transition: opacity 0.15s ease-out;
+}
+
+.paper-fade-leave-active {
+  transition: opacity 0.08s ease-in;
+}
+
+.paper-fade-enter-from,
+.paper-fade-leave-to {
   opacity: 0;
 }
 </style>
