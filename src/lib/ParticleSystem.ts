@@ -69,7 +69,7 @@ interface Particle {
 }
 
 export interface ParticleSystemOptions {
-  count?: number
+  density?: number // Particles per million square pixels
   minSize?: number
   maxSize?: number
   drift?: number // How far particles drift from base position
@@ -83,7 +83,7 @@ export interface ParticleSystemOptions {
 }
 
 const DEFAULT_OPTIONS: Required<ParticleSystemOptions> = {
-  count: 30,
+  density: 15, // particles per million px²
   minSize: 4,
   maxSize: 10,
   drift: 40,
@@ -95,6 +95,10 @@ const DEFAULT_OPTIONS: Required<ParticleSystemOptions> = {
   fadeRatio: 0.2,
   blur: 20,
 }
+
+// Particle count bounds per layer
+const MIN_PARTICLES = 1
+const MAX_PARTICLES = 100
 
 export class ParticleSystem {
   container: Container
@@ -163,8 +167,14 @@ export class ParticleSystem {
     graphics.destroy()
   }
 
+  private calculateParticleCount(): number {
+    const area = this.worldWidth * this.worldHeight
+    const count = Math.round((area * this.options.density) / 1_000_000)
+    return Math.max(MIN_PARTICLES, Math.min(MAX_PARTICLES, count))
+  }
+
   private spawnParticles() {
-    const { count } = this.options
+    const count = this.calculateParticleCount()
 
     for (let i = 0; i < count; i++) {
       // Stagger initial ages so particles don't all die at once

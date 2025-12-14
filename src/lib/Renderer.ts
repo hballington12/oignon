@@ -109,32 +109,32 @@ export class Renderer {
 
     this.viewport.drag().pinch().wheel().decelerate()
 
-    // Triple-layer particle system: back to front
+    // Triple-layer particle system: back to front (density = particles per million px²)
     this.particleSystems = [
       // Layer 1: large, faint, slow drifters (background)
       new ParticleSystem({
-        count: 20,
+        density: 10,
         minSize: 8,
         maxSize: 16,
-        alpha: 0.1,
+        alpha: 0.06,
         drift: 60,
         speed: 0.001,
       }),
       // Layer 2: medium (midground)
       new ParticleSystem({
-        count: 30,
+        density: 15,
         minSize: 4,
         maxSize: 10,
-        alpha: 0.2,
+        alpha: 0.1,
         drift: 40,
         speed: 0.002,
       }),
       // Layer 3: small, brighter, faster (foreground)
       new ParticleSystem({
-        count: 40,
+        density: 20,
         minSize: 2,
         maxSize: 6,
-        alpha: 0.35,
+        alpha: 0.15,
         drift: 25,
         speed: 0.003,
       }),
