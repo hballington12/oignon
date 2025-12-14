@@ -5,8 +5,10 @@
 
 export {
   buildGraph,
+  buildAuthorGraph,
   fetchPaper,
   hydrateMetadata,
   preprocessGraph,
   type BuildGraphOptions,
+  type BuildAuthorGraphOptions,
 } from './graph'

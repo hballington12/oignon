@@ -363,6 +363,136 @@ export async function fetchAutocomplete(query: string): Promise<AutocompleteResu
   }
 }
 
+// --- Author autocomplete ---
+
+export interface AuthorAutocompleteResult {
+  id: string
+  display_name: string
+  hint: string | null
+  cited_by_count: number
+  works_count: number
+  entity_type: 'author'
+  external_id: string | null
+}
+
+export async function fetchAuthorAutocomplete(query: string): Promise<AuthorAutocompleteResult[]> {
+  if (!query || query.length === 0) return []
+
+  const params = new URLSearchParams({
+    q: query,
+    mailto: OPENALEX_EMAIL,
+  })
+
+  try {
+    const response = await fetch(
+      `${OPENALEX_API}/autocomplete/authors?${params}`,
+      OPENALEX_FETCH_OPTIONS,
+    )
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const data = await response.json()
+
+    return (data.results || []).map((result: AuthorAutocompleteResult) => ({
+      id: extractId(result.id),
+      display_name: result.display_name,
+      hint: result.hint,
+      cited_by_count: result.cited_by_count || 0,
+      works_count: result.works_count || 0,
+      entity_type: 'author' as const,
+      external_id: result.external_id,
+    }))
+  } catch (e) {
+    console.error('Author autocomplete error:', e)
+    return []
+  }
+}
+
+// --- Author works fetching ---
+
+export async function fetchAuthorWorks(
+  authorId: string,
+  limit: number = 100,
+  onBatchComplete?: () => void,
+): Promise<Record<string, RawPaper>> {
+  const papers: Record<string, RawPaper> = {}
+  let cursor = '*'
+  let fetched = 0
+
+  while (fetched < limit) {
+    const perPage = Math.min(OPENALEX_MAX_PER_PAGE, limit - fetched)
+    const params = new URLSearchParams({
+      filter: `authorships.author.id:${authorId}`,
+      select: OPENALEX_FULL_FIELDS,
+      per_page: perPage.toString(),
+      sort: 'cited_by_count:desc',
+      cursor,
+      mailto: OPENALEX_EMAIL,
+    })
+
+    logApiCall('/works', `author works for ${authorId}, cursor ${cursor}`)
+
+    try {
+      const response = await fetch(`${OPENALEX_API}/works?${params}`, OPENALEX_FETCH_OPTIONS)
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const data = await response.json()
+
+      const results = data.results || []
+      if (results.length === 0) break
+
+      for (const work of results) {
+        const paper = formatPaper(work)
+        papers[extractId(paper.id)] = paper
+      }
+
+      fetched += results.length
+      cursor = data.meta?.next_cursor
+
+      if (onBatchComplete) onBatchComplete()
+
+      if (!cursor) break
+    } catch (e) {
+      console.error('Author works fetch error:', e)
+      break
+    }
+  }
+
+  return papers
+}
+
+// --- Fetch author metadata ---
+
+export interface AuthorMetadata {
+  id: string
+  display_name: string
+  orcid: string | null
+  works_count: number
+  cited_by_count: number
+  affiliation: string | null
+}
+
+export async function fetchAuthor(authorId: string): Promise<AuthorMetadata | null> {
+  logApiCall('/authors/{id}', `author: ${authorId}`)
+  try {
+    const response = await fetch(
+      `${OPENALEX_API}/authors/${authorId}?mailto=${OPENALEX_EMAIL}`,
+      OPENALEX_FETCH_OPTIONS,
+    )
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const author = await response.json()
+
+    return {
+      id: extractId(author.id),
+      display_name: author.display_name,
+      orcid: author.orcid,
+      works_count: author.works_count || 0,
+      cited_by_count: author.cited_by_count || 0,
+      affiliation: author.last_known_institutions?.[0]?.display_name || null,
+    }
+  } catch (e) {
+    console.error(`Error fetching author ${authorId}:`, e)
+    return null
+  }
+}
+
 // --- Citation fetching ---
 
 export async function fetchCitingPapers(workId: string, limit: number): Promise<string[]> {

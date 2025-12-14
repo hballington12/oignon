@@ -110,22 +110,27 @@ export interface GraphEdge {
 }
 
 export interface GraphMetadata {
-  source_year: number
-  total_root_seeds: number
-  total_root_papers: number
-  total_branch_seeds: number
-  total_branch_papers: number
-  n_roots: number
-  n_branches: number
+  source_year?: number
+  total_root_seeds?: number
+  total_root_papers?: number
+  total_branch_seeds?: number
+  total_branch_papers?: number
+  n_roots?: number
+  n_branches?: number
   papers_in_graph: number
   edges_in_graph: number
   build_time_seconds: number
   timestamp: string
   api_calls?: number
+  // Author graph specific
+  graph_type?: 'paper' | 'author'
+  author_id?: string
+  author_name?: string
+  author_affiliation?: string
 }
 
 export interface RawGraph {
-  source_paper: RawPaper
+  source_paper?: RawPaper
   root_seeds: RawPaper[]
   branch_seeds: RawPaper[]
   papers: RawPaper[]
@@ -135,6 +140,7 @@ export interface RawGraph {
 
 export interface ProcessedGraph {
   nodes: GraphNode[]
+  metadata?: GraphMetadata
 }
 
 // Slim cache types (for localStorage efficiency)

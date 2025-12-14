@@ -2,12 +2,21 @@
  * Graph building module - orchestrates paper fetching, ranking, and graph construction
  */
 
-import type { RawGraph, RawPaper, GraphMetadata, PaperMetadata, ProgressCallback } from '@/types'
+import type {
+  RawGraph,
+  RawPaper,
+  GraphMetadata,
+  GraphEdge,
+  PaperMetadata,
+  ProgressCallback,
+} from '@/types'
 import {
   fetchPaper,
   fetchPapersBulkFull,
   fetchPapersBulkSlim,
   fetchCitingPapers,
+  fetchAuthor,
+  fetchAuthorWorks,
   extractId,
   resetApiCallCount,
   getApiCallCount,
@@ -298,4 +307,93 @@ export async function hydrateMetadata(
   }
 
   return results
+}
+
+// --- Author Graph Building ---
+
+const DEFAULT_AUTHOR_WORKS_LIMIT = 100
+
+export interface BuildAuthorGraphOptions {
+  maxWorks?: number
+  onProgress?: ProgressCallback
+}
+
+/**
+ * Build a citation graph from an author's publications
+ */
+export async function buildAuthorGraph(
+  authorId: string,
+  options: BuildAuthorGraphOptions = {},
+): Promise<RawGraph> {
+  const { maxWorks = DEFAULT_AUTHOR_WORKS_LIMIT, onProgress } = options
+
+  resetApiCallCount()
+  const startTime = performance.now()
+
+  let totalApiCalls = 2 // author + works
+  let completedApiCalls = 0
+
+  const reportProgress = (message: string) => {
+    const percent = totalApiCalls > 0 ? Math.round((completedApiCalls / totalApiCalls) * 100) : 0
+    onProgress?.({
+      message,
+      percent,
+      completed: completedApiCalls,
+      total: totalApiCalls,
+    })
+  }
+
+  // Step 1: Fetch author metadata
+  reportProgress('Fetching author info...')
+  const author = await fetchAuthor(authorId)
+  if (!author) {
+    throw new Error(`Could not fetch author: ${authorId}`)
+  }
+  completedApiCalls++
+
+  // Step 2: Fetch author's works
+  reportProgress(`Fetching works by ${author.display_name}...`)
+  const works = await fetchAuthorWorks(authorId, maxWorks, () => {
+    completedApiCalls++
+    reportProgress(`Fetching works by ${author.display_name}...`)
+  })
+  completedApiCalls++
+
+  const workIds = new Set(Object.keys(works))
+
+  // Step 3: Build edges between works that cite each other
+  reportProgress('Building citation network...')
+  const edges: GraphEdge[] = []
+  for (const [workId, paper] of Object.entries(works)) {
+    for (const refId of paper.references || []) {
+      const cleanRefId = extractId(refId)
+      if (workIds.has(cleanRefId)) {
+        edges.push({ source: workId, target: cleanRefId, type: 'cites' })
+      }
+    }
+  }
+
+  const elapsed = ((performance.now() - startTime) / 1000).toFixed(2)
+  reportProgress(`Complete in ${elapsed}s`)
+
+  const metadata: GraphMetadata = {
+    graph_type: 'author',
+    author_id: author.id,
+    author_name: author.display_name,
+    author_affiliation: author.affiliation || undefined,
+    papers_in_graph: Object.keys(works).length,
+    edges_in_graph: edges.length,
+    build_time_seconds: parseFloat(elapsed),
+    timestamp: new Date().toISOString(),
+    api_calls: getApiCallCount(),
+  }
+
+  return {
+    source_paper: undefined,
+    root_seeds: [],
+    branch_seeds: [],
+    papers: Object.values(works),
+    edges,
+    metadata,
+  }
 }

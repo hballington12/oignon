@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, computed, onMounted, onUnmounted } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
-import { fetchAutocomplete, type AutocompleteResult } from '@/lib/graph/openAlexApi'
+import {
+  fetchAutocomplete,
+  fetchAuthorAutocomplete,
+  type AutocompleteResult,
+  type AuthorAutocompleteResult,
+} from '@/lib/graph/openAlexApi'
 import { useGraphStore } from '@/stores/graph'
 
 const store = useGraphStore()
@@ -15,13 +20,16 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
   build: [id: string]
+  buildAuthor: [id: string]
 }>()
 
 const query = ref('')
-const results = ref<AutocompleteResult[]>([])
+const paperResults = ref<AutocompleteResult[]>([])
+const authorResults = ref<AuthorAutocompleteResult[]>([])
 const loading = ref(false)
 const inputRef = ref<HTMLInputElement | null>(null)
 const selectedPaper = ref<AutocompleteResult | null>(null)
+const selectedAuthor = ref<AuthorAutocompleteResult | null>(null)
 
 // Show building screen when store is loading
 const isBuilding = computed(() => store.loading)
@@ -38,17 +46,20 @@ watch(
   async (isOpen) => {
     if (isOpen) {
       selectedPaper.value = null
+      selectedAuthor.value = null
 
-      // Pre-fill with tutorial query if provided
+      // Pre-fill with tutorial query if provided (papers only for tutorial)
       if (props.tutorialQuery) {
         query.value = props.tutorialQuery
-        results.value = []
+        paperResults.value = []
+        authorResults.value = []
         await nextTick()
-        // Trigger search for the tutorial query
+        // Trigger search for the tutorial query (papers only)
         searchPapers(props.tutorialQuery)
       } else {
         query.value = ''
-        results.value = []
+        paperResults.value = []
+        authorResults.value = []
         await nextTick()
         inputRef.value?.focus()
       }
@@ -81,9 +92,34 @@ onUnmounted(() => {
   window.removeEventListener('keydown', onKeyDown)
 })
 
+const searchAll = useDebounceFn(async (q: string) => {
+  if (!q || q.length === 0) {
+    paperResults.value = []
+    authorResults.value = []
+    loading.value = false
+    return
+  }
+
+  loading.value = true
+  try {
+    // Search papers and authors in parallel
+    const [papers, authors] = await Promise.all([fetchAutocomplete(q), fetchAuthorAutocomplete(q)])
+    // Sort papers by citations (descending), authors by works (descending)
+    paperResults.value = papers.sort((a, b) => b.cited_by_count - a.cited_by_count).slice(0, 4)
+    authorResults.value = authors.sort((a, b) => b.works_count - a.works_count).slice(0, 3)
+  } catch (e) {
+    console.error('Search error:', e)
+    paperResults.value = []
+    authorResults.value = []
+  } finally {
+    loading.value = false
+  }
+}, 300)
+
+// Papers-only search for tutorial
 const searchPapers = useDebounceFn(async (q: string) => {
   if (!q || q.length === 0) {
-    results.value = []
+    paperResults.value = []
     loading.value = false
     return
   }
@@ -91,10 +127,10 @@ const searchPapers = useDebounceFn(async (q: string) => {
   loading.value = true
   try {
     const data = await fetchAutocomplete(q)
-    results.value = data.slice(0, 6) // Show max 6 results
+    paperResults.value = data.slice(0, 6)
   } catch (e) {
     console.error('Search error:', e)
-    results.value = []
+    paperResults.value = []
   } finally {
     loading.value = false
   }
@@ -104,12 +140,17 @@ function onInput() {
   if (query.value.length > 0) {
     loading.value = true
   }
-  searchPapers(query.value)
+  searchAll(query.value)
 }
 
 function onSelect(result: AutocompleteResult) {
   selectedPaper.value = result
   emit('build', result.id)
+}
+
+function onSelectAuthor(result: AuthorAutocompleteResult) {
+  selectedAuthor.value = result
+  emit('buildAuthor', result.id)
 }
 
 function onBackdropClick(e: MouseEvent) {
@@ -122,9 +163,12 @@ function onBackdropClick(e: MouseEvent) {
 
 function clearQuery() {
   query.value = ''
-  results.value = []
+  paperResults.value = []
+  authorResults.value = []
   inputRef.value?.focus()
 }
+
+const hasResults = computed(() => paperResults.value.length > 0 || authorResults.value.length > 0)
 
 function formatCitations(count: number): string {
   if (count >= 1000) {
@@ -145,6 +189,9 @@ function formatCitations(count: number): string {
             <div class="building-title">Building graph</div>
             <div v-if="selectedPaper" class="building-paper">
               {{ selectedPaper.display_name }}
+            </div>
+            <div v-else-if="selectedAuthor" class="building-paper">
+              {{ selectedAuthor.display_name }}
             </div>
             <div v-if="buildProgress" class="building-progress">
               <div class="progress-bar">
@@ -174,7 +221,7 @@ function formatCitations(count: number): string {
               v-model="query"
               type="text"
               class="search-input"
-              placeholder="Search papers..."
+              placeholder="Search papers or authors..."
               autocomplete="off"
               autocorrect="off"
               autocapitalize="off"
@@ -191,47 +238,84 @@ function formatCitations(count: number): string {
           <!-- Results list -->
           <div class="results-container">
             <!-- Loading state -->
-            <div v-if="loading && results.length === 0" class="results-status">
+            <div v-if="loading && !hasResults" class="results-status">
               <div class="spinner" />
               <span>Searching...</span>
             </div>
 
-            <!-- Results -->
-            <div v-else-if="results.length > 0" id="tutorial-results" class="results-list">
-              <button
-                v-for="result in results"
-                :key="result.id"
-                class="result-item"
-                @click="onSelect(result)"
-              >
-                <div class="result-header">
-                  <svg
-                    class="result-icon"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.5"
+            <!-- Grouped results -->
+            <div v-else-if="hasResults" class="results-groups">
+              <!-- Paper results -->
+              <div v-if="paperResults.length > 0" id="tutorial-results" class="results-group">
+                <div class="results-group-title">Papers</div>
+                <div class="results-list">
+                  <button
+                    v-for="result in paperResults"
+                    :key="result.id"
+                    class="result-item"
+                    @click="onSelect(result)"
                   >
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                    <line x1="16" y1="13" x2="8" y2="13" />
-                    <line x1="16" y1="17" x2="8" y2="17" />
-                    <polyline points="10 9 9 9 8 9" />
-                  </svg>
-                  <div class="result-title">{{ result.display_name }}</div>
+                    <div class="result-header">
+                      <svg
+                        class="result-icon"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                      >
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                        <polyline points="10 9 9 9 8 9" />
+                      </svg>
+                      <div class="result-title">{{ result.display_name }}</div>
+                    </div>
+                    <div class="result-meta">
+                      <span v-if="result.hint" class="result-hint">{{ result.hint }}</span>
+                      <span v-if="result.cited_by_count" class="result-citations">
+                        {{ formatCitations(result.cited_by_count) }} citations
+                      </span>
+                    </div>
+                  </button>
                 </div>
-                <div class="result-meta">
-                  <span v-if="result.hint" class="result-hint">{{ result.hint }}</span>
-                  <span v-if="result.cited_by_count" class="result-citations">
-                    {{ formatCitations(result.cited_by_count) }} citations
-                  </span>
+              </div>
+
+              <!-- Author results -->
+              <div v-if="authorResults.length > 0" class="results-group">
+                <div class="results-group-title">Authors</div>
+                <div class="results-list">
+                  <button
+                    v-for="result in authorResults"
+                    :key="result.id"
+                    class="result-item"
+                    @click="onSelectAuthor(result)"
+                  >
+                    <div class="result-header">
+                      <svg
+                        class="result-icon"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                      >
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                      <div class="result-title">{{ result.display_name }}</div>
+                    </div>
+                    <div class="result-meta">
+                      <span v-if="result.hint" class="result-hint">{{ result.hint }}</span>
+                      <span class="result-citations">{{ result.works_count }} works</span>
+                    </div>
+                  </button>
                 </div>
-              </button>
+              </div>
             </div>
 
             <!-- Empty state (typed but no results) -->
             <div v-else-if="query && !loading" class="results-status">
-              <span>No papers found</span>
+              <span>No results found</span>
             </div>
 
             <!-- Initial state -->
@@ -349,6 +433,27 @@ function formatCitations(count: number): string {
 /* Results */
 .results-container {
   margin-top: var(--spacing-lg);
+}
+
+.results-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.results-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.results-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0 var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
 }
 
 .results-list {

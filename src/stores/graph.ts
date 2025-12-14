@@ -156,6 +156,9 @@ export const useGraphStore = defineStore('graph', () => {
     return null
   })
 
+  const graphMetadata = computed(() => graph.value?.metadata)
+  const isAuthorGraph = computed(() => graph.value?.metadata?.graph_type === 'author')
+
   const selectedNodes = computed(() => {
     const result: VisualNode[] = []
     for (const id of selectedNodeIds.value) {
@@ -649,6 +652,8 @@ export const useGraphStore = defineStore('graph', () => {
     hasGraph,
     sourceNode,
     selectedNodes,
+    graphMetadata,
+    isAuthorGraph,
 
     // Actions
     loadGraph,

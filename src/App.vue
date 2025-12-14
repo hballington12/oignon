@@ -15,7 +15,7 @@ import MobileSearchOverlay from '@/components/MobileSearchOverlay.vue'
 import { TAB_HEIGHTS, TAB_BAR_HEIGHT, type TabId } from '@/types/mobile'
 import { useGraphStore } from '@/stores/graph'
 import { useMobile } from '@/composables/useMobile'
-import { buildGraph, preprocessGraph } from '@/lib/graphBuilder'
+import { buildGraph, buildAuthorGraph, preprocessGraph } from '@/lib/graphBuilder'
 import { getBackgroundColorHex, COLORMAPS } from '@/lib/colormap'
 
 const store = useGraphStore()
@@ -167,6 +167,38 @@ async function handleSearch(query: string) {
   }
 }
 
+async function handleAuthorSearch(authorId: string) {
+  store.setLoading(true, { message: 'Starting...', percent: 0, completed: 0, total: 1 })
+
+  try {
+    const rawGraph = await buildAuthorGraph(authorId, {
+      onProgress: (progress) => {
+        store.setLoading(true, progress)
+      },
+    })
+
+    const processed = preprocessGraph(rawGraph)
+    store.loadGraph(processed)
+    store.saveToCache()
+
+    // Add to recent graphs (using author info from metadata)
+    if (rawGraph.metadata.author_name) {
+      store.addRecentGraph(
+        `author:${rawGraph.metadata.author_id}`,
+        rawGraph.metadata.author_name,
+        processed.nodes.length,
+        rawGraph.metadata.author_affiliation,
+        undefined, // no year for author graphs
+        undefined, // no DOI
+        undefined, // no OpenAlex URL for now
+      )
+    }
+  } catch (e) {
+    console.error('Failed to build author graph:', e)
+    store.setLoading(false)
+  }
+}
+
 function handleFitToView() {
   graphCanvas.value?.fitToView()
 }
@@ -308,6 +340,7 @@ function handleColormapChange(index: number) {
       :tutorial-query="tutorialSearchQuery"
       @close="handleSearchOverlayClose"
       @build="handleSearch"
+      @build-author="handleAuthorSearch"
     />
 
     <!-- Tutorial overlay -->
