@@ -126,7 +126,12 @@ export interface GraphMetadata {
   graph_type?: 'paper' | 'author'
   author_id?: string
   author_name?: string
+  author_orcid?: string
   author_affiliation?: string
+  author_works_count?: number
+  author_cited_by_count?: number
+  author_h_index?: number
+  author_i10_index?: number
 }
 
 export interface RawGraph {
@@ -141,6 +146,7 @@ export interface RawGraph {
 export interface ProcessedGraph {
   nodes: GraphNode[]
   metadata?: GraphMetadata
+  graphType?: 'paper' | 'author'
 }
 
 // Slim cache types (for localStorage efficiency)
@@ -155,7 +161,9 @@ export interface SlimGraphNode {
 export interface SlimCache {
   slim: true
   nodes: SlimGraphNode[]
-  sourceId?: number // numeric ID of the source node
+  graphType?: 'paper' | 'author'
+  sourceId?: number // paper ID for paper graphs (numeric, stripped of "W" prefix)
+  authorId?: string // author OpenAlex ID for author graphs
 }
 
 // Visual / Rendering Types
@@ -261,6 +269,17 @@ export interface RecentGraph {
   timestamp: string // formatted date string
   addedAt: number // timestamp for sorting
   cache: SlimCache // slim cache data for instant reload
+}
+
+export interface FollowedAuthor {
+  id: string
+  displayName: string
+  affiliation?: string
+  orcid?: string
+  worksCount: number
+  citedByCount: number
+  hIndex: number
+  addedAt: number // timestamp
 }
 
 // App State Types (for Pinia store)

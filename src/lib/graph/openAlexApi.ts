@@ -466,6 +466,8 @@ export interface AuthorMetadata {
   orcid: string | null
   works_count: number
   cited_by_count: number
+  h_index: number
+  i10_index: number
   affiliation: string | null
 }
 
@@ -485,6 +487,8 @@ export async function fetchAuthor(authorId: string): Promise<AuthorMetadata | nu
       orcid: author.orcid,
       works_count: author.works_count || 0,
       cited_by_count: author.cited_by_count || 0,
+      h_index: author.summary_stats?.h_index || 0,
+      i10_index: author.summary_stats?.i10_index || 0,
       affiliation: author.last_known_institutions?.[0]?.display_name || null,
     }
   } catch (e) {

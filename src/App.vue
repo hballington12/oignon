@@ -170,6 +170,14 @@ async function handleSearch(query: string) {
 }
 
 async function handleAuthorSearch(authorId: string) {
+  // Check if we have this author graph cached
+  const cacheKey = `author:${authorId}`
+  const cached = store.recentGraphs.find((g) => g.sourceId === cacheKey)
+  if (cached) {
+    store.loadRecentGraph(cached.sourceId)
+    return
+  }
+
   store.setLoading(true, { message: 'Starting...', percent: 0, completed: 0, total: 1 })
 
   try {
@@ -326,6 +334,7 @@ function handleColormapChange(index: number) {
         :active-tab="activeTab"
         @colormap-change="handleColormapChange"
         @search="handleSearch"
+        @build-author="handleAuthorSearch"
         @show-details="activeTab = 'details'"
         @height-change="handlePanelHeightChange"
         @drag-start="handlePanelDragStart"

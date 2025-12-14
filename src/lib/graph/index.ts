@@ -27,7 +27,7 @@ import { computeRootRanks, computeBranchRanks, getTopRanked } from './ranking'
 import { buildEdges, preprocessGraph } from './preprocessing'
 
 // Re-export for external use
-export { fetchPaper } from './openAlexApi'
+export { fetchPaper, fetchAuthor } from './openAlexApi'
 export { preprocessGraph } from './preprocessing'
 
 // Configuration
@@ -311,7 +311,7 @@ export async function hydrateMetadata(
 
 // --- Author Graph Building ---
 
-const DEFAULT_AUTHOR_WORKS_LIMIT = 100
+const DEFAULT_AUTHOR_WORKS_LIMIT = 250
 
 export interface BuildAuthorGraphOptions {
   maxWorks?: number
@@ -380,7 +380,12 @@ export async function buildAuthorGraph(
     graph_type: 'author',
     author_id: author.id,
     author_name: author.display_name,
+    author_orcid: author.orcid || undefined,
     author_affiliation: author.affiliation || undefined,
+    author_works_count: author.works_count,
+    author_cited_by_count: author.cited_by_count,
+    author_h_index: author.h_index,
+    author_i10_index: author.i10_index,
     papers_in_graph: Object.keys(works).length,
     edges_in_graph: edges.length,
     build_time_seconds: parseFloat(elapsed),

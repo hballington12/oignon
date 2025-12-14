@@ -7,6 +7,7 @@ export {
   buildGraph,
   buildAuthorGraph,
   fetchPaper,
+  fetchAuthor,
   hydrateMetadata,
   preprocessGraph,
   type BuildGraphOptions,

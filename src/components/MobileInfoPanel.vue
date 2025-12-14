@@ -2,9 +2,13 @@
 import { computed, ref, type Component } from 'vue'
 import { useEventListener } from '@vueuse/core'
 import { TAB_HEIGHTS, PANEL_MIN_HEIGHT, type TabId } from '@/types/mobile'
+import { useGraphStore } from '@/stores/graph'
 import MobileControlsContent from '@/components/MobileControlsContent.vue'
 import PaperDetailsContent from '@/components/PaperDetailsContent.vue'
+import AuthorDetailsContent from '@/components/AuthorDetailsContent.vue'
 import LibraryContent from '@/components/LibraryContent.vue'
+
+const store = useGraphStore()
 
 const contentComponents: Partial<Record<TabId, Component>> = {
   controls: MobileControlsContent,
@@ -19,6 +23,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   colormapChange: [index: number]
   search: [query: string]
+  buildAuthor: [id: string]
   showDetails: []
   heightChange: [height: number]
   dragStart: []
@@ -222,7 +227,10 @@ const activeComponent = computed(() => {
             <div class="drag-handle-pill" />
           </div>
           <div class="resizable-content">
+            <!-- Show author details for author graphs when no node selected, paper details otherwise -->
+            <AuthorDetailsContent v-if="store.isAuthorGraph && store.selectedNodes.length === 0" />
             <PaperDetailsContent
+              v-else
               @search="emit('search', $event)"
               @show-details="emit('showDetails')"
             />
@@ -234,7 +242,11 @@ const activeComponent = computed(() => {
             <div class="drag-handle-pill" />
           </div>
           <div class="resizable-content">
-            <LibraryContent @search="emit('search', $event)" @show-details="emit('showDetails')" />
+            <LibraryContent
+              @search="emit('search', $event)"
+              @build-author="emit('buildAuthor', $event)"
+              @show-details="emit('showDetails')"
+            />
           </div>
         </div>
 

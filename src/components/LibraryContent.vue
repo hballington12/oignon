@@ -4,16 +4,19 @@ import { useGraphStore } from '@/stores/graph'
 import openAlexIcon from '@/assets/tricon-outlined.png'
 
 const store = useGraphStore()
-const activeTab = ref<'bookmarks' | 'graphs'>('bookmarks')
+const activeTab = ref<'bookmarks' | 'authors' | 'graphs'>('bookmarks')
 
 const emit = defineEmits<{
   showDetails: []
+  buildAuthor: [id: string]
 }>()
 
 const hasBookmarks = computed(() => store.bookmarkedPapers.length > 0)
+const hasFollowedAuthors = computed(() => store.followedAuthors.length > 0)
 const hasRecentGraphs = computed(() => store.recentGraphs.length > 0)
 const isEmpty = computed(() => {
   if (activeTab.value === 'bookmarks') return !hasBookmarks.value
+  if (activeTab.value === 'authors') return !hasFollowedAuthors.value
   return !hasRecentGraphs.value
 })
 
@@ -36,6 +39,27 @@ function removeBookmark(id: string) {
 
 function clearAllBookmarks() {
   store.clearBookmarks()
+}
+
+// Followed author actions
+function handleAuthorClick(id: string) {
+  emit('buildAuthor', id)
+}
+
+function unfollowAuthor(id: string) {
+  store.unfollowAuthor(id)
+}
+
+function clearFollowedAuthors() {
+  store.clearFollowedAuthors()
+}
+
+function openOrcid(orcid?: string) {
+  if (orcid) window.open(`https://orcid.org/${orcid}`, '_blank')
+}
+
+function openAuthorOpenAlex(id: string) {
+  window.open(`https://openalex.org/authors/${id}`, '_blank')
 }
 
 // Recent graph actions
@@ -79,6 +103,14 @@ function openOpenAlex(url?: string) {
       </button>
       <button
         class="tab-btn"
+        :class="{ active: activeTab === 'authors' }"
+        @click="activeTab = 'authors'"
+      >
+        Authors
+        <span v-if="hasFollowedAuthors" class="tab-count">{{ store.followedAuthors.length }}</span>
+      </button>
+      <button
+        class="tab-btn"
         :class="{ active: activeTab === 'graphs' }"
         @click="activeTab = 'graphs'"
       >
@@ -91,6 +123,7 @@ function openOpenAlex(url?: string) {
     <div v-if="isEmpty" class="empty-state">
       <span class="empty-icon">~</span>
       <p v-if="activeTab === 'bookmarks'">No bookmarks yet</p>
+      <p v-else-if="activeTab === 'authors'">No followed authors yet</p>
       <p v-else>No cached graphs yet</p>
     </div>
 
@@ -165,6 +198,79 @@ function openOpenAlex(url?: string) {
               class="spine-action remove"
               @click.stop="removeBookmark(paper.id)"
               title="Remove"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </TransitionGroup>
+    </div>
+
+    <!-- Followed Authors -->
+    <div v-if="activeTab === 'authors' && hasFollowedAuthors" class="library-section">
+      <div class="section-header">
+        <button class="clear-btn" @click="clearFollowedAuthors">Clear all</button>
+      </div>
+      <TransitionGroup name="spine-slide" tag="div" class="book-shelf">
+        <div
+          v-for="author in store.followedAuthors"
+          :key="author.id"
+          class="book-spine author-spine"
+          @click="handleAuthorClick(author.id)"
+        >
+          <span class="spine-text">
+            <span class="spine-meta">h={{ author.hIndex }} |</span>
+            <span class="spine-title">{{ author.displayName }}</span>
+            <span v-if="author.affiliation" class="spine-affiliation">{{
+              author.affiliation
+            }}</span>
+          </span>
+          <div class="spine-actions">
+            <button
+              v-if="author.orcid"
+              class="spine-action"
+              @click.stop="openOrcid(author.orcid)"
+              title="Open ORCID"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+              </svg>
+            </button>
+            <button
+              class="spine-action"
+              @click.stop="openAuthorOpenAlex(author.id)"
+              title="Open in OpenAlex"
+            >
+              <img :src="openAlexIcon" alt="OpenAlex" width="14" height="14" />
+            </button>
+            <button
+              class="spine-action remove"
+              @click.stop="unfollowAuthor(author.id)"
+              title="Unfollow"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -462,6 +568,21 @@ function openOpenAlex(url?: string) {
 
 .spine-action img {
   opacity: 0.7;
+}
+
+/* Author spine styles */
+.author-spine {
+  border-left-color: #8b5cf6;
+}
+
+.author-spine:active {
+  border-left-color: #a78bfa;
+}
+
+.spine-affiliation {
+  color: var(--text-faint);
+  font-style: italic;
+  margin-left: var(--spacing-xs);
 }
 
 /* Spine slide animations */

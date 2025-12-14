@@ -161,5 +161,9 @@ export function preprocessGraph(graph: RawGraph): ProcessedGraph {
   // Sort by year descending
   nodes.sort((a, b) => -(a.order || 0) - -(b.order || 0) || a.id.localeCompare(b.id))
 
-  return { nodes, metadata: graph.metadata }
+  return {
+    nodes,
+    metadata: graph.metadata,
+    graphType: graph.metadata?.graph_type,
+  }
 }

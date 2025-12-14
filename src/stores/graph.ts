@@ -10,9 +10,10 @@ import type {
   SlimCache,
   PaperMetadata,
   BookmarkedPaper,
+  FollowedAuthor,
   RecentGraph,
 } from '@/types'
-import { hydrateMetadata, fetchPaper } from '@/lib/graphBuilder'
+import { hydrateMetadata, fetchPaper, fetchAuthor } from '@/lib/graphBuilder'
 
 export const useGraphStore = defineStore('graph', () => {
   // Graph data
@@ -66,6 +67,7 @@ export const useGraphStore = defineStore('graph', () => {
   // Cache keys
   const CACHE_KEY = 'oignon_graph_cache'
   const BOOKMARKS_KEY = 'oignon_bookmarks'
+  const FOLLOWED_AUTHORS_KEY = 'oignon_followed_authors'
   const RECENT_GRAPHS_KEY = 'oignon_recent_graphs'
   const COLORMAP_KEY = 'oignon_colormap'
   const TUTORIAL_KEY = 'oignon_tutorial'
@@ -73,6 +75,7 @@ export const useGraphStore = defineStore('graph', () => {
 
   // Library state
   const bookmarkedPapers = ref<BookmarkedPaper[]>([])
+  const followedAuthors = ref<FollowedAuthor[]>([])
   const recentGraphs = ref<RecentGraph[]>([])
 
   // In-memory metadata cache (session-only, not persisted)
@@ -85,6 +88,10 @@ export const useGraphStore = defineStore('graph', () => {
       const bookmarks = localStorage.getItem(BOOKMARKS_KEY)
       if (bookmarks) {
         bookmarkedPapers.value = JSON.parse(bookmarks)
+      }
+      const authors = localStorage.getItem(FOLLOWED_AUTHORS_KEY)
+      if (authors) {
+        followedAuthors.value = JSON.parse(authors)
       }
       const recent = localStorage.getItem(RECENT_GRAPHS_KEY)
       if (recent) {
@@ -110,6 +117,14 @@ export const useGraphStore = defineStore('graph', () => {
       localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarkedPapers.value))
     } catch (e) {
       console.warn('Failed to save bookmarks:', e)
+    }
+  }
+
+  function saveFollowedAuthors() {
+    try {
+      localStorage.setItem(FOLLOWED_AUTHORS_KEY, JSON.stringify(followedAuthors.value))
+    } catch (e) {
+      console.warn('Failed to save followed authors:', e)
     }
   }
 
@@ -157,7 +172,7 @@ export const useGraphStore = defineStore('graph', () => {
   })
 
   const graphMetadata = computed(() => graph.value?.metadata)
-  const isAuthorGraph = computed(() => graph.value?.metadata?.graph_type === 'author')
+  const isAuthorGraph = computed(() => graph.value?.graphType === 'author')
 
   const selectedNodes = computed(() => {
     const result: VisualNode[] = []
@@ -333,8 +348,10 @@ export const useGraphStore = defineStore('graph', () => {
       return { slim: true, nodes: [] }
     }
 
-    // Find the source node
-    const source = graph.value.nodes.find((n) => n.metadata?.isSource)
+    const isAuthor = graph.value.graphType === 'author'
+
+    // Find the source node (only for paper graphs)
+    const source = !isAuthor ? graph.value.nodes.find((n) => n.metadata?.isSource) : undefined
 
     return {
       slim: true,
@@ -343,7 +360,9 @@ export const useGraphStore = defineStore('graph', () => {
         order: node.order,
         connections: node.connections.map(toNumericId),
       })),
+      graphType: graph.value.graphType,
       sourceId: source ? toNumericId(source.id) : undefined,
+      authorId: isAuthor ? graph.value.metadata?.author_id : undefined,
     }
   }
 
@@ -380,10 +399,14 @@ export const useGraphStore = defineStore('graph', () => {
     }
 
     const fullNodes = Array.from(nodeMap.values())
-    loadGraph({ nodes: fullNodes })
+    loadGraph({ nodes: fullNodes, graphType: slimCache.graphType })
 
     // Hydrate metadata in background (skip in dev if flag is set)
     if (import.meta.env.VITE_DEV_SKIP_HYDRATION !== 'true') {
+      // For author graphs, hydrate author metadata; for paper graphs, hydrate node metadata
+      if (slimCache.graphType === 'author' && slimCache.authorId) {
+        runAuthorHydration(slimCache.authorId)
+      }
       const nodeIds = fullNodes.map((n) => n.id)
       runMetadataHydration(nodeIds)
     }
@@ -443,6 +466,37 @@ export const useGraphStore = defineStore('graph', () => {
     }
   }
 
+  async function runAuthorHydration(authorId: string) {
+    hydratingMetadata.value = true
+
+    try {
+      const author = await fetchAuthor(authorId)
+      if (author && graph.value) {
+        // Update graph metadata with author info
+        graph.value.metadata = {
+          ...graph.value.metadata,
+          graph_type: 'author',
+          author_id: author.id,
+          author_name: author.display_name,
+          author_orcid: author.orcid || undefined,
+          author_affiliation: author.affiliation || undefined,
+          author_works_count: author.works_count,
+          author_cited_by_count: author.cited_by_count,
+          author_h_index: author.h_index,
+          author_i10_index: author.i10_index,
+          papers_in_graph: graph.value.nodes.length,
+          edges_in_graph: graph.value.metadata?.edges_in_graph ?? 0,
+          build_time_seconds: graph.value.metadata?.build_time_seconds ?? 0,
+          timestamp: graph.value.metadata?.timestamp ?? new Date().toISOString(),
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to hydrate author metadata:', e)
+    } finally {
+      hydratingMetadata.value = false
+    }
+  }
+
   function clearCache() {
     localStorage.removeItem(CACHE_KEY)
   }
@@ -479,6 +533,40 @@ export const useGraphStore = defineStore('graph', () => {
 
   function isBookmarked(id: string): boolean {
     return bookmarkedPapers.value.some((b) => b.id === id)
+  }
+
+  // Library actions - Followed Authors
+  function followAuthor(author: {
+    id: string
+    displayName: string
+    affiliation?: string
+    orcid?: string
+    worksCount: number
+    citedByCount: number
+    hIndex: number
+  }) {
+    // Don't add if already following
+    if (followedAuthors.value.some((a) => a.id === author.id)) return
+
+    followedAuthors.value.unshift({
+      ...author,
+      addedAt: Date.now(),
+    })
+    saveFollowedAuthors()
+  }
+
+  function unfollowAuthor(id: string) {
+    followedAuthors.value = followedAuthors.value.filter((a) => a.id !== id)
+    saveFollowedAuthors()
+  }
+
+  function clearFollowedAuthors() {
+    followedAuthors.value = []
+    saveFollowedAuthors()
+  }
+
+  function isFollowingAuthor(id: string): boolean {
+    return followedAuthors.value.some((a) => a.id === id)
   }
 
   // Select a bookmarked paper - either from graph or fetch standalone
@@ -644,6 +732,7 @@ export const useGraphStore = defineStore('graph', () => {
     pendingBuildId,
     hydratingMetadata,
     bookmarkedPapers,
+    followedAuthors,
     recentGraphs,
     standalonePaper,
     loadingStandalone,
@@ -682,6 +771,10 @@ export const useGraphStore = defineStore('graph', () => {
     clearBookmarks,
     isBookmarked,
     selectBookmarkedPaper,
+    followAuthor,
+    unfollowAuthor,
+    clearFollowedAuthors,
+    isFollowingAuthor,
     clearStandalonePaper,
     addRecentGraph,
     loadRecentGraph,
