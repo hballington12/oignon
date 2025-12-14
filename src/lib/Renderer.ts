@@ -6,6 +6,7 @@ import type { VisualNode } from '@/types'
 import { BatchedCurveMesh } from './BatchedCurveMesh'
 import type { CurveData } from './BatchedCurveGeometry'
 import { ColorMapFilter } from './ColorMapFilter'
+import { COLORMAPS } from './colormap'
 import { GRID } from './constants'
 import {
   calculateCurveControlPoints,
@@ -566,6 +567,11 @@ export class Renderer {
     }
     if (this.selectionColorMapFilter) {
       this.selectionColorMapFilter.colormap = colormap
+    }
+    // Update particle colors
+    const colormapData = COLORMAPS[colormap]
+    if (colormapData && this.particleSystem) {
+      this.particleSystem.setColormap(colormapData.stops)
     }
   }
 

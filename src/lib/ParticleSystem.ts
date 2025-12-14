@@ -8,6 +8,7 @@ import {
   type Application,
   type Filter,
 } from 'pixi.js'
+import { getColormapColor, type ColormapStop } from './colormap'
 
 // Simple value noise - less fancy than simplex but bulletproof
 class ValueNoise {
@@ -105,6 +106,7 @@ export class ParticleSystem {
   private options: Required<ParticleSystemOptions>
   private worldWidth = 0
   private worldHeight = 0
+  private colormapStops: ColormapStop[] | null = null
 
   constructor(options: ParticleSystemOptions = {}) {
     this.options = { ...DEFAULT_OPTIONS, ...options }
@@ -171,8 +173,17 @@ export class ParticleSystem {
     }
   }
 
+  /**
+   * Sample a random color from the colormap between 25-75%
+   */
+  private sampleColormapColor(): number {
+    if (!this.colormapStops) return this.options.color
+    const t = 0.25 + Math.random() * 0.5 // Random value between 0.25 and 0.75
+    return getColormapColor(t, this.colormapStops)
+  }
+
   private spawnParticle(initialAgeRatio = 0) {
-    const { minSize, maxSize, alpha, color, minLifetime, maxLifetime } = this.options
+    const { minSize, maxSize, alpha, minLifetime, maxLifetime } = this.options
 
     const sprite = new Sprite(this.hexTexture!)
     sprite.anchor.set(0.5)
@@ -193,8 +204,8 @@ export class ParticleSystem {
     const particleAlpha = alpha * (0.5 + Math.random() * 0.5)
     sprite.alpha = 0 // Start invisible, will fade in
 
-    // Tint
-    sprite.tint = color
+    // Tint - sample from colormap if available
+    sprite.tint = this.sampleColormapColor()
 
     // Position
     sprite.x = baseX
@@ -222,7 +233,7 @@ export class ParticleSystem {
   }
 
   private respawnParticle(particle: Particle) {
-    const { minSize, maxSize, alpha, color, minLifetime, maxLifetime } = this.options
+    const { minSize, maxSize, alpha, minLifetime, maxLifetime } = this.options
 
     // New random position
     particle.baseX = Math.random() * this.worldWidth
@@ -250,8 +261,8 @@ export class ParticleSystem {
     particle.lifetime = Math.floor(lifetimeSeconds * 60)
     particle.age = 0
 
-    // Tint (in case it changed)
-    particle.sprite.tint = color
+    // New tint from colormap
+    particle.sprite.tint = this.sampleColormapColor()
   }
 
   private startAnimation() {
@@ -342,6 +353,18 @@ export class ParticleSystem {
     }
 
     Object.assign(this.options, options)
+  }
+
+  /**
+   * Set colormap stops for particle tinting
+   * Particles will sample random colors from 25-75% of the colormap
+   */
+  setColormap(stops: ColormapStop[]) {
+    this.colormapStops = stops
+    // Re-tint existing particles with new colormap
+    for (const particle of this.particles) {
+      particle.sprite.tint = this.sampleColormapColor()
+    }
   }
 
   destroy() {
