@@ -50,6 +50,7 @@ export interface OpenAlexWork {
     keyword?: string
     score?: number
   }>
+  is_retracted?: boolean
 }
 
 // Slim paper type for ranking (minimal data)
@@ -169,6 +170,7 @@ export function formatPaper(work: OpenAlexWork): RawPaper {
     primaryTopic,
     sdgs: sdgs?.length ? sdgs : undefined,
     keywords: keywords?.length ? keywords : undefined,
+    isRetracted: work.is_retracted,
   }
 }
 

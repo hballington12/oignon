@@ -136,6 +136,16 @@ export function usePaperDetails() {
       })
     }
 
+    // Retracted badge
+    if (meta.isRetracted) {
+      result.push({
+        text: 'Retracted',
+        color: colormap ? getColormapColorHex(0.1, colormap) : '#ef4444',
+        textColor: '#ffffff',
+        title: 'This paper has been retracted',
+      })
+    }
+
     // Access badge (Open or Closed)
     if (meta.openAccess === true) {
       result.push({

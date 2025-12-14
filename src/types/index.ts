@@ -59,6 +59,7 @@ export interface PaperMetadata {
   primaryTopic?: PrimaryTopic
   sdgs?: SDG[] // Sustainable Development Goals
   keywords?: string[]
+  isRetracted?: boolean
 }
 
 export interface GraphNode {
@@ -101,6 +102,7 @@ export interface RawPaper {
   primaryTopic?: PrimaryTopic
   sdgs?: SDG[]
   keywords?: string[]
+  isRetracted?: boolean
 }
 
 export interface GraphEdge {
