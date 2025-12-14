@@ -95,6 +95,7 @@
 
   /* ---- Z-index layers ---- */
   --z-canvas: 1;
+  --z-floating: 40;
   --z-overlay: 50;
   --z-panel: 100;
   --z-toggle: 101;
