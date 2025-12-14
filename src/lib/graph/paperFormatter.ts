@@ -2,7 +2,14 @@
  * Paper formatting utilities for converting OpenAlex API responses
  */
 
-import type { RawPaper, Author, PrimaryTopic, SDG, CitationPercentile } from '@/types'
+import type {
+  RawPaper,
+  Author,
+  PrimaryTopic,
+  SDG,
+  CitationPercentile,
+  PaperMetadata,
+} from '@/types'
 
 const MAX_AUTHORS_IN_PAPER = 5
 
@@ -149,16 +156,14 @@ export function formatPaper(work: OpenAlexWork): RawPaper {
     ?.filter((kw) => kw.keyword)
     .map((kw) => kw.keyword || '')
 
-  return {
-    id: work.id,
-    doi: work.doi,
+  const metadata: PaperMetadata = {
     title: work.title,
-    authors,
-    year: work.publication_year,
+    authors: authors.map((a) => a.name),
+    authorsDetailed: authors,
     citationCount: work.cited_by_count || 0,
     referencesCount: refs.length,
+    doi: work.doi,
     openAlexUrl: work.id,
-    references: refs.map(extractId),
     type: work.type,
     sourceType: work.primary_location?.source?.type,
     sourceName: work.primary_location?.source?.display_name,
@@ -171,6 +176,13 @@ export function formatPaper(work: OpenAlexWork): RawPaper {
     sdgs: sdgs?.length ? sdgs : undefined,
     keywords: keywords?.length ? keywords : undefined,
     isRetracted: work.is_retracted,
+  }
+
+  return {
+    id: work.id,
+    year: work.publication_year,
+    references: refs.map(extractId),
+    metadata,
   }
 }
 

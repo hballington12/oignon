@@ -123,38 +123,11 @@ export function preprocessGraph(graph: RawGraph): ProcessedGraph {
     const refs = paper.references || []
     const connections = refs.map(extractId).filter((r) => nodeIds.has(r))
 
-    const authorsRaw = paper.authors || []
-    const authorNames = authorsRaw.map((a) => (typeof a === 'object' ? a.name || '' : String(a)))
-
-    const metadata = {
-      title: paper.title || '',
-      authors: authorNames,
-      citationCount: paper.citationCount || 0,
-      doi: paper.doi,
-      referencesCount: paper.referencesCount,
-      openAlexUrl: paper.openAlexUrl,
-      authorsDetailed:
-        authorsRaw.length && typeof authorsRaw[0] === 'object' ? authorsRaw : undefined,
-      isSource: paper.isSource,
-      type: paper.type,
-      sourceType: paper.sourceType,
-      sourceName: paper.sourceName,
-      openAccess: paper.openAccess,
-      language: paper.language,
-      abstract: paper.abstract,
-      fwci: paper.fwci,
-      citationPercentile: paper.citationPercentile,
-      primaryTopic: paper.primaryTopic,
-      sdgs: paper.sdgs,
-      keywords: paper.keywords,
-      isRetracted: paper.isRetracted,
-    }
-
     nodes.push({
       id: pid,
       connections,
       order: paper.year,
-      metadata,
+      metadata: paper.metadata,
       citedBy: citedBy[pid] || [],
     })
   }

@@ -619,17 +619,7 @@ export const useGraphStore = defineStore('graph', () => {
         selectedNodeIds.value = new Set()
 
         const metadata: PaperMetadata = {
-          title: paper.title,
-          authors: paper.authors.map((a) => a.name),
-          citationCount: paper.citationCount,
-          referencesCount: paper.referencesCount,
-          doi: paper.doi,
-          openAlexUrl: paper.openAlexUrl,
-          type: paper.type,
-          sourceType: paper.sourceType,
-          sourceName: paper.sourceName,
-          openAccess: paper.openAccess,
-          abstract: paper.abstract,
+          ...paper.metadata,
           isSource: false,
         }
 

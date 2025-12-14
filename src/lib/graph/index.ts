@@ -104,7 +104,7 @@ export async function buildGraph(
     estBranchSeedBatches +
     estBranchRefBatches
 
-  reportProgress(`Source: ${source.title} (${source.year})`)
+  reportProgress(`Source: ${source.metadata.title} (${source.year})`)
 
   // Step 2: Build ROOTS
   reportProgress('Building roots...')
@@ -280,30 +280,7 @@ export async function hydrateMetadata(
   })
 
   for (const [id, paper] of Object.entries(fullPapers)) {
-    const authorNames = (paper.authors || []).map((a) =>
-      typeof a === 'object' ? a.name || '' : String(a),
-    )
-
-    results[id] = {
-      title: paper.title || '',
-      authors: authorNames,
-      authorsDetailed: paper.authors,
-      citationCount: paper.citationCount || 0,
-      referencesCount: paper.referencesCount,
-      doi: paper.doi,
-      openAlexUrl: paper.openAlexUrl,
-      type: paper.type,
-      sourceType: paper.sourceType,
-      sourceName: paper.sourceName,
-      openAccess: paper.openAccess,
-      language: paper.language,
-      abstract: paper.abstract,
-      fwci: paper.fwci,
-      citationPercentile: paper.citationPercentile,
-      primaryTopic: paper.primaryTopic,
-      sdgs: paper.sdgs,
-      keywords: paper.keywords,
-    }
+    results[id] = paper.metadata
   }
 
   return results

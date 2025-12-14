@@ -74,35 +74,16 @@ export interface GraphNode {
 
 export interface RawPaper {
   id: string
-  doi?: string
-  title: string
-  authors: Author[]
   year: number
-  citationCount: number
-  referencesCount: number
-  openAlexUrl: string
   references: string[]
+  metadata: PaperMetadata
+  // Graph building fields (not part of display metadata)
   role?: 'root' | 'branch' | 'root_seed' | 'branch_seed'
-  isSource?: boolean
   rank?: number
   citedCount?: number
   coCitedCount?: number
   coCitingCount?: number
   citingCount?: number
-  // Additional metadata
-  type?: string
-  sourceType?: string
-  sourceName?: string
-  openAccess?: boolean
-  language?: string
-  abstract?: string
-  // Extended metadata
-  fwci?: number
-  citationPercentile?: CitationPercentile
-  primaryTopic?: PrimaryTopic
-  sdgs?: SDG[]
-  keywords?: string[]
-  isRetracted?: boolean
 }
 
 export interface GraphEdge {
