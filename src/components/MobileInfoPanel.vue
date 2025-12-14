@@ -228,16 +228,20 @@ const activeComponent = computed(() => {
           </div>
           <div class="resizable-content">
             <!-- Show author details for author graphs when no node selected and no standalone paper -->
-            <AuthorDetailsContent
-              v-if="
-                store.isAuthorGraph && store.selectedNodes.length === 0 && !store.standalonePaper
-              "
-            />
-            <PaperDetailsContent
-              v-else
-              @search="emit('search', $event)"
-              @show-details="emit('showDetails')"
-            />
+            <Transition name="details-fade" mode="out-in">
+              <AuthorDetailsContent
+                v-if="
+                  store.isAuthorGraph && store.selectedNodes.length === 0 && !store.standalonePaper
+                "
+                key="author"
+              />
+              <PaperDetailsContent
+                v-else
+                key="paper"
+                @search="emit('search', $event)"
+                @show-details="emit('showDetails')"
+              />
+            </Transition>
           </div>
         </div>
 
@@ -355,6 +359,20 @@ const activeComponent = computed(() => {
 
 .fade-enter-from,
 .fade-leave-to {
+  opacity: 0;
+}
+
+/* Details content fade (author <-> paper) */
+.details-fade-enter-active {
+  transition: opacity 0.15s ease-out;
+}
+
+.details-fade-leave-active {
+  transition: opacity 0.08s ease-in;
+}
+
+.details-fade-enter-from,
+.details-fade-leave-to {
   opacity: 0;
 }
 </style>
