@@ -173,6 +173,8 @@ export class Renderer {
 
     // Watch for container resize and update viewport
     this.resizeObserver = new ResizeObserver(() => {
+      // Force PixiJS to update its screen dimensions first
+      this.app.resize()
       if (this.viewport) {
         this.viewport.resize(this.app.screen.width, this.app.screen.height)
       }
