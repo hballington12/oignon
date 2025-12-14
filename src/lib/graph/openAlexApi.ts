@@ -38,6 +38,7 @@ const OPENALEX_FULL_FIELDS = [
   'primary_topic',
   'sustainable_development_goals',
   'keywords',
+  'is_retracted',
 ].join(',')
 
 // Slim fields for intermediate papers (only used for ranking)
