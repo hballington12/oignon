@@ -315,11 +315,24 @@ export class Renderer {
   }
 
   private initParticles(grid: Grid) {
+    // Calculate the fit-to-view scale to determine visible area in world coords
+    const { scale } = this.calculateFitToView(grid)
+    const visibleWidth = this.app.screen.width / scale
+    const visibleHeight = this.app.screen.height / scale
+
+    // Use the larger of graph canvas or visible viewport
     const padding = 100
+    const worldWidth = Math.max(grid.canvasWidth, visibleWidth) + padding * 2
+    const worldHeight = Math.max(grid.canvasHeight, visibleHeight) + padding * 2
+
+    // Center the particle area on the graph
+    const offsetX = (grid.canvasWidth - worldWidth) / 2
+    const offsetY = (grid.canvasHeight - worldHeight) / 2
+
     for (const ps of this.particleSystems) {
-      ps.init(this.app, grid.canvasWidth + padding * 2, grid.canvasHeight + padding * 2)
-      ps.container.x = -padding
-      ps.container.y = -padding
+      ps.init(this.app, worldWidth, worldHeight)
+      ps.container.x = offsetX
+      ps.container.y = offsetY
     }
   }
 
