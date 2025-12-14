@@ -49,9 +49,8 @@ const OPENALEX_SLIM_FIELDS = ['id', 'publication_year', 'cited_by_count', 'refer
 
 let apiCallCount = 0
 
-export function logApiCall(endpoint: string, detail?: string) {
+export function logApiCall(_endpoint: string, _detail?: string) {
   apiCallCount++
-  console.log(`[API #${apiCallCount}] ${endpoint}${detail ? ` (${detail})` : ''}`)
 }
 
 export function resetApiCallCount() {
@@ -254,6 +253,35 @@ export async function fetchCitationsBulk(
   return citingIds
 }
 
+// --- DOI parsing ---
+
+/**
+ * Extract a DOI from various input formats:
+ * - Raw DOI: 10.1234/example
+ * - Full URL: https://doi.org/10.1234/example
+ * - HTTP variant: http://doi.org/10.1234/example
+ * - dx.doi.org: https://dx.doi.org/10.1234/example
+ * - Without protocol: doi.org/10.1234/example
+ *
+ * Returns the raw DOI (e.g., "10.1234/example") or null if not a DOI
+ */
+export function parseDoi(input: string): string | null {
+  const trimmed = input.trim()
+
+  // Raw DOI: starts with 10.
+  if (trimmed.match(/^10\.\d{4,}/)) {
+    return trimmed
+  }
+
+  // URL formats: extract DOI after doi.org/ or dx.doi.org/
+  const urlMatch = trimmed.match(/(?:https?:\/\/)?(?:dx\.)?doi\.org\/(10\.\d{4,}.+)$/i)
+  if (urlMatch?.[1]) {
+    return urlMatch[1]
+  }
+
+  return null
+}
+
 // --- Autocomplete ---
 
 export interface AutocompleteResult {
@@ -265,11 +293,50 @@ export interface AutocompleteResult {
   external_id: string | null
 }
 
+/**
+ * Fetch a single work by DOI and format as AutocompleteResult
+ */
+async function fetchWorkByDoi(doi: string): Promise<AutocompleteResult | null> {
+  const encodedDoi = encodeURIComponent(`https://doi.org/${doi}`)
+  const url = `${OPENALEX_API}/works/${encodedDoi}?mailto=${OPENALEX_EMAIL}`
+  try {
+    const response = await fetch(url, OPENALEX_FETCH_OPTIONS)
+    if (!response.ok) return null
+    const work = await response.json()
+
+    // Format first author for hint
+    const firstAuthor = work.authorships?.[0]?.author?.display_name || null
+    const year = work.publication_year
+    const hint = firstAuthor && year ? `${firstAuthor}, ${year}` : firstAuthor || year?.toString()
+
+    return {
+      id: extractId(work.id),
+      display_name: work.title || 'Untitled',
+      hint: hint || null,
+      cited_by_count: work.cited_by_count || 0,
+      entity_type: 'work',
+      external_id: work.doi || null,
+    }
+  } catch (e) {
+    console.error('DOI lookup error:', e)
+    return null
+  }
+}
+
 export async function fetchAutocomplete(query: string): Promise<AutocompleteResult[]> {
   if (!query || query.length === 0) return []
 
+  // Check if query is a DOI - if so, try fetching directly
+  const doi = parseDoi(query)
+  if (doi) {
+    const result = await fetchWorkByDoi(doi)
+    if (result) return [result]
+    // DOI not found in OpenAlex, fall through to regular autocomplete
+  }
+
   const params = new URLSearchParams({
     q: query,
+    filter: 'has_doi:true',
     mailto: OPENALEX_EMAIL,
   })
 

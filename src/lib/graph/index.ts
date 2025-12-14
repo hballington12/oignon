@@ -43,7 +43,6 @@ export async function buildGraph(
   const { nRoots = DEFAULT_N_ROOTS, nBranches = DEFAULT_N_BRANCHES, onProgress } = options
 
   resetApiCallCount()
-  console.log('[GraphBuilder] Starting build...')
 
   const startTime = performance.now()
 
@@ -161,9 +160,7 @@ export async function buildGraph(
   }
 
   const totalUniqueRefs = Object.keys(branchRefFrequency).length
-  console.log(
-    `[GraphBuilder] Frequency filter: ${totalUniqueRefs} -> ${allBranchRefIds.size} refs (>= ${MIN_BRANCH_REF_FREQUENCY} seeds)`,
-  )
+  void totalUniqueRefs // Used for debugging
 
   const actualBranchRefBatches = Math.ceil(allBranchRefIds.size / OPENALEX_MAX_FILTER_IDS)
   totalApiCalls = completedApiCalls + actualBranchRefBatches
@@ -245,8 +242,6 @@ export async function buildGraph(
     timestamp: new Date().toISOString(),
     api_calls: getApiCallCount(),
   }
-
-  console.log(`[GraphBuilder] Complete: ${getApiCallCount()} API calls in ${elapsed}s`)
 
   return {
     source_paper: source,
