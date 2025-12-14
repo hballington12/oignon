@@ -11,6 +11,7 @@ import MobileTabBar from '@/components/MobileTabBar.vue'
 import MobileInfoPanel from '@/components/MobileInfoPanel.vue'
 import FloatingControls from '@/components/FloatingControls.vue'
 import TutorialOverlay from '@/components/TutorialOverlay.vue'
+import MobileSearchOverlay from '@/components/MobileSearchOverlay.vue'
 import { TAB_HEIGHTS, TAB_BAR_HEIGHT, type TabId } from '@/types/mobile'
 import { useGraphStore } from '@/stores/graph'
 import { useMobile } from '@/composables/useMobile'
@@ -22,6 +23,7 @@ const { isMobile } = useMobile()
 const activeTab = ref<TabId | null>(null)
 const customPanelHeights = ref<Partial<Record<TabId, number>>>({})
 const isPanelDragging = ref(false)
+const searchOverlayOpen = ref(false)
 
 // Year axis visibility (persisted)
 const YEAR_AXIS_KEY = 'oignon:showYearAxis'
@@ -33,6 +35,11 @@ function toggleYearAxis() {
 }
 
 function handleTabSelect(tab: TabId) {
+  // Search tab opens the overlay instead of the panel
+  if (tab === 'search') {
+    searchOverlayOpen.value = true
+    return
+  }
   // Toggle off if tapping the same tab
   activeTab.value = activeTab.value === tab ? null : tab
 }
@@ -51,12 +58,15 @@ function handlePanelDragEnd() {
   isPanelDragging.value = false
 }
 
-// Switch to search tab on mobile when a build is triggered
+// Open search overlay on mobile when a build is triggered externally
 watch(
   () => store.pendingBuildId,
   (newId) => {
     if (newId && isMobile.value) {
-      activeTab.value = 'search'
+      searchOverlayOpen.value = true
+      // Trigger build with the pending ID
+      handleSearch(newId)
+      store.clearPendingBuild()
     }
   },
 )
@@ -272,6 +282,14 @@ function handleColormapChange(index: number) {
       />
       <MobileTabBar :active-tab="activeTab" @select="handleTabSelect" />
     </div>
+
+    <!-- Mobile search overlay -->
+    <MobileSearchOverlay
+      v-if="isMobile"
+      :open="searchOverlayOpen"
+      @close="searchOverlayOpen = false"
+      @build="handleSearch"
+    />
 
     <!-- Tutorial overlay -->
     <TutorialOverlay

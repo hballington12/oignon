@@ -4,13 +4,11 @@ import { useEventListener } from '@vueuse/core'
 import { TAB_HEIGHTS, PANEL_MIN_HEIGHT, type TabId } from '@/types/mobile'
 import MobileControlsContent from '@/components/MobileControlsContent.vue'
 import PaperDetailsContent from '@/components/PaperDetailsContent.vue'
-import MobileSearchContent from '@/components/MobileSearchContent.vue'
 import LibraryContent from '@/components/LibraryContent.vue'
 
 const contentComponents: Partial<Record<TabId, Component>> = {
   controls: MobileControlsContent,
   details: PaperDetailsContent,
-  search: MobileSearchContent,
   library: LibraryContent,
 }
 

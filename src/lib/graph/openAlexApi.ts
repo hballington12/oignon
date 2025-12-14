@@ -254,6 +254,49 @@ export async function fetchCitationsBulk(
   return citingIds
 }
 
+// --- Autocomplete ---
+
+export interface AutocompleteResult {
+  id: string
+  display_name: string
+  hint: string | null
+  cited_by_count: number
+  entity_type: string
+  external_id: string | null
+}
+
+export async function fetchAutocomplete(query: string): Promise<AutocompleteResult[]> {
+  if (!query || query.length === 0) return []
+
+  const params = new URLSearchParams({
+    q: query,
+    mailto: OPENALEX_EMAIL,
+  })
+
+  try {
+    const response = await fetch(
+      `${OPENALEX_API}/autocomplete/works?${params}`,
+      OPENALEX_FETCH_OPTIONS,
+    )
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const data = await response.json()
+
+    return (data.results || []).map((result: AutocompleteResult) => ({
+      id: extractId(result.id),
+      display_name: result.display_name,
+      hint: result.hint,
+      cited_by_count: result.cited_by_count || 0,
+      entity_type: result.entity_type,
+      external_id: result.external_id,
+    }))
+  } catch (e) {
+    console.error('Autocomplete error:', e)
+    return []
+  }
+}
+
+// --- Citation fetching ---
+
 export async function fetchCitingPapers(workId: string, limit: number): Promise<string[]> {
   const params = new URLSearchParams({
     filter: `cites:${workId}`,
