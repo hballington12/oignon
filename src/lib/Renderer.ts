@@ -49,7 +49,7 @@ export class Renderer {
   private app: Application
   private viewport: Viewport | null = null
   private baseScale = 1
-  private particleSystem: ParticleSystem | null = null
+  private particleSystems: ParticleSystem[] = []
   private curvesContainer: Container
   private nodesContainer: Container
   private nodeTextures: NodeTextures | null = null
@@ -109,10 +109,41 @@ export class Renderer {
 
     this.viewport.drag().pinch().wheel().decelerate()
 
-    this.particleSystem = new ParticleSystem()
+    // Triple-layer particle system: back to front
+    this.particleSystems = [
+      // Layer 1: large, faint, slow drifters (background)
+      new ParticleSystem({
+        count: 20,
+        minSize: 8,
+        maxSize: 16,
+        alpha: 0.06,
+        drift: 60,
+        speed: 0.001,
+      }),
+      // Layer 2: medium (midground)
+      new ParticleSystem({
+        count: 30,
+        minSize: 4,
+        maxSize: 10,
+        alpha: 0.1,
+        drift: 40,
+        speed: 0.002,
+      }),
+      // Layer 3: small, brighter, faster (foreground)
+      new ParticleSystem({
+        count: 40,
+        minSize: 2,
+        maxSize: 6,
+        alpha: 0.15,
+        drift: 25,
+        speed: 0.003,
+      }),
+    ]
 
     // Layer order: particles -> curves -> selection curves -> nodes
-    this.viewport.addChild(this.particleSystem.container)
+    for (const ps of this.particleSystems) {
+      this.viewport.addChild(ps.container)
+    }
     this.viewport.addChild(this.curvesContainer)
     this.viewport.addChild(this.selectionManager.selectionCurvesContainer)
     this.viewport.addChild(this.nodesContainer)
@@ -284,15 +315,12 @@ export class Renderer {
   }
 
   private initParticles(grid: Grid) {
-    if (!this.particleSystem) return
     const padding = 100
-    this.particleSystem.init(
-      this.app,
-      grid.canvasWidth + padding * 2,
-      grid.canvasHeight + padding * 2,
-    )
-    this.particleSystem.container.x = -padding
-    this.particleSystem.container.y = -padding
+    for (const ps of this.particleSystems) {
+      ps.init(this.app, grid.canvasWidth + padding * 2, grid.canvasHeight + padding * 2)
+      ps.container.x = -padding
+      ps.container.y = -padding
+    }
   }
 
   private centerOnScreen(grid: Grid) {
@@ -570,8 +598,10 @@ export class Renderer {
     }
     // Update particle colors
     const colormapData = COLORMAPS[colormap]
-    if (colormapData && this.particleSystem) {
-      this.particleSystem.setColormap(colormapData.stops)
+    if (colormapData) {
+      for (const ps of this.particleSystems) {
+        ps.setColormap(colormapData.stops)
+      }
     }
   }
 
@@ -631,7 +661,9 @@ export class Renderer {
   // --- Particles ---
 
   setParticleOptions(options: ParticleSystemOptions) {
-    this.particleSystem?.setOptions(options)
+    for (const ps of this.particleSystems) {
+      ps.setOptions(options)
+    }
   }
 
   // --- Cleanup ---
@@ -668,8 +700,10 @@ export class Renderer {
     if (!this.initialized) return
 
     this.clear()
-    this.particleSystem?.destroy()
-    this.particleSystem = null
+    for (const ps of this.particleSystems) {
+      ps.destroy()
+    }
+    this.particleSystems = []
 
     if (this.nodeTextures) {
       destroyNodeTextures(this.nodeTextures)

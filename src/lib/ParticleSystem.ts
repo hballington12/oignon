@@ -174,11 +174,11 @@ export class ParticleSystem {
   }
 
   /**
-   * Sample a random color from the colormap between 25-75%
+   * Sample a random color from the colormap between 25-100%
    */
   private sampleColormapColor(): number {
     if (!this.colormapStops) return this.options.color
-    const t = 0.25 + Math.random() * 0.5 // Random value between 0.25 and 0.75
+    const t = 0.25 + Math.random() * 0.75 // Random value between 0.25 and 1.0
     return getColormapColor(t, this.colormapStops)
   }
 
