@@ -79,6 +79,7 @@ export class Renderer {
   private selectionColorMapFilter: ColorMapFilter | null = null
   private curveAlphaFilter: AlphaFilter | null = null
   private curveAlphaAnimationRunner = new AnimationRunner()
+  private resizeObserver: ResizeObserver | null = null
 
   constructor() {
     this.app = new Application()
@@ -169,6 +170,14 @@ export class Renderer {
 
     this.nodeTextures = createNodeTextures(this.app)
     this.initialized = true
+
+    // Watch for container resize and update viewport
+    this.resizeObserver = new ResizeObserver(() => {
+      if (this.viewport) {
+        this.viewport.resize(this.app.screen.width, this.app.screen.height)
+      }
+    })
+    this.resizeObserver.observe(element)
   }
 
   render(grid: Grid, orderToRow?: Record<number, number>) {
@@ -724,6 +733,11 @@ export class Renderer {
     if (this.nodeTextures) {
       destroyNodeTextures(this.nodeTextures)
       this.nodeTextures = null
+    }
+
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect()
+      this.resizeObserver = null
     }
 
     this.app.destroy(true)
