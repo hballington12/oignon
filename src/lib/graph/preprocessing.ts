@@ -127,7 +127,10 @@ export function preprocessGraph(graph: RawGraph): ProcessedGraph {
       id: pid,
       connections,
       order: paper.year,
-      metadata: paper.metadata,
+      metadata: {
+        ...paper.metadata,
+        isSource: paper.isSource,
+      },
       citedBy: citedBy[pid] || [],
     })
   }
