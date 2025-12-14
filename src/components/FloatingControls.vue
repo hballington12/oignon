@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const props = defineProps<{
   showYearAxis?: boolean
+  graphType?: 'paper' | 'author'
 }>()
 
 const emit = defineEmits<{
@@ -78,7 +79,12 @@ const emit = defineEmits<{
         <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
       </svg>
     </button>
-    <button class="float-btn" @click="emit('zoomToSource')" title="Go to source">
+    <button
+      v-if="props.graphType !== 'author'"
+      class="float-btn"
+      @click="emit('zoomToSource')"
+      title="Go to source"
+    >
       <svg
         width="20"
         height="20"

@@ -97,6 +97,8 @@ const backgroundColor = computed(() => {
   return colormap ? getBackgroundColorHex(colormap) : '#000000'
 })
 
+const graphType = computed(() => store.graphMetadata?.graph_type)
+
 // Dynamic CSS variables based on colormap
 const colormapStyles = computed(() => {
   const bg = backgroundColor.value
@@ -288,6 +290,7 @@ function handleColormapChange(index: number) {
       <FloatingControls
         v-if="isMobile"
         :show-year-axis="showYearAxis"
+        :graph-type="graphType"
         @zoom-in="handleZoomIn"
         @zoom-out="handleZoomOut"
         @fit-to-view="handleFitToView"
