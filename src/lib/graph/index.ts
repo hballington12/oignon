@@ -311,7 +311,7 @@ export async function hydrateMetadata(
 
 // --- Author Graph Building ---
 
-const DEFAULT_AUTHOR_WORKS_LIMIT = 250
+const DEFAULT_AUTHOR_WORKS_LIMIT = 500
 
 export interface BuildAuthorGraphOptions {
   maxWorks?: number
