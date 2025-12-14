@@ -635,6 +635,11 @@ export class Renderer {
     this.curveAnimationRunner.cancel()
     this.curveAlphaAnimationRunner.cancel()
 
+    // Reset curve alpha to fully visible for fresh render
+    if (this.curveAlphaFilter) {
+      this.curveAlphaFilter.alpha = 1
+    }
+
     this.nodesContainer.removeChildren()
     this.curvesContainer.removeChildren()
     this.nodeContainers.clear()
