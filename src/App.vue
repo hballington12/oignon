@@ -412,12 +412,14 @@ body,
   position: relative;
   flex: 1;
   min-height: 0;
+  z-index: 1;
 }
 
 .mobile-bottom-area {
   flex-shrink: 0;
   transition: height var(--transition-smooth);
   padding-bottom: env(safe-area-inset-bottom);
+  z-index: 2;
 }
 
 .mobile-bottom-area.dragging {
