@@ -253,6 +253,7 @@ function handleTutorialCleanup() {
   showYearAxis.value = true
   customPanelHeights.value = {}
   tutorialSearchQuery.value = undefined
+  searchOverlayOpen.value = false
   mobileInfoPanel.value?.resetHeights()
   graphCanvas.value?.fitToView()
 }
