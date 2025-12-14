@@ -359,6 +359,9 @@ export class Renderer {
   fitToView(grid: Grid, padding = 20): number {
     if (!this.viewport) return 1
 
+    // Stop any momentum/deceleration
+    this.viewport.plugins.get('decelerate')?.reset()
+
     const { scale, x, y } = this.calculateFitToView(grid, padding)
 
     this.viewport.scale.set(scale)
