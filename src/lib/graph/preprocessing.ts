@@ -147,6 +147,7 @@ export function preprocessGraph(graph: RawGraph): ProcessedGraph {
       primaryTopic: paper.primaryTopic,
       sdgs: paper.sdgs,
       keywords: paper.keywords,
+      isRetracted: paper.isRetracted,
     }
 
     nodes.push({
