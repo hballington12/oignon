@@ -172,6 +172,7 @@ export const useGraphStore = defineStore('graph', () => {
   })
 
   const graphMetadata = computed(() => graph.value?.metadata)
+  const graphType = computed(() => graph.value?.graphType)
   const isAuthorGraph = computed(() => graph.value?.graphType === 'author')
 
   const selectedNodes = computed(() => {
@@ -742,6 +743,7 @@ export const useGraphStore = defineStore('graph', () => {
     sourceNode,
     selectedNodes,
     graphMetadata,
+    graphType,
     isAuthorGraph,
 
     // Actions

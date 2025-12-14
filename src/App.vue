@@ -97,7 +97,7 @@ const backgroundColor = computed(() => {
   return colormap ? getBackgroundColorHex(colormap) : '#000000'
 })
 
-const graphType = computed(() => store.graphMetadata?.graph_type)
+const graphType = computed(() => store.graphType)
 
 // Dynamic CSS variables based on colormap
 const colormapStyles = computed(() => {
