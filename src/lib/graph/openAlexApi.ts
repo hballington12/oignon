@@ -330,8 +330,9 @@ export async function fetchAutocomplete(query: string): Promise<AutocompleteResu
   const doi = parseDoi(query)
   if (doi) {
     const result = await fetchWorkByDoi(doi)
-    if (result) return [result]
-    // DOI not found in OpenAlex, fall through to regular autocomplete
+    // Return result if found, or empty array if DOI not in OpenAlex
+    // (don't fall back to text search with a DOI string)
+    return result ? [result] : []
   }
 
   const params = new URLSearchParams({

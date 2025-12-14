@@ -9,6 +9,7 @@ const store = useGraphStore()
 const props = defineProps<{
   open: boolean
   colormapColor?: string
+  tutorialQuery?: string
 }>()
 
 const emit = defineEmits<{
@@ -31,16 +32,26 @@ const overlayStyle = computed(() => ({
 }))
 const buildProgress = computed(() => store.loadingProgress)
 
-// Focus input when overlay opens
+// Focus input when overlay opens, pre-fill tutorial query if provided
 watch(
   () => props.open,
   async (isOpen) => {
     if (isOpen) {
-      query.value = ''
-      results.value = []
       selectedPaper.value = null
-      await nextTick()
-      inputRef.value?.focus()
+
+      // Pre-fill with tutorial query if provided
+      if (props.tutorialQuery) {
+        query.value = props.tutorialQuery
+        results.value = []
+        await nextTick()
+        // Trigger search for the tutorial query
+        searchPapers(props.tutorialQuery)
+      } else {
+        query.value = ''
+        results.value = []
+        await nextTick()
+        inputRef.value?.focus()
+      }
     }
   },
 )
@@ -128,7 +139,7 @@ function formatCitations(count: number): string {
     <Transition name="overlay">
       <div v-if="open" class="search-overlay" :style="overlayStyle" @click="onBackdropClick">
         <!-- Building state -->
-        <div v-if="isBuilding" class="building-container">
+        <div v-if="isBuilding" id="building-container" class="building-container">
           <div class="building-card">
             <div class="building-spinner" />
             <div class="building-title">Building graph</div>
@@ -145,7 +156,7 @@ function formatCitations(count: number): string {
         </div>
 
         <!-- Search state -->
-        <div v-else class="search-container">
+        <div v-else id="search-container" class="search-container">
           <!-- Search input -->
           <div class="search-bar">
             <svg
@@ -186,7 +197,7 @@ function formatCitations(count: number): string {
             </div>
 
             <!-- Results -->
-            <div v-else-if="results.length > 0" class="results-list">
+            <div v-else-if="results.length > 0" id="tutorial-results" class="results-list">
               <button
                 v-for="result in results"
                 :key="result.id"

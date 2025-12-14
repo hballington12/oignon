@@ -21,11 +21,16 @@ const emit = defineEmits<{
   bookmarkSource: []
   openDetailsTab: []
   cleanup: []
+  openSearch: [doi: string]
+  closeSearch: []
 }>()
 
 const showWelcome = ref(true)
 const currentStepIndex = ref(0)
 let driverInstance: ReturnType<typeof driver> | null = null
+
+// DOI used for tutorial demo
+const TUTORIAL_DOI = '10.1038/nature12373'
 
 // Watch for visibility changes to handle skipWelcome
 watch(
@@ -51,19 +56,19 @@ const steps: DriveStep[] = [
     disableActiveInteraction: false,
   },
   {
-    element: '#search-content',
+    element: '#tutorial-results',
     popover: {
-      side: 'top',
+      side: 'bottom',
       title: 'Build a Graph',
-      description: "You need a DOI to build a graph. Let's hit Build and create our first graph.",
+      description: "We've searched for a paper. Tap the result to build your first graph!",
       showButtons: [],
     },
     disableActiveInteraction: false,
   },
   {
-    element: '#search-content',
+    element: '#building-container',
     popover: {
-      side: 'right',
+      side: 'bottom',
       title: 'Building...',
       description:
         'Oignon searches several thousand related publications to build a graph. This might take a moment, hang tight!',
@@ -219,10 +224,19 @@ watch(
 
     // Step 0: waiting for search tab to open
     if (currentStepIndex.value === 0 && newTab === 'search') {
-      // Wait for the panel to render before advancing
-      setTimeout(() => {
-        advanceStep()
-      }, 100)
+      // Open search overlay with tutorial DOI pre-filled
+      emit('openSearch', TUTORIAL_DOI)
+      // Wait for the overlay to render and results to load before advancing
+      // Poll until the results element exists (API response received)
+      const waitForResults = () => {
+        const resultsEl = document.getElementById('tutorial-results')
+        if (resultsEl) {
+          advanceStep()
+        } else {
+          setTimeout(waitForResults, 100)
+        }
+      }
+      setTimeout(waitForResults, 300)
     }
 
     // Step 8: waiting for library tab to open
@@ -243,7 +257,16 @@ watch(
 
     // Step 1: waiting for build to start
     if (currentStepIndex.value === 1 && loading) {
-      advanceStep()
+      // Poll until the building container element exists
+      const waitForBuilding = () => {
+        const buildingEl = document.getElementById('building-container')
+        if (buildingEl) {
+          advanceStep()
+        } else {
+          setTimeout(waitForBuilding, 100)
+        }
+      }
+      setTimeout(waitForBuilding, 100)
     }
 
     // Step 2: waiting for build to finish
@@ -282,7 +305,8 @@ watch(
 
     // Step 1: if graph loads without loading state (cached), skip to step 3 (graph built)
     if (currentStepIndex.value === 1) {
-      // Jump directly to step 3 (index 3 = graph built)
+      // Close the search overlay and jump directly to step 3 (index 3 = graph built)
+      emit('closeSearch')
       currentStepIndex.value = 3
       driverInstance.drive(3)
     }

@@ -37,6 +37,11 @@ function toggleYearAxis() {
 function handleTabSelect(tab: TabId) {
   // Search tab opens the overlay instead of the panel
   if (tab === 'search') {
+    // During tutorial, just set activeTab so tutorial can handle opening with pre-filled DOI
+    if (store.tutorialStatus === 'pending') {
+      activeTab.value = 'search'
+      return
+    }
     searchOverlayOpen.value = true
     return
   }
@@ -103,6 +108,7 @@ const colormapStyles = computed(() => {
 })
 const graphCanvas = ref<InstanceType<typeof GraphCanvas> | null>(null)
 const mobileInfoPanel = ref<InstanceType<typeof MobileInfoPanel> | null>(null)
+const tutorialSearchQuery = ref<string | undefined>(undefined)
 
 // Load cached graph on startup (before mount)
 store.loadFromCache()
@@ -204,8 +210,19 @@ function handleTutorialCleanup() {
   activeTab.value = null
   showYearAxis.value = true
   customPanelHeights.value = {}
+  tutorialSearchQuery.value = undefined
   mobileInfoPanel.value?.resetHeights()
   graphCanvas.value?.fitToView()
+}
+
+function handleTutorialOpenSearch(doi: string) {
+  tutorialSearchQuery.value = doi
+  searchOverlayOpen.value = true
+}
+
+function handleSearchOverlayClose() {
+  searchOverlayOpen.value = false
+  tutorialSearchQuery.value = undefined
 }
 
 function handleSkipTutorial() {
@@ -288,7 +305,8 @@ function handleColormapChange(index: number) {
       v-if="isMobile"
       :open="searchOverlayOpen"
       :colormap-color="backgroundColor"
-      @close="searchOverlayOpen = false"
+      :tutorial-query="tutorialSearchQuery"
+      @close="handleSearchOverlayClose"
       @build="handleSearch"
     />
 
@@ -304,6 +322,8 @@ function handleColormapChange(index: number) {
       @bookmark-source="handleBookmarkSource"
       @open-details-tab="activeTab = 'details'"
       @cleanup="handleTutorialCleanup"
+      @open-search="handleTutorialOpenSearch"
+      @close-search="handleSearchOverlayClose"
     />
   </div>
 </template>
