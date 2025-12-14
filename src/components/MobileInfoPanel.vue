@@ -227,8 +227,12 @@ const activeComponent = computed(() => {
             <div class="drag-handle-pill" />
           </div>
           <div class="resizable-content">
-            <!-- Show author details for author graphs when no node selected, paper details otherwise -->
-            <AuthorDetailsContent v-if="store.isAuthorGraph && store.selectedNodes.length === 0" />
+            <!-- Show author details for author graphs when no node selected and no standalone paper -->
+            <AuthorDetailsContent
+              v-if="
+                store.isAuthorGraph && store.selectedNodes.length === 0 && !store.standalonePaper
+              "
+            />
             <PaperDetailsContent
               v-else
               @search="emit('search', $event)"
