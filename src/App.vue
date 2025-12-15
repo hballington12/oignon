@@ -2,25 +2,24 @@
 import '@/assets/styles/variables.css'
 import { ref, computed, watch } from 'vue'
 import GraphCanvas from '@/components/GraphCanvas.vue'
-import SearchPanel from '@/components/SearchPanel.vue'
-import ControlPanel from '@/components/ControlPanel.vue'
-import PaperTooltip from '@/components/PaperTooltip.vue'
-import PaperDetailsPanel from '@/components/PaperDetailsPanel.vue'
-import LibraryPanel from '@/components/LibraryPanel.vue'
 import MobileTabBar from '@/components/MobileTabBar.vue'
 import MobileInfoPanel from '@/components/MobileInfoPanel.vue'
 import FloatingControls from '@/components/FloatingControls.vue'
 import TutorialOverlay from '@/components/TutorialOverlay.vue'
 import MobileSearchOverlay from '@/components/MobileSearchOverlay.vue'
-import { TAB_HEIGHTS, TAB_BAR_HEIGHT, type TabId } from '@/types/mobile'
+import {
+  TAB_HEIGHTS,
+  TAB_BAR_HEIGHT,
+  TRANSITION_SMOOTH_MS,
+  TRANSITION_SAFE_PADDING_MS,
+  type TabId,
+} from '@/types/mobile'
 import type { Author } from '@/types'
 import { useGraphStore } from '@/stores/graph'
-import { useMobile } from '@/composables/useMobile'
 import { buildGraph, buildAuthorGraph, preprocessGraph } from '@/lib/graphBuilder'
 import { getBackgroundColorHex, COLORMAPS } from '@/lib/colormap'
 
 const store = useGraphStore()
-const { isMobile } = useMobile()
 const activeTab = ref<TabId | null>(null)
 const customPanelHeights = ref<Partial<Record<TabId, number>>>({})
 const isPanelDragging = ref(false)
@@ -65,11 +64,11 @@ function handlePanelDragEnd() {
   isPanelDragging.value = false
 }
 
-// Open search overlay on mobile when a build is triggered externally
+// Open search overlay when a build is triggered externally
 watch(
   () => store.pendingBuildId,
   (newId) => {
-    if (newId && isMobile.value) {
+    if (newId) {
       searchOverlayOpen.value = true
       // Trigger build with the pending ID
       handleSearch(newId)
@@ -78,11 +77,11 @@ watch(
   },
 )
 
-// Switch to details tab on mobile when a node is selected
+// Switch to details tab when a node is selected
 watch(
   () => store.selectedNodes[0],
   (node) => {
-    if (node && isMobile.value) {
+    if (node) {
       activeTab.value = 'details'
     }
   },
@@ -278,7 +277,11 @@ function handleTutorialCleanup() {
   tutorialSearchQuery.value = undefined
   searchOverlayOpen.value = false
   mobileInfoPanel.value?.resetHeights()
-  graphCanvas.value?.fitToView()
+  // Wait for panel close animation before fitting to view
+  setTimeout(
+    () => graphCanvas.value?.fitToView(),
+    TRANSITION_SMOOTH_MS + TRANSITION_SAFE_PADDING_MS,
+  )
 }
 
 function handleTutorialOpenSearch(doi: string) {
@@ -311,16 +314,11 @@ function handleColormapChange(index: number) {
 </script>
 
 <template>
-  <div
-    class="app"
-    :class="{ mobile: isMobile }"
-    :style="{ background: backgroundColor, ...colormapStyles }"
-  >
-    <!-- Canvas area (shared between layouts) -->
+  <div class="app" :style="{ background: backgroundColor, ...colormapStyles }">
+    <!-- Canvas area -->
     <div class="canvas-area">
       <GraphCanvas ref="graphCanvas" :show-year-axis="showYearAxis" />
       <FloatingControls
-        v-if="isMobile"
         :show-year-axis="showYearAxis"
         :graph-type="graphType"
         @zoom-in="handleZoomIn"
@@ -332,23 +330,8 @@ function handleColormapChange(index: number) {
       />
     </div>
 
-    <!-- Desktop panels -->
-    <template v-if="!isMobile">
-      <SearchPanel @search="handleSearch" />
-      <ControlPanel
-        @fit-to-view="handleFitToView"
-        @zoom-in="handleZoomIn"
-        @zoom-out="handleZoomOut"
-        @colormap-change="handleColormapChange"
-      />
-      <PaperTooltip />
-      <PaperDetailsPanel />
-      <LibraryPanel />
-    </template>
-
-    <!-- Mobile bottom area -->
+    <!-- Bottom area -->
     <div
-      v-if="isMobile"
       class="mobile-bottom-area"
       :class="{ dragging: isPanelDragging }"
       :style="{ height: bottomAreaHeight + 'px' }"
@@ -369,9 +352,8 @@ function handleColormapChange(index: number) {
       <MobileTabBar :active-tab="activeTab" @select="handleTabSelect" />
     </div>
 
-    <!-- Mobile search overlay -->
+    <!-- Search overlay -->
     <MobileSearchOverlay
-      v-if="isMobile"
       :open="searchOverlayOpen"
       :colormap-color="backgroundColor"
       :tutorial-query="tutorialSearchQuery"
@@ -404,7 +386,7 @@ function handleColormapChange(index: number) {
 
     <!-- Tutorial overlay -->
     <TutorialOverlay
-      :visible="isMobile && store.tutorialStatus === 'pending'"
+      :visible="store.tutorialStatus === 'pending'"
       :active-tab="activeTab"
       :skip-welcome="store.tutorialSkipWelcome"
       @start="store.completeTutorial()"
@@ -440,21 +422,11 @@ body,
   width: 100%;
   height: 100%;
   position: relative;
-}
-
-/* Canvas area - full size on desktop, flex on mobile */
-.canvas-area {
-  position: absolute;
-  inset: 0;
-}
-
-/* Mobile flexbox layout */
-.app.mobile {
   display: flex;
   flex-direction: column;
 }
 
-.app.mobile .canvas-area {
+.canvas-area {
   position: relative;
   flex: 1;
   min-height: 0;
