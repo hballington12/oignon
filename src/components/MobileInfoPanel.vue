@@ -25,7 +25,8 @@ import type { Author } from '@/types'
 const emit = defineEmits<{
   colormapChange: [index: number]
   search: [query: string]
-  buildAuthor: [author: Author]
+  buildAuthor: [id: string]
+  confirmBuildAuthor: [author: Author]
   showDetails: []
   heightChange: [height: number]
   dragStart: []
@@ -242,7 +243,7 @@ const activeComponent = computed(() => {
                 key="paper"
                 @search="emit('search', $event)"
                 @show-details="emit('showDetails')"
-                @build-author="emit('buildAuthor', $event)"
+                @build-author="emit('confirmBuildAuthor', $event)"
               />
             </Transition>
           </div>
