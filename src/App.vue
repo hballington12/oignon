@@ -13,6 +13,7 @@ import FloatingControls from '@/components/FloatingControls.vue'
 import TutorialOverlay from '@/components/TutorialOverlay.vue'
 import MobileSearchOverlay from '@/components/MobileSearchOverlay.vue'
 import { TAB_HEIGHTS, TAB_BAR_HEIGHT, type TabId } from '@/types/mobile'
+import type { Author } from '@/types'
 import { useGraphStore } from '@/stores/graph'
 import { useMobile } from '@/composables/useMobile'
 import { buildGraph, buildAuthorGraph, preprocessGraph } from '@/lib/graphBuilder'
@@ -24,6 +25,7 @@ const activeTab = ref<TabId | null>(null)
 const customPanelHeights = ref<Partial<Record<TabId, number>>>({})
 const isPanelDragging = ref(false)
 const searchOverlayOpen = ref(false)
+const pendingAuthorBuild = ref<Author | null>(null)
 
 // Year axis visibility (persisted)
 const YEAR_AXIS_KEY = 'oignon:showYearAxis'
@@ -167,6 +169,27 @@ async function handleSearch(query: string) {
     console.error('Failed to build graph:', e)
     store.setLoading(false)
   }
+}
+
+function handleAuthorClick(author: Author) {
+  pendingAuthorBuild.value = author
+}
+
+function confirmAuthorBuild() {
+  if (pendingAuthorBuild.value?.id) {
+    const authorId = pendingAuthorBuild.value.id
+    const cacheKey = `author:${authorId}`
+    const isCached = store.recentGraphs.some((g) => g.sourceId === cacheKey)
+    if (!isCached) {
+      searchOverlayOpen.value = true
+    }
+    handleAuthorSearch(authorId)
+  }
+  pendingAuthorBuild.value = null
+}
+
+function cancelAuthorBuild() {
+  pendingAuthorBuild.value = null
 }
 
 async function handleAuthorSearch(authorId: string) {
@@ -335,7 +358,7 @@ function handleColormapChange(index: number) {
         :active-tab="activeTab"
         @colormap-change="handleColormapChange"
         @search="handleSearch"
-        @build-author="handleAuthorSearch"
+        @build-author="handleAuthorClick"
         @show-details="activeTab = 'details'"
         @height-change="handlePanelHeightChange"
         @drag-start="handlePanelDragStart"
@@ -355,6 +378,28 @@ function handleColormapChange(index: number) {
       @build="handleSearch"
       @build-author="handleAuthorSearch"
     />
+
+    <!-- Author build confirmation modal -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="pendingAuthorBuild"
+          class="author-confirm-overlay"
+          @click.self="cancelAuthorBuild"
+        >
+          <div class="author-confirm-modal">
+            <p class="author-confirm-text">
+              Build author graph for <strong>{{ pendingAuthorBuild.name }}</strong
+              >?
+            </p>
+            <div class="author-confirm-buttons">
+              <button class="confirm-btn cancel" @click="cancelAuthorBuild">Cancel</button>
+              <button class="confirm-btn confirm" @click="confirmAuthorBuild">Build</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <!-- Tutorial overlay -->
     <TutorialOverlay
@@ -423,5 +468,86 @@ body,
 
 .mobile-bottom-area.dragging {
   transition: none;
+}
+
+/* Author confirmation modal */
+.author-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--spacing-lg);
+}
+
+.author-confirm-modal {
+  border-radius: 16px;
+  padding: var(--spacing-lg);
+  max-width: 320px;
+  width: 100%;
+  border: 1px solid var(--border-light);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.author-confirm-text {
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  text-align: center;
+  margin-bottom: var(--spacing-lg);
+  line-height: 1.5;
+}
+
+.author-confirm-text strong {
+  color: var(--text-primary);
+}
+
+.author-confirm-buttons {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.confirm-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.confirm-btn.cancel {
+  background: var(--bg-panel-solid);
+  color: var(--text-secondary);
+}
+
+.confirm-btn.cancel:hover {
+  background: var(--bg-item-hover);
+}
+
+.confirm-btn.confirm {
+  background: var(--accent-green);
+  color: #000;
+  border-color: var(--accent-green);
+}
+
+.confirm-btn.confirm:hover {
+  filter: brightness(1.1);
+}
+
+/* Fade transition */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

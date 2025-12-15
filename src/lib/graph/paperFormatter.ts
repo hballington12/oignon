@@ -19,7 +19,7 @@ export interface OpenAlexWork {
   doi?: string
   title: string
   authorships?: Array<{
-    author?: { display_name?: string; orcid?: string | null }
+    author?: { id?: string; display_name?: string; orcid?: string | null }
     institutions?: Array<{ display_name?: string; country_code?: string }>
   }>
   publication_year: number
@@ -98,7 +98,10 @@ export function formatPaper(work: OpenAlexWork): RawPaper {
   const authorships = work.authorships || []
 
   const authors: Author[] = authorships.slice(0, MAX_AUTHORS_IN_PAPER).map((authorship) => {
+    // Extract OpenAlex author ID from URL (e.g., "https://openalex.org/A12345" -> "A12345")
+    const authorId = authorship.author?.id?.split('/').pop()
     const authorInfo: Author = {
+      id: authorId,
       name: authorship.author?.display_name || '',
       orcid: authorship.author?.orcid || null,
     }

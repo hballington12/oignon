@@ -20,10 +20,12 @@ const props = defineProps<{
   activeTab: TabId | null
 }>()
 
+import type { Author } from '@/types'
+
 const emit = defineEmits<{
   colormapChange: [index: number]
   search: [query: string]
-  buildAuthor: [id: string]
+  buildAuthor: [author: Author]
   showDetails: []
   heightChange: [height: number]
   dragStart: []
@@ -240,6 +242,7 @@ const activeComponent = computed(() => {
                 key="paper"
                 @search="emit('search', $event)"
                 @show-details="emit('showDetails')"
+                @build-author="emit('buildAuthor', $event)"
               />
             </Transition>
           </div>

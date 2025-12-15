@@ -1,6 +1,7 @@
 // Author Types
 
 export interface Author {
+  id?: string // OpenAlex author ID
   name: string
   orcid?: string | null
   affiliation?: string

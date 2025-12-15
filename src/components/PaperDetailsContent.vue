@@ -1,7 +1,15 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { usePaperDetails } from '@/composables/usePaperDetails'
 import ExpandableAbstract from '@/components/ExpandableAbstract.vue'
 import openAlexIcon from '@/assets/tricon-outlined.png'
+import type { Author } from '@/types'
+
+const emit = defineEmits<{
+  search: [id: string]
+  showDetails: []
+  buildAuthor: [author: Author]
+}>()
 
 const {
   abstractExpanded,
@@ -26,6 +34,12 @@ const {
   expandAbstract,
   collapseAbstract,
 } = usePaperDetails()
+
+function handleAuthorClick(author: Author) {
+  if (author.id) {
+    emit('buildAuthor', author)
+  }
+}
 </script>
 
 <template>
@@ -145,17 +159,21 @@ const {
           </div>
 
           <!-- Authors -->
-          <div v-if="displayNode.metadata.authors.length" class="paper-authors">
+          <div v-if="displayNode.metadata.authorsDetailed?.length" class="paper-authors">
             <span
-              v-for="(author, i) in displayNode.metadata.authors.slice(0, 5)"
+              v-for="(author, i) in displayNode.metadata.authorsDetailed.slice(0, 5)"
               :key="i"
               class="paper-author"
+              :class="{ clickable: author.id }"
+              @click="handleAuthorClick(author)"
             >
-              {{ author
-              }}<span v-if="i < Math.min(displayNode.metadata.authors.length, 5) - 1">, </span>
+              {{ author.name
+              }}<span v-if="i < Math.min(displayNode.metadata.authorsDetailed.length, 5) - 1"
+                >,
+              </span>
             </span>
-            <span v-if="displayNode.metadata.authors.length > 5" class="paper-author more">
-              +{{ displayNode.metadata.authors.length - 5 }} more
+            <span v-if="displayNode.metadata.authorsDetailed.length > 5" class="paper-author more">
+              +{{ displayNode.metadata.authorsDetailed.length - 5 }} more
             </span>
           </div>
 
@@ -418,6 +436,29 @@ const {
   color: var(--text-muted);
   line-height: 1.4;
   margin-bottom: var(--spacing-sm);
+}
+
+.paper-author.clickable {
+  cursor: pointer;
+  padding: 2px 6px;
+  margin: -2px -6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.paper-author.clickable:hover {
+  color: var(--text-primary);
+  background: var(--bg-item-hover);
+  border-color: var(--border-medium);
+}
+
+.paper-author.clickable:active {
+  background: var(--bg-item-active);
+  border-color: var(--border-light);
 }
 
 .paper-author.more {
