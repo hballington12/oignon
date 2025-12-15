@@ -1,7 +1,6 @@
 export type TabId = 'search' | 'details' | 'library' | 'controls'
 
 // Layout constants
-export const MOBILE_BREAKPOINT = 768
 export const TAB_BAR_HEIGHT = 52
 export const TAB_ICON_SIZE = 22
 
