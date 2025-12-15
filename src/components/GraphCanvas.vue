@@ -29,6 +29,86 @@ let pointerDownY = 0
 const TAP_THRESHOLD = 10 // max movement for a tap
 const TAP_TIMEOUT = 300 // max time for a tap (ms)
 
+// Vim-style navigation state (remembers preferred column like vim)
+let preferredGridX: number | null = null
+
+// --- Keyboard Navigation ---
+
+function onKeyDown(e: KeyboardEvent) {
+  // Don't intercept if user is typing in an input
+  if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+
+  const key = e.key.toLowerCase()
+
+  // Zoom controls (work anytime)
+  if (key === 'i') {
+    e.preventDefault()
+    zoomIn()
+    return
+  } else if (key === 'o') {
+    e.preventDefault()
+    zoomOut()
+    return
+  }
+
+  // Navigation requires a selected node
+  if (!grid || !store.selectedNodes.length) return
+
+  const isNavKey = ['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'h', 'j', 'k', 'l'].includes(
+    key,
+  )
+  if (!isNavKey) return
+
+  e.preventDefault()
+
+  const currentNode = store.selectedNodes[0]
+  if (!currentNode) return
+
+  let targetNode: typeof currentNode | null = null
+
+  if (key === 'arrowup' || key === 'k') {
+    targetNode = findNodeInRow(currentNode.gridY - 1)
+  } else if (key === 'arrowdown' || key === 'j') {
+    targetNode = findNodeInRow(currentNode.gridY + 1)
+  } else if (key === 'arrowleft' || key === 'h') {
+    targetNode = findNodeInColumn(currentNode.gridY, currentNode.gridX - 1)
+    if (targetNode) preferredGridX = targetNode.gridX
+  } else if (key === 'arrowright' || key === 'l') {
+    targetNode = findNodeInColumn(currentNode.gridY, currentNode.gridX + 1)
+    if (targetNode) preferredGridX = targetNode.gridX
+  }
+
+  if (targetNode) {
+    store.selectNode(targetNode.id)
+    // Pan to keep the node visible (maintain current zoom level)
+    const currentScale = renderer?.getViewport().scale ?? baseScale
+    zoomToNode(targetNode.id, currentScale)
+  }
+}
+
+function findNodeInRow(targetRow: number): (typeof store.selectedNodes)[0] | null {
+  if (!grid) return null
+
+  const nodesInRow = [...grid.nodes.values()].filter((n) => n.gridY === targetRow)
+  if (nodesInRow.length === 0) return null
+
+  // Use preferredGridX to find closest node
+  const targetX = preferredGridX ?? store.selectedNodes[0]?.gridX ?? 0
+
+  return nodesInRow.reduce((closest, node) => {
+    const closestDist = Math.abs(closest.gridX - targetX)
+    const nodeDist = Math.abs(node.gridX - targetX)
+    return nodeDist < closestDist ? node : closest
+  })
+}
+
+function findNodeInColumn(row: number, targetX: number): (typeof store.selectedNodes)[0] | null {
+  if (!grid) return null
+
+  const nodesInRow = [...grid.nodes.values()].filter((n) => n.gridY === row)
+  return nodesInRow.find((n) => n.gridX === targetX) ?? null
+}
+
 // --- Event Handlers ---
 
 function onPointerDown(e: PointerEvent) {
@@ -56,8 +136,12 @@ function onPointerUp(e: PointerEvent) {
     const nodeId = renderer.hitTestNode(screenX, screenY, grid)
     if (nodeId) {
       store.selectNode(nodeId)
+      // Update preferred column for vim-style navigation
+      const node = grid.nodes.get(nodeId)
+      if (node) preferredGridX = node.gridX
     } else {
       store.clearSelection()
+      preferredGridX = null
     }
   }
 }
@@ -316,11 +400,15 @@ onMounted(async () => {
     renderGraph()
   }
 
+  // Keyboard navigation
+  window.addEventListener('keydown', onKeyDown)
+
   // Cleanup on page refresh/close (onUnmounted doesn't fire fast enough)
   window.addEventListener('beforeunload', cleanup)
 })
 
 onUnmounted(() => {
+  window.removeEventListener('keydown', onKeyDown)
   window.removeEventListener('beforeunload', cleanup)
   cleanup()
 })
