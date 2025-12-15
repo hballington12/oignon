@@ -7,7 +7,13 @@ import MobileInfoPanel from '@/components/MobileInfoPanel.vue'
 import FloatingControls from '@/components/FloatingControls.vue'
 import TutorialOverlay from '@/components/TutorialOverlay.vue'
 import MobileSearchOverlay from '@/components/MobileSearchOverlay.vue'
-import { TAB_HEIGHTS, TAB_BAR_HEIGHT, type TabId } from '@/types/mobile'
+import {
+  TAB_HEIGHTS,
+  TAB_BAR_HEIGHT,
+  TRANSITION_SMOOTH_MS,
+  TRANSITION_SAFE_PADDING_MS,
+  type TabId,
+} from '@/types/mobile'
 import type { Author } from '@/types'
 import { useGraphStore } from '@/stores/graph'
 import { buildGraph, buildAuthorGraph, preprocessGraph } from '@/lib/graphBuilder'
@@ -271,7 +277,11 @@ function handleTutorialCleanup() {
   tutorialSearchQuery.value = undefined
   searchOverlayOpen.value = false
   mobileInfoPanel.value?.resetHeights()
-  graphCanvas.value?.fitToView()
+  // Wait for panel close animation before fitting to view
+  setTimeout(
+    () => graphCanvas.value?.fitToView(),
+    TRANSITION_SMOOTH_MS + TRANSITION_SAFE_PADDING_MS,
+  )
 }
 
 function handleTutorialOpenSearch(doi: string) {

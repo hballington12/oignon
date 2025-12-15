@@ -15,3 +15,7 @@ export const TAB_HEIGHTS: Record<TabId, number> = {
 // Resize constraints
 export const PANEL_MIN_HEIGHT = 60
 export const PANEL_MAX_HEIGHT = 400
+
+// Animation timing (matches --transition-smooth in variables.css)
+export const TRANSITION_SMOOTH_MS = 300
+export const TRANSITION_SAFE_PADDING_MS = 50
