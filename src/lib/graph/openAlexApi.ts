@@ -4,6 +4,7 @@
 
 import type { RawPaper } from '@/types'
 import { formatPaper, formatSlimPaper, type SlimPaper } from './paperFormatter'
+import { analytics } from '@/composables/usePostHog'
 
 // Configuration
 const OPENALEX_API = 'https://api.openalex.org'
@@ -42,8 +43,9 @@ const OPENALEX_SLIM_FIELDS = ['id', 'publication_year', 'cited_by_count', 'refer
 
 let apiCallCount = 0
 
-export function logApiCall(_endpoint: string, _detail?: string) {
+export function logApiCall(endpoint: string, detail?: string) {
   apiCallCount++
+  analytics.apiCall(endpoint, detail)
 }
 
 export function resetApiCallCount() {
