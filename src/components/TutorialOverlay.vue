@@ -108,7 +108,7 @@ const steps: DriveStep[] = [
   {
     element: '#year-axis-target',
     popover: {
-      side: 'right',
+      side: 'bottom',
       title: 'Year Axis',
       description:
         'Year axis labels show the year of publication. Years without publications in the graph are skipped.',

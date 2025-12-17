@@ -6,7 +6,7 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/oignon/',
+  base: process.env.CAPACITOR ? './' : '/oignon/',
   plugins: [vue(), vueDevTools()],
   resolve: {
     alias: {

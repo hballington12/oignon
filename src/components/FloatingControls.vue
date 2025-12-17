@@ -130,8 +130,8 @@ const emit = defineEmits<{
 <style scoped>
 .floating-controls {
   position: absolute;
-  top: var(--spacing-lg);
-  right: var(--spacing-lg);
+  top: calc(var(--spacing-lg) + env(safe-area-inset-top));
+  right: calc(var(--spacing-lg) + env(safe-area-inset-right));
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);

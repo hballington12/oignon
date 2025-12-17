@@ -44,7 +44,8 @@ function handleTap(id: TabId) {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  height: 52px;
+  height: calc(52px + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
   border-top: 1px solid var(--border-light);
 }
 

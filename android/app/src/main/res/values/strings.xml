@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Oignon</string>
+    <string name="title_activity_main">Oignon</string>
+    <string name="package_name">com.oignon.app</string>
+    <string name="custom_url_scheme">com.oignon.app</string>
+</resources>
