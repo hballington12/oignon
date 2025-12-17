@@ -44,10 +44,6 @@ let apiCallCount = 0
 
 export function logApiCall(_endpoint: string, _detail?: string) {
   apiCallCount++
-  // TODO: get rid of this later
-  fetch('https://api.api-ninjas.com/v1/counter?id=oignon-openalex&hit=true', {
-    headers: { 'X-Api-Key': '2Am8xF7Czi14Ur4Xzl42SA==tMbNq5zjXcookSIG' },
-  }).catch(() => {})
 }
 
 export function resetApiCallCount() {

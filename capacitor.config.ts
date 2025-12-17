@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Oignon',
   webDir: 'dist',
   server: {
-    allowNavigation: ['api.openalex.org', 'api.api-ninjas.com'],
+    allowNavigation: ['api.openalex.org'],
   },
   ios: {
     allowsLinkPreview: false,
