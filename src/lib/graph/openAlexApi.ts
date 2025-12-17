@@ -7,7 +7,6 @@ import { formatPaper, formatSlimPaper, type SlimPaper } from './paperFormatter'
 
 // Configuration
 const OPENALEX_API = 'https://api.openalex.org'
-const OPENALEX_EMAIL = 'ballington@uni-wuppertal.de'
 const OPENALEX_USER_AGENT = 'CitationGraphBuilder/1.0 (mailto:ballington@uni-wuppertal.de)'
 export const OPENALEX_MAX_PER_PAGE = 200
 export const OPENALEX_MAX_FILTER_IDS = 100
@@ -88,10 +87,7 @@ export function chunk<T>(array: T[], size: number): T[][] {
 export async function fetchPaper(workId: string): Promise<RawPaper | null> {
   logApiCall('/works/{id}', `single paper: ${workId.slice(0, 30)}`)
   try {
-    const response = await fetch(
-      `${OPENALEX_API}/works/${workId}?mailto=${OPENALEX_EMAIL}`,
-      OPENALEX_FETCH_OPTIONS,
-    )
+    const response = await fetch(`${OPENALEX_API}/works/${workId}`, OPENALEX_FETCH_OPTIONS)
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const work = await response.json()
     return formatPaper(work)
@@ -109,7 +105,6 @@ async function fetchBatchFull(batch: string[]): Promise<Record<string, RawPaper>
     filter: `openalex:${idFilter}`,
     select: OPENALEX_FULL_FIELDS,
     per_page: OPENALEX_MAX_PER_PAGE.toString(),
-    mailto: OPENALEX_EMAIL,
   })
 
   logApiCall('/works', `full batch: ${batch.length} ids`)
@@ -137,7 +132,6 @@ async function fetchBatchSlim(batch: string[]): Promise<Record<string, SlimPaper
     filter: `openalex:${idFilter}`,
     select: OPENALEX_SLIM_FIELDS,
     per_page: OPENALEX_MAX_PER_PAGE.toString(),
-    mailto: OPENALEX_EMAIL,
   })
 
   logApiCall('/works', `slim batch: ${batch.length} ids`)
@@ -211,7 +205,6 @@ async function fetchCitationsBatch(batch: string[]): Promise<Set<string>> {
     filter: `cites:${citesFilter}`,
     select: 'id',
     per_page: OPENALEX_MAX_PER_PAGE.toString(),
-    mailto: OPENALEX_EMAIL,
   })
 
   logApiCall('/works', `citations batch: ${batch.length} ids`)
@@ -303,7 +296,7 @@ export interface AutocompleteResult {
  */
 async function fetchWorkByDoi(doi: string): Promise<AutocompleteResult | null> {
   const encodedDoi = encodeURIComponent(`https://doi.org/${doi}`)
-  const url = `${OPENALEX_API}/works/${encodedDoi}?mailto=${OPENALEX_EMAIL}`
+  const url = `${OPENALEX_API}/works/${encodedDoi}`
   try {
     const response = await fetch(url, OPENALEX_FETCH_OPTIONS)
     if (!response.ok) return null
@@ -343,7 +336,6 @@ export async function fetchAutocomplete(query: string): Promise<AutocompleteResu
   const params = new URLSearchParams({
     q: query,
     filter: 'has_doi:true',
-    mailto: OPENALEX_EMAIL,
   })
 
   try {
@@ -385,7 +377,6 @@ export async function fetchAuthorAutocomplete(query: string): Promise<AuthorAuto
 
   const params = new URLSearchParams({
     q: query,
-    mailto: OPENALEX_EMAIL,
   })
 
   try {
@@ -430,7 +421,6 @@ export async function fetchAuthorWorks(
       per_page: perPage.toString(),
       sort: 'cited_by_count:desc',
       cursor,
-      mailto: OPENALEX_EMAIL,
     })
 
     logApiCall('/works', `author works for ${authorId}, cursor ${cursor}`)
@@ -479,10 +469,7 @@ export interface AuthorMetadata {
 export async function fetchAuthor(authorId: string): Promise<AuthorMetadata | null> {
   logApiCall('/authors/{id}', `author: ${authorId}`)
   try {
-    const response = await fetch(
-      `${OPENALEX_API}/authors/${authorId}?mailto=${OPENALEX_EMAIL}`,
-      OPENALEX_FETCH_OPTIONS,
-    )
+    const response = await fetch(`${OPENALEX_API}/authors/${authorId}`, OPENALEX_FETCH_OPTIONS)
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const author = await response.json()
 
@@ -509,7 +496,6 @@ export async function fetchCitingPapers(workId: string, limit: number): Promise<
     filter: `cites:${workId}`,
     select: 'id',
     per_page: limit.toString(),
-    mailto: OPENALEX_EMAIL,
   })
 
   logApiCall('/works', `citing papers for ${workId.slice(0, 20)}, limit ${limit}`)
