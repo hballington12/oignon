@@ -6,7 +6,7 @@ import type { VisualNode } from '@/types'
 import { BatchedCurveMesh } from './BatchedCurveMesh'
 import type { CurveData } from './BatchedCurveGeometry'
 import { ColorMapFilter } from './ColorMapFilter'
-import { COLORMAPS } from './colormap'
+import { COLORMAPS, getCanvasBackgroundColor } from './colormap'
 import { GRID } from './constants'
 import {
   calculateCurveControlPoints,
@@ -618,27 +618,33 @@ export class Renderer {
 
   // --- Colormap and background ---
 
-  setColormap(colormap: number) {
+  setColormap(index: number, grid: Grid) {
+    const colormapData = COLORMAPS[index]
+    if (!colormapData) return
+
+    // Curve filters
     if (this.colorMapFilter) {
-      this.colorMapFilter.colormap = colormap
+      this.colorMapFilter.colormap = index
     }
     if (this.selectionColorMapFilter) {
-      this.selectionColorMapFilter.colormap = colormap
+      this.selectionColorMapFilter.colormap = index
     }
-    // Update particle colors
-    const colormapData = COLORMAPS[colormap]
-    if (colormapData) {
-      for (const ps of this.particleSystems) {
-        ps.setColormap(colormapData.stops)
-      }
+
+    // Particles
+    for (const ps of this.particleSystems) {
+      ps.setColormap(colormapData.stops)
     }
+
+    // Nodes (update grid data, then sprites)
+    grid.setColormap(index)
+    grid.updateNodeColors()
+    this.updateNodeColors(grid)
+
+    // Background
+    this.app.renderer.background.color = getCanvasBackgroundColor(colormapData)
   }
 
-  setBackgroundColor(color: number) {
-    this.app.renderer.background.color = color
-  }
-
-  updateNodeColors(grid: Grid) {
+  private updateNodeColors(grid: Grid) {
     for (const [id, container] of this.nodeContainers) {
       const node = grid.nodes.get(id)
       if (!node) continue

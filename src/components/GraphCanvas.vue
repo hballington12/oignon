@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useGraphStore } from '@/stores/graph'
 import { Grid } from '@/lib/Grid'
 import { Renderer } from '@/lib/Renderer'
-import { COLORMAPS, getCanvasBackgroundColor } from '@/lib/colormap'
+import { COLORMAPS } from '@/lib/colormap'
 
 const props = defineProps<{
   showYearAxis?: boolean
@@ -201,7 +201,7 @@ function renderGraph() {
 
   // Create new grid (data only)
   grid = new Grid(store.rows, store.cols)
-  grid.setColormap(store.activeColormap)
+  grid.setColormap(store.activeColormap) // Set before populateNodes so initial colors are correct
   grid.populateNodes(store.graph.nodes, store.orderToRow)
 
   // Set up callbacks
@@ -222,9 +222,8 @@ function renderGraph() {
     store.setNode(id, node)
   }
 
-  // Set colormap, background, year axis visibility, and tell renderer to draw
-  renderer.setColormap(store.activeColormap)
-  renderer.setBackgroundColor(getCanvasBackgroundColor(COLORMAPS[store.activeColormap]!))
+  // Set colormap, year axis visibility, and tell renderer to draw
+  renderer.setColormap(store.activeColormap, grid)
   renderer.setYearAxisVisible(props.showYearAxis ?? true)
   renderer.render(grid, store.orderToRow)
 
@@ -416,11 +415,7 @@ onUnmounted(() => {
 // Colormap change handler
 function handleColormapChange(index: number) {
   if (!grid || !renderer) return
-  grid.setColormap(index)
-  grid.updateNodeColors()
-  renderer.setColormap(index)
-  renderer.updateNodeColors(grid)
-  renderer.setBackgroundColor(getCanvasBackgroundColor(COLORMAPS[index]!))
+  renderer.setColormap(index, grid)
 }
 
 // Expose for parent components
