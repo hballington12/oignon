@@ -19,13 +19,17 @@ import {
 import { ParticleSystem, type ParticleSystemOptions } from './ParticleSystem'
 import { createNodeTextures, destroyNodeTextures, type NodeTextures } from './NodeTextureFactory'
 import { YearAxisOverlay } from './YearAxisOverlay'
-import { SelectionManager } from './SelectionManager'
+import { SelectionManager, type CurveNodeMapping } from './SelectionManager'
 import { AnimationRunner, animateProgress } from './AnimationRunner'
 import { easeInOutCubic, easeOutElastic, easeOutQuad } from './easing'
 
 // Viewport zoom limits (relative to base/fit scale)
 const MIN_SCALE_FACTOR = 1
 const MAX_SCALE_FACTOR = 10
+
+// Node dimming when selection is active
+const NODE_DIM_ALPHA = 0.25
+const NODE_DIM_DURATION = 300
 
 export interface NodeAnimationOptions {
   totalDuration?: number // Total time for all nodes to start animating
@@ -37,12 +41,6 @@ export interface CurveAnimationOptions {
   awaitSourceNode?: boolean
   awaitBothNodes?: boolean
   durationStrategy?: 'fixedIndependent' | 'fixedGlobal'
-}
-
-interface CurveNodeMapping {
-  curveIndex: number
-  sourceNodeId: string
-  targetNodeId: string
 }
 
 export class Renderer {
@@ -79,6 +77,7 @@ export class Renderer {
   private selectionColorMapFilter: ColorMapFilter | null = null
   private curveAlphaFilter: AlphaFilter | null = null
   private curveAlphaAnimationRunner = new AnimationRunner()
+  private nodeAlphaAnimationRunner = new AnimationRunner()
   private resizeObserver: ResizeObserver | null = null
 
   constructor() {
@@ -141,13 +140,16 @@ export class Renderer {
       }),
     ]
 
-    // Layer order: particles -> curves -> selection curves -> nodes
+    // Layer order: particles -> curves -> nodes -> selection curves -> selected endpoints
+    // Static curves render behind nodes (normal view)
+    // Selection curves + cloned endpoints render above nodes (highlighted on select)
     for (const ps of this.particleSystems) {
       this.viewport.addChild(ps.container)
     }
     this.viewport.addChild(this.curvesContainer)
-    this.viewport.addChild(this.selectionManager.selectionCurvesContainer)
     this.viewport.addChild(this.nodesContainer)
+    this.viewport.addChild(this.selectionManager.selectionCurvesContainer)
+    this.viewport.addChild(this.selectionManager.selectedEndpointsContainer)
     this.app.stage.addChild(this.viewport)
 
     // Year axis overlay (outside viewport)
@@ -646,6 +648,9 @@ export class Renderer {
         fill.tint = node.fillColor
       }
     }
+
+    // Also update cloned endpoint nodes
+    this.selectionManager.updateEndpointColors()
   }
 
   // --- Selection ---
@@ -658,8 +663,24 @@ export class Renderer {
     )
 
     if (changed) {
-      this.animateCurveAlpha(nodeIds.size > 0 ? 0 : 1)
+      const hasSelection = nodeIds.size > 0
+      this.animateCurveAlpha(hasSelection ? 0 : 1)
+      this.animateNodeDimming(hasSelection)
     }
+  }
+
+  private animateNodeDimming(dim: boolean) {
+    const targetAlpha = dim ? NODE_DIM_ALPHA : 1
+    const startAlpha = this.nodesContainer.alpha
+
+    animateProgress(
+      this.nodeAlphaAnimationRunner,
+      NODE_DIM_DURATION,
+      easeInOutCubic,
+      (progress) => {
+        this.nodesContainer.alpha = startAlpha + (targetAlpha - startAlpha) * progress
+      },
+    )
   }
 
   private animateCurveAlpha(targetAlpha: number, duration = 300) {
@@ -699,11 +720,15 @@ export class Renderer {
     this.nodeAnimationRunner.cancel()
     this.curveAnimationRunner.cancel()
     this.curveAlphaAnimationRunner.cancel()
+    this.nodeAlphaAnimationRunner.cancel()
 
     // Reset curve alpha to fully visible for fresh render
     if (this.curveAlphaFilter) {
       this.curveAlphaFilter.alpha = 1
     }
+
+    // Reset node container alpha (may have been dimmed by selection)
+    this.nodesContainer.alpha = 1
 
     this.nodesContainer.removeChildren()
     this.curvesContainer.removeChildren()

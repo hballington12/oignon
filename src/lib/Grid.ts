@@ -6,6 +6,14 @@ import { getColormapColor, getBrighterColor, COLORMAPS } from './colormap'
 const MIN_NODE_RADIUS = 6
 const MAX_NODE_RADIUS = (Math.min(GRID.xSpacing, GRID.ySpacing) / 2) * 0.8
 
+// Minimum colormap position for nodes (avoids dark nodes on dark background)
+const MIN_COLORMAP_T = 0.5
+
+/** Remap normalized value (0-1) to colormap range (MIN_COLORMAP_T to 1) */
+function toColormapT(t: number): number {
+  return MIN_COLORMAP_T + t * (1 - MIN_COLORMAP_T)
+}
+
 export class Grid {
   rows: number
   cols: number
@@ -79,7 +87,7 @@ export class Grid {
           y,
           radius: MIN_NODE_RADIUS,
           normalizedCitations: 0,
-          fillColor: getColormapColor(0, this.getColormapStops()),
+          fillColor: getColormapColor(toColormapT(0), this.getColormapStops()),
           strokeColor: 0x000000,
         }
         this.nodes.set(n.id, visualNode)
@@ -107,7 +115,7 @@ export class Grid {
       if (maxCount === minCount) {
         node.radius = (MIN_NODE_RADIUS + MAX_NODE_RADIUS) / 2
         node.normalizedCitations = 0.5
-        node.fillColor = getColormapColor(0.5, this.getColormapStops())
+        node.fillColor = getColormapColor(toColormapT(0.5), this.getColormapStops())
         continue
       }
 
@@ -118,7 +126,7 @@ export class Grid {
 
       node.radius = MIN_NODE_RADIUS + t * (MAX_NODE_RADIUS - MIN_NODE_RADIUS)
       node.normalizedCitations = t
-      node.fillColor = getColormapColor(t, this.getColormapStops())
+      node.fillColor = getColormapColor(toColormapT(t), this.getColormapStops())
       node.strokeColor = getBrighterColor(node.fillColor)
     }
   }
@@ -176,7 +184,7 @@ export class Grid {
   updateNodeColors() {
     const stops = this.getColormapStops()
     for (const node of this.nodes.values()) {
-      node.fillColor = getColormapColor(node.normalizedCitations, stops)
+      node.fillColor = getColormapColor(toColormapT(node.normalizedCitations), stops)
       node.strokeColor = getBrighterColor(node.fillColor)
     }
   }
