@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useGraphStore } from '@/stores/graph'
 import { Grid } from '@/lib/Grid'
 import { Renderer } from '@/lib/Renderer'
 import { COLORMAPS } from '@/lib/colormap'
+import NodeTooltip from './NodeTooltip.vue'
 
 const props = defineProps<{
   showYearAxis?: boolean
@@ -31,6 +32,14 @@ const TAP_TIMEOUT = 300 // max time for a tap (ms)
 
 // Vim-style navigation state (remembers preferred column like vim)
 let preferredGridX: number | null = null
+
+// Tooltip state
+const tooltipX = ref(0)
+const tooltipY = ref(0)
+const hoveredNode = computed(() => {
+  if (!store.hoveredNodeId) return null
+  return store.nodes.get(store.hoveredNodeId) ?? null
+})
 
 // --- Keyboard Navigation ---
 
@@ -160,6 +169,12 @@ function onPointerMove(e: PointerEvent) {
 
   const nodeId = renderer.hitTestNode(screenX, screenY, grid)
   store.setHoveredNode(nodeId)
+
+  // Track mouse position for tooltip
+  if (nodeId) {
+    tooltipX.value = e.clientX
+    tooltipY.value = e.clientY
+  }
 }
 
 // --- Helpers ---
@@ -431,6 +446,7 @@ defineExpose({
 <template>
   <div id="graph-canvas" ref="canvasContainer" class="graph-canvas">
     <div id="year-axis-target" class="year-axis-target"></div>
+    <NodeTooltip :node="hoveredNode" :x="tooltipX" :y="tooltipY" />
   </div>
 </template>
 
