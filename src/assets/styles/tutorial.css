@@ -1,8 +1,30 @@
 /* Driver.js overrides for tutorial */
 
+@keyframes driver-pulse {
+  0%,
+  100% {
+    outline-color: #3b82f6;
+    outline-width: 3px;
+  }
+  50% {
+    outline-color: #93c5fd;
+    outline-width: 5px;
+  }
+}
+
 .driver-active-element {
-  border: 2px solid rgba(255, 255, 255, 0.6) !important;
-  border-radius: 10px !important;
+  outline-style: solid !important;
+  outline-offset: 4px !important;
+  animation: driver-pulse 1.2s ease-in-out infinite !important;
+}
+
+/* Fix clipping for specific tutorial elements */
+.driver-active .results-groups,
+.driver-active .results-group,
+.driver-active .results-list,
+.driver-active .panel-header-row,
+.driver-active .header-actions {
+  overflow: visible !important;
 }
 
 /* Popover styling to match app theme */
@@ -33,6 +55,16 @@
 }
 
 /* Next/Finish button */
+@keyframes btn-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0);
+  }
+}
+
 .driver-popover-next-btn {
   background: #3b82f6 !important;
   border: 1px solid #3b82f6 !important;
@@ -44,15 +76,14 @@
   padding: 8px 16px !important;
   margin-top: 12px !important;
   cursor: pointer !important;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease !important;
   text-shadow: none !important;
+  animation: btn-pulse 1.2s ease-in-out infinite !important;
 }
 
 .driver-popover-next-btn:hover {
   background: #60a5fa !important;
   border-color: #60a5fa !important;
+  animation: none !important;
 }
 
 /* Hide arrow */
