@@ -25,6 +25,8 @@ const customPanelHeights = ref<Partial<Record<TabId, number>>>({})
 const isPanelDragging = ref(false)
 const searchOverlayOpen = ref(false)
 const pendingAuthorBuild = ref<Author | null>(null)
+const showHelpHint = ref(false)
+let helpHintTimer: ReturnType<typeof setTimeout> | null = null
 
 // Year axis visibility (persisted)
 const YEAR_AXIS_KEY = 'oignon:showYearAxis'
@@ -44,6 +46,7 @@ function handleTabSelect(tab: TabId) {
       return
     }
     searchOverlayOpen.value = true
+    clearHelpHint()
     return
   }
   // Toggle off if tapping the same tab
@@ -297,9 +300,37 @@ function handleSearchOverlayClose() {
 function handleSkipTutorial() {
   store.skipTutorial()
   handleTutorialCleanup()
+  startHelpHintTimer()
+}
+
+function startHelpHintTimer() {
+  // Only show hint if user hasn't completed tutorial before and hasn't dismissed it
+  if (localStorage.getItem('oignon:tutorial') === 'completed') return
+  if (localStorage.getItem('oignon:helpHintDismissed') === 'true') return
+
+  helpHintTimer = setTimeout(() => {
+    // Only show if search hasn't been opened
+    if (!searchOverlayOpen.value) {
+      showHelpHint.value = true
+    }
+  }, 10000)
+}
+
+function clearHelpHint() {
+  showHelpHint.value = false
+  if (helpHintTimer) {
+    clearTimeout(helpHintTimer)
+    helpHintTimer = null
+  }
+}
+
+function dismissHelpHintPermanently() {
+  clearHelpHint()
+  localStorage.setItem('oignon:helpHintDismissed', 'true')
 }
 
 function handleRestartTutorial() {
+  clearHelpHint()
   store.resetTutorial()
 }
 
@@ -321,12 +352,14 @@ function handleColormapChange(index: number) {
       <FloatingControls
         :show-year-axis="showYearAxis"
         :graph-type="graphType"
+        :show-help-hint="showHelpHint"
         @zoom-in="handleZoomIn"
         @zoom-out="handleZoomOut"
         @fit-to-view="handleFitToView"
         @restart-tutorial="handleRestartTutorial"
         @toggle-year-axis="toggleYearAxis"
         @zoom-to-source="handleZoomToSource"
+        @dismiss-help-hint="dismissHelpHintPermanently"
       />
     </div>
 

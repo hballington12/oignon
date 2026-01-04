@@ -2,6 +2,7 @@
 const props = defineProps<{
   showYearAxis?: boolean
   graphType?: 'paper' | 'author'
+  showHelpHint?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -11,27 +12,43 @@ const emit = defineEmits<{
   restartTutorial: []
   toggleYearAxis: []
   zoomToSource: []
+  dismissHelpHint: []
 }>()
 </script>
 
 <template>
   <div class="floating-controls">
-    <button class="float-btn" @click="emit('restartTutorial')" title="Tutorial">
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+    <div class="help-btn-wrapper">
+      <button
+        class="float-btn"
+        :class="{ 'help-hint-active': props.showHelpHint }"
+        @click="emit('restartTutorial')"
+        title="Tutorial"
       >
-        <circle cx="12" cy="12" r="10" />
-        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-        <line x1="12" y1="17" x2="12.01" y2="17" />
-      </svg>
-    </button>
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+      </button>
+      <Transition name="hint-fade">
+        <div v-if="props.showHelpHint" class="help-hint-tooltip">
+          <span>Not sure what to do? Click here...</span>
+          <button class="dismiss-hint" @click.stop="emit('dismissHelpHint')">
+            Don't show this again.
+          </button>
+        </div>
+      </Transition>
+    </div>
     <button class="float-btn" @click="emit('zoomIn')" title="Zoom in">
       <svg
         width="20"
@@ -176,5 +193,91 @@ const emit = defineEmits<{
   background: var(--bg-item-active);
   color: var(--text-primary);
   border-color: var(--border-medium);
+}
+
+/* Help hint styles */
+.help-btn-wrapper {
+  position: relative;
+}
+
+@keyframes help-hint-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(59, 130, 246, 0.6),
+      0 0 8px rgba(59, 130, 246, 0.4);
+  }
+  50% {
+    box-shadow:
+      0 0 0 6px rgba(59, 130, 246, 0),
+      0 0 16px rgba(59, 130, 246, 0.6);
+  }
+}
+
+.float-btn.help-hint-active {
+  animation: help-hint-pulse 1.5s ease-in-out infinite;
+  border-color: #3b82f6;
+  color: var(--text-primary);
+}
+
+.help-hint-tooltip {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 12px);
+  transform: translateY(-50%);
+  white-space: nowrap;
+  background: rgba(30, 30, 50, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.dismiss-hint {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s ease;
+}
+
+.dismiss-hint:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.help-hint-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -6px;
+  transform: translateY(-50%);
+  border: 6px solid transparent;
+  border-left-color: rgba(30, 30, 50, 0.95);
+}
+
+.hint-fade-enter-active {
+  transition:
+    opacity 1s ease,
+    transform 1s ease;
+}
+
+.hint-fade-leave-active {
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+
+.hint-fade-enter-from,
+.hint-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-50%) translateX(10px);
 }
 </style>
