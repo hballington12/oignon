@@ -178,7 +178,14 @@ export class Renderer {
       // Force PixiJS to update its screen dimensions first
       this.app.resize()
       if (this.viewport) {
+        // Preserve the world center point during resize
+        const centerX = this.viewport.center.x
+        const centerY = this.viewport.center.y
+
         this.viewport.resize(this.app.screen.width, this.app.screen.height)
+
+        // Move back to the same world center
+        this.viewport.moveCenter(centerX, centerY)
       }
     })
     this.resizeObserver.observe(element)
