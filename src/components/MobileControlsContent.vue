@@ -5,7 +5,7 @@ import { useGraphStore } from '@/stores/graph'
 
 const store = useGraphStore()
 
-const isLandscape = computed(() => store.layoutMode === 'landscape')
+const isLandscape = computed(() => store.effectiveLayoutMode === 'landscape')
 
 const emit = defineEmits<{
   colormapChange: [index: number]

@@ -1,5 +1,5 @@
 export type TabId = 'search' | 'details' | 'library' | 'controls'
-export type LayoutMode = 'portrait' | 'landscape'
+export type LayoutMode = 'auto' | 'portrait' | 'landscape'
 
 // Layout constants
 export const TAB_BAR_HEIGHT = 52

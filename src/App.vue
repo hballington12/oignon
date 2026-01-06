@@ -29,7 +29,8 @@ const isPanelDragging = ref(false)
 
 // Layout mode from store
 const layoutMode = computed(() => store.layoutMode)
-const isLandscape = computed(() => layoutMode.value === 'landscape')
+const effectiveLayoutMode = computed(() => store.effectiveLayoutMode)
+const isLandscape = computed(() => effectiveLayoutMode.value === 'landscape')
 const searchOverlayOpen = ref(false)
 const pendingAuthorBuild = ref<Author | null>(null)
 const showHelpHint = ref(false)
@@ -396,7 +397,7 @@ function handleColormapChange(index: number) {
       <MobileInfoPanel
         ref="mobileInfoPanel"
         :active-tab="activeTab"
-        :layout-mode="layoutMode"
+        :layout-mode="effectiveLayoutMode"
         @colormap-change="handleColormapChange"
         @search="handleSearch"
         @build-author="handleAuthorSearch"
@@ -407,7 +408,11 @@ function handleColormapChange(index: number) {
         @drag-end="handlePanelDragEnd"
         @collapse="activeTab = null"
       />
-      <MobileTabBar :active-tab="activeTab" :layout-mode="layoutMode" @select="handleTabSelect" />
+      <MobileTabBar
+        :active-tab="activeTab"
+        :layout-mode="effectiveLayoutMode"
+        @select="handleTabSelect"
+      />
     </div>
 
     <!-- Search overlay -->

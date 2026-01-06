@@ -125,6 +125,61 @@ const emit = defineEmits<{
     </button>
     <button
       class="float-btn"
+      :class="{ active: props.layoutMode !== 'auto' }"
+      @click="emit('toggleLayoutMode')"
+      :title="`Layout: ${props.layoutMode}`"
+    >
+      <!-- Auto: phone with rotation arrows -->
+      <svg
+        v-if="props.layoutMode === 'auto'"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <rect x="7" y="4" width="10" height="16" rx="2" />
+        <path d="M4 12a5 5 0 0 1 3-4.5" />
+        <path d="M4 9l-1.5 1.5L4 12" />
+        <path d="M20 12a5 5 0 0 1-3 4.5" />
+        <path d="M20 15l1.5-1.5L20 12" />
+      </svg>
+      <!-- Portrait: vertical phone -->
+      <svg
+        v-else-if="props.layoutMode === 'portrait'"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <rect x="6" y="3" width="12" height="18" rx="2" />
+        <circle cx="12" cy="17" r="1" />
+      </svg>
+      <!-- Landscape: horizontal phone -->
+      <svg
+        v-else
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <rect x="3" y="6" width="18" height="12" rx="2" />
+        <circle cx="17" cy="12" r="1" />
+      </svg>
+    </button>
+    <button
+      class="float-btn"
       :class="{ active: props.showYearAxis }"
       @click="emit('toggleYearAxis')"
       title="Toggle year axis"
@@ -143,26 +198,6 @@ const emit = defineEmits<{
         <path d="M16 2v4" />
         <rect width="18" height="18" x="3" y="4" rx="2" />
         <path d="M3 10h18" />
-      </svg>
-    </button>
-    <button
-      class="float-btn"
-      :class="{ active: props.layoutMode === 'landscape' }"
-      @click="emit('toggleLayoutMode')"
-      title="Toggle layout"
-    >
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-        <path d="M9 3v18" />
       </svg>
     </button>
   </div>

@@ -65,8 +65,32 @@ export const useGraphStore = defineStore('graph', () => {
   // Tutorial state: 'pending' | 'completed' | 'skipped'
   const tutorialStatus = ref<'pending' | 'completed' | 'skipped'>('pending')
 
-  // Layout mode: 'portrait' | 'landscape'
-  const layoutMode = ref<LayoutMode>('portrait')
+  // Layout mode: 'auto' | 'portrait' | 'landscape'
+  const layoutMode = ref<LayoutMode>('auto')
+
+  // Screen orientation for auto mode
+  const screenIsLandscape = ref(false)
+
+  // Detect screen orientation
+  function updateScreenOrientation() {
+    screenIsLandscape.value = window.matchMedia('(orientation: landscape)').matches
+  }
+
+  // Initialize orientation detection
+  if (typeof window !== 'undefined') {
+    updateScreenOrientation()
+    window
+      .matchMedia('(orientation: landscape)')
+      .addEventListener('change', updateScreenOrientation)
+  }
+
+  // Effective layout mode resolves 'auto' to actual orientation
+  const effectiveLayoutMode = computed(() => {
+    if (layoutMode.value === 'auto') {
+      return screenIsLandscape.value ? 'landscape' : 'portrait'
+    }
+    return layoutMode.value
+  })
 
   // Cache keys
   const CACHE_KEY = 'oignon_graph_cache'
@@ -112,9 +136,10 @@ export const useGraphStore = defineStore('graph', () => {
         tutorialStatus.value = tutorial as 'pending' | 'completed' | 'skipped'
       }
       const savedLayoutMode = localStorage.getItem(LAYOUT_MODE_KEY)
-      if (savedLayoutMode === 'landscape') {
-        layoutMode.value = 'landscape'
+      if (savedLayoutMode === 'portrait' || savedLayoutMode === 'landscape') {
+        layoutMode.value = savedLayoutMode
       }
+      // 'auto' is the default, so no need to explicitly set it
     } catch (e) {
       console.warn('Failed to load library data:', e)
     }
@@ -174,7 +199,11 @@ export const useGraphStore = defineStore('graph', () => {
   }
 
   function toggleLayoutMode() {
-    setLayoutMode(layoutMode.value === 'portrait' ? 'landscape' : 'portrait')
+    // Cycle: auto → portrait → landscape → auto
+    const cycle: LayoutMode[] = ['auto', 'portrait', 'landscape']
+    const currentIndex = cycle.indexOf(layoutMode.value)
+    const nextIndex = (currentIndex + 1) % cycle.length
+    setLayoutMode(cycle[nextIndex])
   }
 
   // Initialize library on store creation
@@ -801,6 +830,7 @@ export const useGraphStore = defineStore('graph', () => {
 
     // Layout mode
     layoutMode,
+    effectiveLayoutMode,
     setLayoutMode,
     toggleLayoutMode,
   }
