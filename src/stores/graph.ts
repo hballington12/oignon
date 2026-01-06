@@ -203,7 +203,7 @@ export const useGraphStore = defineStore('graph', () => {
     const cycle: LayoutMode[] = ['auto', 'portrait', 'landscape']
     const currentIndex = cycle.indexOf(layoutMode.value)
     const nextIndex = (currentIndex + 1) % cycle.length
-    setLayoutMode(cycle[nextIndex])
+    setLayoutMode(cycle[nextIndex] ?? 'auto')
   }
 
   // Initialize library on store creation

@@ -68,14 +68,17 @@ export class SelectionManager {
 
     if (!changed) return false
 
-    // Update selectedIds first so rebuildSelectedEndpoints can use it
+    // Capture previous state before updating
+    const previousSelectedIds = this.selectedIds
+    const previousConnectedIds = this.connectedIds
+
+    // Update selectedIds
     this.selectedIds = new Set(nodeIds)
 
     // Calculate connected node IDs and rebuild visuals
-    const previousConnectedIds = this.connectedIds
     this.connectedIds = this.calculateConnectedIds(nodeIds, curveNodeMappings)
     this.rebuildSelectionCurves(nodeIds, curveDataCache, curveNodeMappings)
-    this.rebuildSelectedEndpoints(previousConnectedIds)
+    this.rebuildSelectedEndpoints(previousConnectedIds, previousSelectedIds)
 
     return true
   }
@@ -183,14 +186,25 @@ export class SelectionManager {
   /**
    * Update endpoint clones with fade transitions
    */
-  private rebuildSelectedEndpoints(previousConnectedIds: Set<string>) {
-    // Determine which endpoints to add, remove, or keep
+  private rebuildSelectedEndpoints(
+    previousConnectedIds: Set<string>,
+    previousSelectedIds: Set<string>,
+  ) {
+    // Determine which endpoints to add, remove, or rebuild
     const toAdd = new Set<string>()
     const toRemove = new Set<string>()
+    const toRebuild = new Set<string>()
 
     for (const id of this.connectedIds) {
       if (!previousConnectedIds.has(id)) {
         toAdd.add(id)
+      } else {
+        // Node stays connected - check if selection status changed
+        const wasSelected = previousSelectedIds.has(id)
+        const isSelected = this.selectedIds.has(id)
+        if (wasSelected !== isSelected) {
+          toRebuild.add(id)
+        }
       }
     }
 
@@ -206,6 +220,22 @@ export class SelectionManager {
       if (clone) {
         this.fadeOutAndRemove(clone)
         this.endpointClones.delete(id)
+      }
+    }
+
+    // Rebuild endpoints whose selection status changed (instant swap, no fade)
+    for (const id of toRebuild) {
+      const oldClone = this.endpointClones.get(id)
+      if (oldClone) {
+        this.selectedEndpointsContainer.removeChild(oldClone)
+      }
+      const original = this.nodeContainers.get(id)
+      if (original) {
+        const isSelected = this.selectedIds.has(id)
+        const clone = this.cloneNodeContainer(original, isSelected)
+        clone.alpha = 1 // No fade, instant swap
+        this.selectedEndpointsContainer.addChild(clone)
+        this.endpointClones.set(id, clone)
       }
     }
 
