@@ -81,11 +81,7 @@ export function createNodeTextures(app: Application): NodeTextures {
   overlayGraphics.circle(cx - r * primary.offset, cy - r * primary.offset, r * primary.radius)
   overlayGraphics.fill({ color: 0xffffff, alpha: primary.alpha })
 
-  overlayGraphics.circle(
-    cx - r * secondary.offset,
-    cy - r * secondary.offset,
-    r * secondary.radius,
-  )
+  overlayGraphics.circle(cx - r * secondary.offset, cy - r * secondary.offset, r * secondary.radius)
   overlayGraphics.fill({ color: 0xffffff, alpha: secondary.alpha })
 
   overlayGraphics.circle(cx - r * tertiary.offset, cy - r * tertiary.offset, r * tertiary.radius)
@@ -97,7 +93,7 @@ export function createNodeTextures(app: Application): NodeTextures {
   // --- Selection ring texture ---
   const selectionGraphics = new Graphics()
   selectionGraphics.circle(cx, cy, r)
-  selectionGraphics.stroke({ width: 4, color: 0xffffff, alpha: 1 })
+  selectionGraphics.stroke({ width: 8, color: 0xffffff, alpha: 1 })
   const selectionRing = app.renderer.generateTexture(selectionGraphics)
   selectionGraphics.destroy()
 

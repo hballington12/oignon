@@ -53,8 +53,8 @@ export class SelectionManager {
   }
 
   /**
-   * Update selection, adding/removing rings, rebuilding selection curves,
-   * and cloning connected endpoint nodes
+   * Update selection, rebuilding selection curves and cloning connected endpoint nodes
+   * Selection ring is now added to cloned endpoints, not original nodes
    * @returns true if selection changed
    */
   setSelected(
@@ -68,19 +68,8 @@ export class SelectionManager {
 
     if (!changed) return false
 
-    // Remove rings from deselected nodes
-    for (const id of this.selectedIds) {
-      if (!nodeIds.has(id)) {
-        this.removeRing(id)
-      }
-    }
-
-    // Add rings to newly selected nodes
-    for (const id of nodeIds) {
-      if (!this.selectedIds.has(id)) {
-        this.addRing(id)
-      }
-    }
+    // Update selectedIds first so rebuildSelectedEndpoints can use it
+    this.selectedIds = new Set(nodeIds)
 
     // Calculate connected node IDs and rebuild visuals
     const previousConnectedIds = this.connectedIds
@@ -88,7 +77,6 @@ export class SelectionManager {
     this.rebuildSelectionCurves(nodeIds, curveDataCache, curveNodeMappings)
     this.rebuildSelectedEndpoints(previousConnectedIds)
 
-    this.selectedIds = new Set(nodeIds)
     return true
   }
 
@@ -137,23 +125,6 @@ export class SelectionManager {
       if (originalFill && cloneFill) {
         cloneFill.tint = originalFill.tint
       }
-    }
-  }
-
-  private addRing(nodeId: string) {
-    const container = this.nodeContainers.get(nodeId)
-    if (container && this.selectionRingTexture) {
-      const ring = new Sprite(this.selectionRingTexture)
-      ring.anchor.set(0.5)
-      container.addChild(ring)
-    }
-  }
-
-  private removeRing(nodeId: string) {
-    const container = this.nodeContainers.get(nodeId)
-    if (container && container.children.length > 3) {
-      // Ring is the 4th child (shadow=0, fill=1, overlay=2, ring=3)
-      container.removeChildAt(3)
     }
   }
 
@@ -242,7 +213,9 @@ export class SelectionManager {
     for (const id of toAdd) {
       const original = this.nodeContainers.get(id)
       if (original) {
-        const clone = this.cloneNodeContainer(original)
+        // Pass isSelected=true for selected nodes to add the selection ring
+        const isSelected = this.selectedIds.has(id)
+        const clone = this.cloneNodeContainer(original, isSelected)
         clone.alpha = 0
         this.selectedEndpointsContainer.addChild(clone)
         this.endpointClones.set(id, clone)
@@ -278,8 +251,9 @@ export class SelectionManager {
 
   /**
    * Clone a node container (shadow, fill, overlay sprites)
+   * If isSelected is true, also add the selection ring
    */
-  private cloneNodeContainer(original: Container): Container {
+  private cloneNodeContainer(original: Container, isSelected: boolean = false): Container {
     const clone = new Container()
     clone.x = original.x
     clone.y = original.y
@@ -296,6 +270,13 @@ export class SelectionManager {
         spriteClone.tint = child.tint
         clone.addChild(spriteClone)
       }
+    }
+
+    // Add selection ring to selected nodes
+    if (isSelected && this.selectionRingTexture) {
+      const ring = new Sprite(this.selectionRingTexture)
+      ring.anchor.set(0.5)
+      clone.addChild(ring)
     }
 
     return clone
