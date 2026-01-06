@@ -55,7 +55,7 @@ function handleTap(id: TabId) {
 /* Landscape mode - vertical bar on left */
 .mobile-tab-bar.landscape {
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: space-around; /* Even vertical spacing like portrait horizontal */
   align-items: center;
   width: calc(52px + env(safe-area-inset-left));
   height: 100%;
@@ -64,6 +64,7 @@ function handleTap(id: TabId) {
   padding-top: env(safe-area-inset-top);
   border-top: none;
   border-right: 1px solid var(--border-light);
+  order: -1; /* Move before InfoPanel in landscape */
 }
 
 .tab-button {

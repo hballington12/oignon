@@ -5,6 +5,8 @@ import { useGraphStore } from '@/stores/graph'
 
 const store = useGraphStore()
 
+const isLandscape = computed(() => store.layoutMode === 'landscape')
+
 const emit = defineEmits<{
   colormapChange: [index: number]
 }>()
@@ -24,9 +26,9 @@ function selectColormap(index: number) {
 </script>
 
 <template>
-  <div class="controls-content">
+  <div class="controls-content" :class="{ landscape: isLandscape }">
     <div class="controls-group">
-      <div class="colormap-buttons">
+      <div class="colormap-buttons" :class="{ landscape: isLandscape }">
         <button
           v-for="(colormap, index) in COLORMAPS"
           :key="colormap.name"
@@ -61,7 +63,13 @@ function selectColormap(index: number) {
 
 .colormap-buttons {
   display: flex;
+  flex-direction: row;
   gap: clamp(8px, 3vw, 16px);
+}
+
+/* Landscape - column layout */
+.colormap-buttons.landscape {
+  flex-direction: column;
 }
 
 .colormap-btn {
