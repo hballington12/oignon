@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { TabId } from '@/types/mobile'
+import type { TabId, LayoutMode } from '@/types/mobile'
 import TabIcon from '@/components/TabIcon.vue'
 
 defineProps<{
   activeTab: TabId | null
+  layoutMode?: LayoutMode
 }>()
 
 const emit = defineEmits<{
@@ -23,7 +24,7 @@ function handleTap(id: TabId) {
 </script>
 
 <template>
-  <div class="mobile-tab-bar">
+  <div class="mobile-tab-bar" :class="{ landscape: layoutMode === 'landscape' }">
     <button
       v-for="tab in tabs"
       :key="tab.id"
@@ -40,13 +41,29 @@ function handleTap(id: TabId) {
 </template>
 
 <style scoped>
+/* Portrait mode (default) - horizontal bar at bottom */
 .mobile-tab-bar {
   display: flex;
+  flex-direction: row;
   justify-content: space-around;
   align-items: center;
   height: calc(52px + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
   border-top: 1px solid var(--border-light);
+}
+
+/* Landscape mode - vertical bar on left */
+.mobile-tab-bar.landscape {
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  width: calc(52px + env(safe-area-inset-left));
+  height: 100%;
+  padding-bottom: 0;
+  padding-left: env(safe-area-inset-left);
+  padding-top: env(safe-area-inset-top);
+  border-top: none;
+  border-right: 1px solid var(--border-light);
 }
 
 .tab-button {
@@ -66,6 +83,14 @@ function handleTap(id: TabId) {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Landscape tab button */
+.mobile-tab-bar.landscape .tab-button {
+  flex: 0 0 auto;
+  width: 100%;
+  height: auto;
+  padding: var(--spacing-md) 0;
+}
+
 .tab-button:active {
   color: var(--text-secondary);
 }
@@ -74,6 +99,7 @@ function handleTap(id: TabId) {
   color: var(--text-primary);
 }
 
+/* Portrait indicator - horizontal at bottom */
 .tab-indicator {
   position: absolute;
   bottom: 8px;
@@ -88,6 +114,21 @@ function handleTap(id: TabId) {
 
 .tab-button.active .tab-indicator {
   transform: translateX(-50%) scaleX(1);
+}
+
+/* Landscape indicator - vertical on right edge */
+.mobile-tab-bar.landscape .tab-indicator {
+  bottom: auto;
+  left: auto;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%) scaleX(0);
+  width: 2px;
+  height: 20px;
+}
+
+.mobile-tab-bar.landscape .tab-button.active .tab-indicator {
+  transform: translateY(-50%) scaleX(1);
 }
 
 .tab-target {

@@ -13,6 +13,7 @@ import type {
   FollowedAuthor,
   RecentGraph,
 } from '@/types'
+import type { LayoutMode } from '@/types/mobile'
 import { hydrateMetadata, fetchPaper, fetchAuthor } from '@/lib/graphBuilder'
 
 export const useGraphStore = defineStore('graph', () => {
@@ -64,6 +65,9 @@ export const useGraphStore = defineStore('graph', () => {
   // Tutorial state: 'pending' | 'completed' | 'skipped'
   const tutorialStatus = ref<'pending' | 'completed' | 'skipped'>('pending')
 
+  // Layout mode: 'portrait' | 'landscape'
+  const layoutMode = ref<LayoutMode>('portrait')
+
   // Cache keys
   const CACHE_KEY = 'oignon_graph_cache'
   const BOOKMARKS_KEY = 'oignon_bookmarks'
@@ -71,6 +75,7 @@ export const useGraphStore = defineStore('graph', () => {
   const RECENT_GRAPHS_KEY = 'oignon_recent_graphs'
   const COLORMAP_KEY = 'oignon_colormap'
   const TUTORIAL_KEY = 'oignon_tutorial'
+  const LAYOUT_MODE_KEY = 'oignon:layoutMode'
   const MAX_RECENT_GRAPHS = 10
 
   // Library state
@@ -105,6 +110,10 @@ export const useGraphStore = defineStore('graph', () => {
       const loadTutorialStatus = import.meta.env.VITE_FORCE_NEW_USER !== 'true'
       if (tutorial !== null && loadTutorialStatus) {
         tutorialStatus.value = tutorial as 'pending' | 'completed' | 'skipped'
+      }
+      const savedLayoutMode = localStorage.getItem(LAYOUT_MODE_KEY)
+      if (savedLayoutMode === 'landscape') {
+        layoutMode.value = 'landscape'
       }
     } catch (e) {
       console.warn('Failed to load library data:', e)
@@ -156,6 +165,16 @@ export const useGraphStore = defineStore('graph', () => {
     // Keep localStorage as 'completed' or 'skipped' - user has seen tutorial before
     // On next page load, they won't see welcome message
     // We just reset in-memory state so they can replay the tutorial this session
+  }
+
+  // Layout mode actions
+  function setLayoutMode(mode: LayoutMode) {
+    layoutMode.value = mode
+    localStorage.setItem(LAYOUT_MODE_KEY, mode)
+  }
+
+  function toggleLayoutMode() {
+    setLayoutMode(layoutMode.value === 'portrait' ? 'landscape' : 'portrait')
   }
 
   // Initialize library on store creation
@@ -779,5 +798,10 @@ export const useGraphStore = defineStore('graph', () => {
     completeTutorial,
     skipTutorial,
     resetTutorial,
+
+    // Layout mode
+    layoutMode,
+    setLayoutMode,
+    toggleLayoutMode,
   }
 })

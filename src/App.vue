@@ -9,7 +9,9 @@ import TutorialOverlay from '@/components/TutorialOverlay.vue'
 import MobileSearchOverlay from '@/components/MobileSearchOverlay.vue'
 import {
   TAB_HEIGHTS,
+  TAB_WIDTHS,
   TAB_BAR_HEIGHT,
+  TAB_BAR_WIDTH,
   TRANSITION_SMOOTH_MS,
   TRANSITION_SAFE_PADDING_MS,
   type TabId,
@@ -22,7 +24,12 @@ import { getBackgroundColorHex, COLORMAPS } from '@/lib/colormap'
 const store = useGraphStore()
 const activeTab = ref<TabId | null>(null)
 const customPanelHeights = ref<Partial<Record<TabId, number>>>({})
+const customPanelWidths = ref<Partial<Record<TabId, number>>>({})
 const isPanelDragging = ref(false)
+
+// Layout mode from store
+const layoutMode = computed(() => store.layoutMode)
+const isLandscape = computed(() => layoutMode.value === 'landscape')
 const searchOverlayOpen = ref(false)
 const pendingAuthorBuild = ref<Author | null>(null)
 const showHelpHint = ref(false)
@@ -53,9 +60,13 @@ function handleTabSelect(tab: TabId) {
   activeTab.value = activeTab.value === tab ? null : tab
 }
 
-function handlePanelHeightChange(height: number) {
+function handlePanelSizeChange(size: number) {
   if (activeTab.value) {
-    customPanelHeights.value[activeTab.value] = height
+    if (isLandscape.value) {
+      customPanelWidths.value[activeTab.value] = size
+    } else {
+      customPanelHeights.value[activeTab.value] = size
+    }
   }
 }
 
@@ -90,10 +101,17 @@ watch(
   },
 )
 
-const bottomAreaHeight = computed(() => {
-  if (!activeTab.value) return TAB_BAR_HEIGHT
-  const panelHeight = customPanelHeights.value[activeTab.value] ?? TAB_HEIGHTS[activeTab.value]
-  return TAB_BAR_HEIGHT + panelHeight
+// Side/bottom area size (height in portrait, width in landscape)
+const sideAreaSize = computed(() => {
+  if (isLandscape.value) {
+    if (!activeTab.value) return TAB_BAR_WIDTH
+    const panelWidth = customPanelWidths.value[activeTab.value] ?? TAB_WIDTHS[activeTab.value]
+    return TAB_BAR_WIDTH + panelWidth
+  } else {
+    if (!activeTab.value) return TAB_BAR_HEIGHT
+    const panelHeight = customPanelHeights.value[activeTab.value] ?? TAB_HEIGHTS[activeTab.value]
+    return TAB_BAR_HEIGHT + panelHeight
+  }
 })
 
 const backgroundColor = computed(() => {
@@ -345,7 +363,11 @@ function handleColormapChange(index: number) {
 </script>
 
 <template>
-  <div class="app" :style="{ background: backgroundColor, ...colormapStyles }">
+  <div
+    class="app"
+    :class="{ landscape: isLandscape }"
+    :style="{ background: backgroundColor, ...colormapStyles }"
+  >
     <!-- Canvas area -->
     <div class="canvas-area">
       <GraphCanvas ref="graphCanvas" :show-year-axis="showYearAxis" />
@@ -353,6 +375,7 @@ function handleColormapChange(index: number) {
         :show-year-axis="showYearAxis"
         :graph-type="graphType"
         :show-help-hint="showHelpHint"
+        :layout-mode="layoutMode"
         @zoom-in="handleZoomIn"
         @zoom-out="handleZoomOut"
         @fit-to-view="handleFitToView"
@@ -360,29 +383,31 @@ function handleColormapChange(index: number) {
         @toggle-year-axis="toggleYearAxis"
         @zoom-to-source="handleZoomToSource"
         @dismiss-help-hint="dismissHelpHintPermanently"
+        @toggle-layout-mode="store.toggleLayoutMode"
       />
     </div>
 
-    <!-- Bottom area -->
+    <!-- Side/bottom area -->
     <div
-      class="mobile-bottom-area"
-      :class="{ dragging: isPanelDragging }"
-      :style="{ height: bottomAreaHeight + 'px' }"
+      class="mobile-side-area"
+      :class="{ dragging: isPanelDragging, landscape: isLandscape }"
+      :style="isLandscape ? { width: sideAreaSize + 'px' } : { height: sideAreaSize + 'px' }"
     >
       <MobileInfoPanel
         ref="mobileInfoPanel"
         :active-tab="activeTab"
+        :layout-mode="layoutMode"
         @colormap-change="handleColormapChange"
         @search="handleSearch"
         @build-author="handleAuthorSearch"
         @confirm-build-author="handleAuthorClick"
         @show-details="activeTab = 'details'"
-        @height-change="handlePanelHeightChange"
+        @size-change="handlePanelSizeChange"
         @drag-start="handlePanelDragStart"
         @drag-end="handlePanelDragEnd"
         @collapse="activeTab = null"
       />
-      <MobileTabBar :active-tab="activeTab" @select="handleTabSelect" />
+      <MobileTabBar :active-tab="activeTab" :layout-mode="layoutMode" @select="handleTabSelect" />
     </div>
 
     <!-- Search overlay -->
@@ -459,20 +484,37 @@ body,
   flex-direction: column;
 }
 
+.app.landscape {
+  flex-direction: row;
+}
+
 .canvas-area {
   position: relative;
   flex: 1;
   min-height: 0;
+  min-width: 0;
   overflow: hidden;
 }
 
-.mobile-bottom-area {
+/* Portrait mode (default) */
+.mobile-side-area {
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
   transition: height var(--transition-smooth);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-.mobile-bottom-area.dragging {
+/* Landscape mode */
+.mobile-side-area.landscape {
+  flex-direction: row;
+  order: -1; /* Move to left side */
+  transition: width var(--transition-smooth);
+  padding-bottom: 0;
+  padding-left: env(safe-area-inset-left);
+}
+
+.mobile-side-area.dragging {
   transition: none;
 }
 

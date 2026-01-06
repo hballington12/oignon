@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import type { LayoutMode } from '@/types/mobile'
+
 const props = defineProps<{
   showYearAxis?: boolean
   graphType?: 'paper' | 'author'
   showHelpHint?: boolean
+  layoutMode?: LayoutMode
 }>()
 
 const emit = defineEmits<{
@@ -13,6 +16,7 @@ const emit = defineEmits<{
   toggleYearAxis: []
   zoomToSource: []
   dismissHelpHint: []
+  toggleLayoutMode: []
 }>()
 </script>
 
@@ -139,6 +143,26 @@ const emit = defineEmits<{
         <path d="M16 2v4" />
         <rect width="18" height="18" x="3" y="4" rx="2" />
         <path d="M3 10h18" />
+      </svg>
+    </button>
+    <button
+      class="float-btn"
+      :class="{ active: props.layoutMode === 'landscape' }"
+      @click="emit('toggleLayoutMode')"
+      title="Toggle layout"
+    >
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <path d="M9 3v18" />
       </svg>
     </button>
   </div>

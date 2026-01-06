@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { computed, ref, type Component } from 'vue'
 import { useEventListener } from '@vueuse/core'
-import { TAB_HEIGHTS, PANEL_MIN_HEIGHT, type TabId } from '@/types/mobile'
+import {
+  TAB_HEIGHTS,
+  TAB_WIDTHS,
+  PANEL_MIN_HEIGHT,
+  PANEL_MIN_WIDTH,
+  type TabId,
+  type LayoutMode,
+} from '@/types/mobile'
 import { useGraphStore } from '@/stores/graph'
 import MobileControlsContent from '@/components/MobileControlsContent.vue'
 import PaperDetailsContent from '@/components/PaperDetailsContent.vue'
@@ -18,6 +25,7 @@ const contentComponents: Partial<Record<TabId, Component>> = {
 
 const props = defineProps<{
   activeTab: TabId | null
+  layoutMode?: LayoutMode
 }>()
 
 import type { Author } from '@/types'
@@ -28,7 +36,7 @@ const emit = defineEmits<{
   buildAuthor: [id: string]
   confirmBuildAuthor: [author: Author]
   showDetails: []
-  heightChange: [height: number]
+  sizeChange: [size: number]
   dragStart: []
   dragEnd: []
   collapse: []
@@ -37,22 +45,33 @@ const emit = defineEmits<{
 // Drag handle ref and resize state
 const handleRef = ref<HTMLElement | null>(null)
 const customHeights = ref<Partial<Record<TabId, number>>>({})
+const customWidths = ref<Partial<Record<TabId, number>>>({})
 const isDragging = ref(false)
 
-// Dynamic max height - 70% of viewport
-function getMaxHeight(): number {
-  return Math.round(window.innerHeight * 0.7)
+// Orientation helpers
+const isLandscape = computed(() => props.layoutMode === 'landscape')
+
+const minSize = computed(() => (isLandscape.value ? PANEL_MIN_WIDTH : PANEL_MIN_HEIGHT))
+
+const defaultSizes = computed(() => (isLandscape.value ? TAB_WIDTHS : TAB_HEIGHTS))
+
+const customSizes = computed(() => (isLandscape.value ? customWidths.value : customHeights.value))
+
+// Dynamic max size - 70% of viewport
+function getMaxSize(): number {
+  const dimension = isLandscape.value ? window.innerWidth : window.innerHeight
+  return Math.round(dimension * 0.7)
 }
 
 // Drag state
-let dragStartY = 0
-let dragStartHeight = 0
+let dragStartPos = 0
+let dragStartSize = 0
 let hasMoved = false
 const TAP_THRESHOLD = 5 // pixels - below this counts as a tap
 
 // Momentum tracking (like pixi-viewport's Decelerate plugin)
 interface Snapshot {
-  y: number
+  pos: number
   time: number
 }
 const snapshots: Snapshot[] = []
@@ -62,15 +81,24 @@ const MIN_VELOCITY = 0.5 // Stop when velocity drops below this
 let velocity = 0
 let momentumFrame: number | null = null
 
-function clampHeight(h: number): number {
-  return Math.round(Math.min(getMaxHeight(), Math.max(PANEL_MIN_HEIGHT, h)))
+function clampSize(s: number): number {
+  return Math.round(Math.min(getMaxSize(), Math.max(minSize.value, s)))
 }
 
-function setHeight(h: number) {
+function setSize(s: number) {
   if (!props.activeTab) return
-  const clamped = clampHeight(h)
-  customHeights.value[props.activeTab] = clamped
-  emit('heightChange', clamped)
+  const clamped = clampSize(s)
+  if (isLandscape.value) {
+    customWidths.value[props.activeTab] = clamped
+  } else {
+    customHeights.value[props.activeTab] = clamped
+  }
+  emit('sizeChange', clamped)
+}
+
+// Get pointer position based on orientation
+function getPointerPos(e: PointerEvent): number {
+  return isLandscape.value ? e.clientX : e.clientY
 }
 
 const isMomentumActive = ref(false)
@@ -97,18 +125,18 @@ function applyMomentum() {
     return
   }
 
-  const currentHeight =
-    customHeights.value[props.activeTab] ?? TAB_HEIGHTS[props.activeTab] ?? PANEL_MIN_HEIGHT
-  const newHeight = currentHeight + velocity
+  const currentSize =
+    customSizes.value[props.activeTab] ?? defaultSizes.value[props.activeTab] ?? minSize.value
+  const newSize = currentSize + velocity
 
   // Stop if we hit bounds
-  if (newHeight <= PANEL_MIN_HEIGHT || newHeight >= getMaxHeight()) {
-    setHeight(newHeight)
+  if (newSize <= minSize.value || newSize >= getMaxSize()) {
+    setSize(newSize)
     stopMomentum()
     return
   }
 
-  setHeight(newHeight)
+  setSize(newSize)
   momentumFrame = requestAnimationFrame(applyMomentum)
 }
 
@@ -121,12 +149,12 @@ function onPointerDown(e: PointerEvent) {
   hasMoved = false
 
   isDragging.value = true
-  dragStartY = e.clientY
-  dragStartHeight =
-    customHeights.value[props.activeTab] ?? TAB_HEIGHTS[props.activeTab] ?? PANEL_MIN_HEIGHT
+  dragStartPos = getPointerPos(e)
+  dragStartSize =
+    customSizes.value[props.activeTab] ?? defaultSizes.value[props.activeTab] ?? minSize.value
 
   // Record initial snapshot
-  snapshots.push({ y: e.clientY, time: performance.now() })
+  snapshots.push({ pos: getPointerPos(e), time: performance.now() })
 
   // Capture pointer for smooth tracking even outside element
   ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
@@ -138,23 +166,30 @@ function onPointerMove(e: PointerEvent) {
   if (!isDragging.value || !props.activeTab) return
 
   // Record snapshot for velocity calculation
-  snapshots.push({ y: e.clientY, time: performance.now() })
+  snapshots.push({ pos: getPointerPos(e), time: performance.now() })
   // Keep buffer reasonable
   if (snapshots.length > 60) {
     snapshots.splice(0, 30)
   }
 
-  const deltaY = dragStartY - e.clientY // Negative = dragging up = increase height
+  // Portrait: drag up (negative Y delta) = increase height
+  // Landscape: drag right (positive X delta) = increase width
+  const pointerPos = getPointerPos(e)
+  const delta = isLandscape.value ? pointerPos - dragStartPos : dragStartPos - pointerPos
 
   // Check if we've moved enough to count as a drag
-  if (!hasMoved && Math.abs(deltaY) > TAP_THRESHOLD) {
+  if (!hasMoved && Math.abs(delta) > TAP_THRESHOLD) {
     hasMoved = true
   }
 
-  const newHeight = clampHeight(dragStartHeight + deltaY)
+  const newSize = clampSize(dragStartSize + delta)
 
-  customHeights.value[props.activeTab] = newHeight
-  emit('heightChange', newHeight)
+  if (isLandscape.value) {
+    customWidths.value[props.activeTab] = newSize
+  } else {
+    customHeights.value[props.activeTab] = newSize
+  }
+  emit('sizeChange', newSize)
 }
 
 function onPointerUp(e: PointerEvent) {
@@ -178,9 +213,13 @@ function onPointerUp(e: PointerEvent) {
     const dt = now - recentSnapshot.time
     if (dt > 0) {
       // Velocity in pixels per frame (~16ms)
-      // Negative deltaY = dragging up = positive height change
-      const deltaY = recentSnapshot.y - e.clientY
-      velocity = (deltaY / dt) * 16
+      // Portrait: negative deltaY = dragging up = positive height change
+      // Landscape: positive deltaX = dragging right = positive width change
+      const pointerPos = getPointerPos(e)
+      const deltaPos = isLandscape.value
+        ? pointerPos - recentSnapshot.pos
+        : recentSnapshot.pos - pointerPos
+      velocity = (deltaPos / dt) * 16
     }
   }
 
@@ -199,9 +238,9 @@ useEventListener(handleRef, 'pointermove', onPointerMove)
 useEventListener(handleRef, 'pointerup', onPointerUp)
 useEventListener(handleRef, 'pointercancel', onPointerUp)
 
-const panelHeight = computed(() => {
+const panelSize = computed(() => {
   if (!props.activeTab) return 0
-  return customHeights.value[props.activeTab] ?? TAB_HEIGHTS[props.activeTab]
+  return customSizes.value[props.activeTab] ?? defaultSizes.value[props.activeTab]
 })
 
 function resetHeights() {
@@ -219,8 +258,12 @@ const activeComponent = computed(() => {
 <template>
   <div
     class="mobile-info-panel"
-    :class="{ open: activeTab !== null, dragging: isDragging || isMomentumActive }"
-    :style="{ height: panelHeight + 'px' }"
+    :class="{
+      open: activeTab !== null,
+      dragging: isDragging || isMomentumActive,
+      landscape: isLandscape,
+    }"
+    :style="isLandscape ? { width: panelSize + 'px' } : { height: panelSize + 'px' }"
   >
     <div class="info-panel-content">
       <Transition name="fade" mode="out-in">
@@ -277,6 +320,7 @@ const activeComponent = computed(() => {
 </template>
 
 <style scoped>
+/* Portrait mode (default) */
 .mobile-info-panel {
   height: 0;
   border-top: 1px solid transparent;
@@ -288,6 +332,18 @@ const activeComponent = computed(() => {
   flex-direction: column;
 }
 
+/* Landscape mode */
+.mobile-info-panel.landscape {
+  height: 100%;
+  width: 0;
+  border-top: none;
+  border-right: 1px solid transparent;
+  transition:
+    width var(--transition-smooth),
+    border-color var(--transition-smooth);
+  flex-direction: row;
+}
+
 .mobile-info-panel.dragging {
   transition: none;
 }
@@ -296,7 +352,12 @@ const activeComponent = computed(() => {
   border-top-color: var(--border-light);
 }
 
-/* Drag handle */
+.mobile-info-panel.landscape.open {
+  border-top-color: transparent;
+  border-right-color: var(--border-light);
+}
+
+/* Drag handle - portrait */
 .drag-handle {
   flex-shrink: 0;
   display: flex;
@@ -310,6 +371,16 @@ const activeComponent = computed(() => {
   position: relative;
 }
 
+/* Drag handle - landscape */
+.mobile-info-panel.landscape .drag-handle {
+  order: 1; /* Move handle to right edge */
+  padding: 0 5px;
+  cursor: ew-resize;
+  width: auto;
+  height: 100%;
+}
+
+/* Hit area - portrait */
 .drag-handle::before {
   content: '';
   position: absolute;
@@ -321,12 +392,27 @@ const activeComponent = computed(() => {
   z-index: 10;
 }
 
+/* Hit area - landscape */
+.mobile-info-panel.landscape .drag-handle::before {
+  top: 0;
+  bottom: 0;
+  left: -10px;
+  right: -34px;
+}
+
+/* Pill - portrait */
 .drag-handle-pill {
   width: 98px;
   height: 8px;
   background: var(--border-medium);
   border-radius: 4px;
   transition: background var(--transition-fast);
+}
+
+/* Pill - landscape */
+.mobile-info-panel.landscape .drag-handle-pill {
+  width: 8px;
+  height: 98px;
 }
 
 .drag-handle:hover .drag-handle-pill,
@@ -349,11 +435,23 @@ const activeComponent = computed(() => {
   height: 100%;
 }
 
+/* Landscape wrapper */
+.mobile-info-panel.landscape .resizable-wrapper {
+  flex-direction: row;
+  width: 100%;
+}
+
 .resizable-content {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Landscape content - on left of handle */
+.mobile-info-panel.landscape .resizable-content {
+  order: 0;
+  min-width: 0;
 }
 
 .fade-enter-active,
