@@ -50,6 +50,7 @@ function handleTap(id: TabId) {
   height: calc(52px + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
   border-top: 1px solid var(--border-light);
+  transition: border-color var(--transition-fast);
 }
 
 /* Landscape mode - vertical bar on left */

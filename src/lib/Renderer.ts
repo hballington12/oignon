@@ -736,28 +736,59 @@ export class Renderer {
     }
   }
 
-  setDarkMode(isDark: boolean, colormapIndex?: number) {
+  private bgColorAnimationRunner = new AnimationRunner()
+
+  setDarkMode(isDark: boolean, colormapIndex?: number, animate = true) {
     this.isDarkMode = isDark
 
     // Disable particles in light mode
     this.setParticlesVisible(isDark)
 
-    // Set canvas background color
+    // Determine target background color
+    let targetColor: number
     if (isDark) {
       // Dark mode: use colormap background
       if (colormapIndex !== undefined) {
         const colormapData = COLORMAPS[colormapIndex]
         if (colormapData) {
-          this.app.renderer.background.color = getCanvasBackgroundColor(colormapData)
-          return
+          targetColor = getCanvasBackgroundColor(colormapData)
+        } else {
+          targetColor = 0x1a1a2e
         }
+      } else {
+        targetColor = 0x1a1a2e
       }
-      // Fallback if no colormap provided
-      this.app.renderer.background.color = 0x1a1a2e
     } else {
       // Light mode: off-white background
-      this.app.renderer.background.color = 0xf5f5f0
+      targetColor = 0xf5f5f0
     }
+
+    if (animate) {
+      this.animateBackgroundColor(targetColor)
+    } else {
+      this.app.renderer.background.color = targetColor
+    }
+  }
+
+  private animateBackgroundColor(targetColor: number, duration = 300) {
+    const bgColor = this.app.renderer.background.color
+    const startColor = typeof bgColor === 'number' ? bgColor : bgColor.toNumber()
+
+    // Extract RGB components
+    const startR = (startColor >> 16) & 0xff
+    const startG = (startColor >> 8) & 0xff
+    const startB = startColor & 0xff
+
+    const targetR = (targetColor >> 16) & 0xff
+    const targetG = (targetColor >> 8) & 0xff
+    const targetB = targetColor & 0xff
+
+    animateProgress(this.bgColorAnimationRunner, duration, easeInOutCubic, (progress) => {
+      const r = Math.round(startR + (targetR - startR) * progress)
+      const g = Math.round(startG + (targetG - startG) * progress)
+      const b = Math.round(startB + (targetB - startB) * progress)
+      this.app.renderer.background.color = (r << 16) | (g << 8) | b
+    })
   }
 
   // --- Cleanup ---

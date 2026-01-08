@@ -15,6 +15,7 @@ const props = defineProps<{
   open: boolean
   colormapColor?: string
   tutorialQuery?: string
+  isDarkMode?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -181,7 +182,13 @@ function formatCitations(count: number): string {
 <template>
   <Teleport to="body">
     <Transition name="overlay">
-      <div v-if="open" class="search-overlay" :style="overlayStyle" @click="onBackdropClick">
+      <div
+        v-if="open"
+        class="search-overlay"
+        :class="{ 'light-mode': !props.isDarkMode }"
+        :style="overlayStyle"
+        @click="onBackdropClick"
+      >
         <!-- Building state -->
         <div v-if="isBuilding" id="building-container" class="building-container">
           <div class="building-card">
@@ -647,5 +654,20 @@ function formatCitations(count: number): string {
 .overlay-enter-from,
 .overlay-leave-to {
   opacity: 0;
+}
+
+/* Light mode overrides */
+.search-overlay.light-mode {
+  --overlay-subtle: rgba(0, 0, 0, 0.06);
+  --overlay-border: rgba(0, 0, 0, 0.12);
+  --overlay-hover: rgba(0, 0, 0, 0.1);
+  --overlay-focus: rgba(0, 0, 0, 0.2);
+  --panel-bg: rgba(255, 255, 255, 0.85);
+
+  --text-primary: #1a1a1a;
+  --text-secondary: rgba(0, 0, 0, 0.85);
+  --text-muted: rgba(0, 0, 0, 0.65);
+  --text-dim: rgba(0, 0, 0, 0.55);
+  --text-placeholder: rgba(0, 0, 0, 0.5);
 }
 </style>

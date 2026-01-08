@@ -42,7 +42,7 @@ const citations = computed(() => props.node?.metadata?.citationCount ?? 0)
       <div v-if="authors" class="tooltip-authors">{{ authors }}</div>
       <div class="tooltip-meta">
         <span v-if="year">{{ year }}</span>
-        <span v-if="year && citations"> · </span>
+        <span v-if="year"> · </span>
         <span>{{ citations }} citations</span>
       </div>
     </div>

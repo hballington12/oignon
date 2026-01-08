@@ -24,7 +24,8 @@
     width var(--transition-smooth),
     min-width var(--transition-smooth),
     opacity var(--transition-smooth),
-    border-color var(--transition-smooth);
+    border-color var(--transition-smooth),
+    background var(--transition-smooth);
 }
 
 .collapsible-panel.collapsed {

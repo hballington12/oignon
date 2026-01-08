@@ -412,8 +412,9 @@ onMounted(async () => {
   await init()
 
   // Apply initial dark mode state (particles visibility and background)
+  // Don't animate on initial load
   if (renderer) {
-    renderer.setDarkMode(store.isDarkMode, store.activeColormap)
+    renderer.setDarkMode(store.isDarkMode, store.activeColormap, false)
   }
 
   if (store.graph) {

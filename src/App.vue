@@ -441,6 +441,7 @@ function handleToggleTheme() {
       :open="searchOverlayOpen"
       :colormap-color="backgroundColor"
       :tutorial-query="tutorialSearchQuery"
+      :is-dark-mode="store.isDarkMode"
       @close="handleSearchOverlayClose"
       @build="handleSearch"
       @build-author="handleAuthorSearch"
@@ -508,6 +509,7 @@ body,
   position: relative;
   display: flex;
   flex-direction: column;
+  transition: background var(--transition-smooth);
 }
 
 .app.landscape {
@@ -629,10 +631,11 @@ body,
 .app.light-mode {
   --text-primary: #1a1a1a;
   --text-secondary: rgba(0, 0, 0, 0.85);
-  --text-tertiary: rgba(0, 0, 0, 0.7);
-  --text-muted: rgba(0, 0, 0, 0.5);
-  --text-dim: rgba(0, 0, 0, 0.4);
-  --text-faint: rgba(0, 0, 0, 0.3);
+  --text-tertiary: rgba(0, 0, 0, 0.75);
+  --text-muted: rgba(0, 0, 0, 0.65);
+  --text-dim: rgba(0, 0, 0, 0.55);
+  --text-faint: rgba(0, 0, 0, 0.45);
+  --text-placeholder: rgba(0, 0, 0, 0.5);
 
   --bg-panel: rgba(255, 255, 255, 0.7);
   --bg-panel-solid: rgba(245, 245, 240, 0.95);
