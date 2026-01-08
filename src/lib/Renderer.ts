@@ -54,6 +54,7 @@ export class Renderer {
   private nodeContainers: Map<string, Container> = new Map()
   private batchedCurves: BatchedCurveMesh | null = null
   private initialized = false
+  private isDarkMode = true
 
   // Extracted modules
   private yearAxisOverlay: YearAxisOverlay
@@ -647,8 +648,10 @@ export class Renderer {
     grid.updateNodeColors()
     this.updateNodeColors(grid)
 
-    // Background
-    this.app.renderer.background.color = getCanvasBackgroundColor(colormapData)
+    // Background (only update if in dark mode)
+    if (this.isDarkMode) {
+      this.app.renderer.background.color = getCanvasBackgroundColor(colormapData)
+    }
   }
 
   private updateNodeColors(grid: Grid) {
@@ -734,6 +737,8 @@ export class Renderer {
   }
 
   setDarkMode(isDark: boolean, colormapIndex?: number) {
+    this.isDarkMode = isDark
+
     // Disable particles in light mode
     this.setParticlesVisible(isDark)
 
