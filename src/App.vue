@@ -116,15 +116,29 @@ const sideAreaSize = computed(() => {
 })
 
 const backgroundColor = computed(() => {
+  // Light mode: use off-white background
+  if (!store.isDarkMode) {
+    return '#f5f5f0'
+  }
+  // Dark mode: derive from colormap
   const colormap = COLORMAPS[store.activeColormap]
   return colormap ? getBackgroundColorHex(colormap) : '#000000'
 })
 
 const graphType = computed(() => store.graphType)
 
-// Dynamic CSS variables based on colormap
+// Dynamic CSS variables based on colormap and theme
 const colormapStyles = computed(() => {
   const bg = backgroundColor.value
+  if (!store.isDarkMode) {
+    // Light mode: use white-ish panel backgrounds
+    return {
+      '--bg-colormap': bg,
+      '--bg-panel-colormap': 'rgba(255, 255, 255, 0.85)',
+      '--bg-panel-colormap-light': 'rgba(255, 255, 255, 0.7)',
+    }
+  }
+  // Dark mode: derive from colormap
   return {
     '--bg-colormap': bg,
     '--bg-panel-colormap': `${bg}f2`, // 95% opacity
@@ -361,12 +375,17 @@ function handleColormapChange(index: number) {
   store.setColormap(index)
   graphCanvas.value?.setColormap(index)
 }
+
+function handleToggleTheme() {
+  store.toggleTheme()
+  graphCanvas.value?.setDarkMode(store.isDarkMode)
+}
 </script>
 
 <template>
   <div
     class="app"
-    :class="{ landscape: isLandscape }"
+    :class="{ landscape: isLandscape, 'light-mode': !store.isDarkMode }"
     :style="{ background: backgroundColor, ...colormapStyles }"
   >
     <!-- Canvas area -->
@@ -377,6 +396,7 @@ function handleColormapChange(index: number) {
         :graph-type="graphType"
         :show-help-hint="showHelpHint"
         :layout-mode="layoutMode"
+        :is-dark-mode="store.isDarkMode"
         @zoom-in="handleZoomIn"
         @zoom-out="handleZoomOut"
         @fit-to-view="handleFitToView"
@@ -385,6 +405,7 @@ function handleColormapChange(index: number) {
         @zoom-to-source="handleZoomToSource"
         @dismiss-help-hint="dismissHelpHintPermanently"
         @toggle-layout-mode="store.toggleLayoutMode"
+        @toggle-theme="handleToggleTheme"
       />
     </div>
 
@@ -602,5 +623,42 @@ body,
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* Light mode overrides */
+.app.light-mode {
+  --text-primary: #1a1a1a;
+  --text-secondary: rgba(0, 0, 0, 0.85);
+  --text-tertiary: rgba(0, 0, 0, 0.7);
+  --text-muted: rgba(0, 0, 0, 0.5);
+  --text-dim: rgba(0, 0, 0, 0.4);
+  --text-faint: rgba(0, 0, 0, 0.3);
+
+  --bg-panel: rgba(255, 255, 255, 0.7);
+  --bg-panel-solid: rgba(245, 245, 240, 0.95);
+  --bg-panel-colormap: rgba(255, 255, 255, 0.85);
+  --bg-panel-colormap-light: rgba(255, 255, 255, 0.7);
+  --bg-input: rgba(0, 0, 0, 0.06);
+  --bg-input-focus: rgba(0, 0, 0, 0.1);
+  --bg-item: rgba(0, 0, 0, 0.04);
+  --bg-item-hover: rgba(0, 0, 0, 0.08);
+  --bg-item-active: rgba(0, 0, 0, 0.12);
+
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-light: rgba(0, 0, 0, 0.1);
+  --border-medium: rgba(0, 0, 0, 0.15);
+  --border-strong: rgba(0, 0, 0, 0.25);
+  --border-focus: rgba(0, 0, 0, 0.4);
+
+  --panel-bg: rgba(255, 255, 255, 0.7);
+  --panel-border: rgba(0, 0, 0, 0.1);
+
+  --btn-bg: rgba(0, 0, 0, 0.06);
+  --btn-bg-hover: rgba(0, 0, 0, 0.1);
+  --btn-bg-active: rgba(0, 0, 0, 0.14);
+  --btn-border: rgba(0, 0, 0, 0.12);
+  --btn-border-hover: rgba(0, 0, 0, 0.2);
+
+  --shadow-panel: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 </style>

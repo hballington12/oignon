@@ -68,6 +68,9 @@ export const useGraphStore = defineStore('graph', () => {
   // Layout mode: 'auto' | 'portrait' | 'landscape'
   const layoutMode = ref<LayoutMode>('auto')
 
+  // Theme mode: dark (true) or light (false)
+  const isDarkMode = ref(true)
+
   // Screen orientation for auto mode
   const screenIsLandscape = ref(false)
 
@@ -100,6 +103,7 @@ export const useGraphStore = defineStore('graph', () => {
   const COLORMAP_KEY = 'oignon_colormap'
   const TUTORIAL_KEY = 'oignon_tutorial'
   const LAYOUT_MODE_KEY = 'oignon:layoutMode'
+  const THEME_KEY = 'oignon:theme'
   const MAX_RECENT_GRAPHS = 10
 
   // Library state
@@ -140,6 +144,11 @@ export const useGraphStore = defineStore('graph', () => {
         layoutMode.value = savedLayoutMode
       }
       // 'auto' is the default, so no need to explicitly set it
+
+      const savedTheme = localStorage.getItem(THEME_KEY)
+      if (savedTheme !== null) {
+        isDarkMode.value = savedTheme === 'dark'
+      }
     } catch (e) {
       console.warn('Failed to load library data:', e)
     }
@@ -204,6 +213,12 @@ export const useGraphStore = defineStore('graph', () => {
     const currentIndex = cycle.indexOf(layoutMode.value)
     const nextIndex = (currentIndex + 1) % cycle.length
     setLayoutMode(cycle[nextIndex] ?? 'auto')
+  }
+
+  // Theme mode actions
+  function toggleTheme() {
+    isDarkMode.value = !isDarkMode.value
+    localStorage.setItem(THEME_KEY, isDarkMode.value ? 'dark' : 'light')
   }
 
   // Initialize library on store creation
@@ -833,5 +848,9 @@ export const useGraphStore = defineStore('graph', () => {
     effectiveLayoutMode,
     setLayoutMode,
     toggleLayoutMode,
+
+    // Theme mode
+    isDarkMode,
+    toggleTheme,
   }
 })

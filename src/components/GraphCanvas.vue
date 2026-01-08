@@ -410,6 +410,12 @@ watch(
 
 onMounted(async () => {
   await init()
+
+  // Apply initial dark mode state (particles visibility and background)
+  if (renderer) {
+    renderer.setDarkMode(store.isDarkMode, store.activeColormap)
+  }
+
   if (store.graph) {
     renderGraph()
   }
@@ -433,6 +439,12 @@ function handleColormapChange(index: number) {
   renderer.setColormap(index, grid)
 }
 
+// Dark mode handler
+function handleSetDarkMode(isDark: boolean) {
+  if (!renderer) return
+  renderer.setDarkMode(isDark, store.activeColormap)
+}
+
 // Expose for parent components
 defineExpose({
   fitToView,
@@ -440,6 +452,7 @@ defineExpose({
   zoomOut,
   zoomToNode,
   setColormap: handleColormapChange,
+  setDarkMode: handleSetDarkMode,
 })
 </script>
 

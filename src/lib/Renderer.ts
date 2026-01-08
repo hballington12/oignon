@@ -727,6 +727,34 @@ export class Renderer {
     }
   }
 
+  setParticlesVisible(visible: boolean) {
+    for (const ps of this.particleSystems) {
+      ps.container.visible = visible
+    }
+  }
+
+  setDarkMode(isDark: boolean, colormapIndex?: number) {
+    // Disable particles in light mode
+    this.setParticlesVisible(isDark)
+
+    // Set canvas background color
+    if (isDark) {
+      // Dark mode: use colormap background
+      if (colormapIndex !== undefined) {
+        const colormapData = COLORMAPS[colormapIndex]
+        if (colormapData) {
+          this.app.renderer.background.color = getCanvasBackgroundColor(colormapData)
+          return
+        }
+      }
+      // Fallback if no colormap provided
+      this.app.renderer.background.color = 0x1a1a2e
+    } else {
+      // Light mode: off-white background
+      this.app.renderer.background.color = 0xf5f5f0
+    }
+  }
+
   // --- Cleanup ---
 
   private clear() {

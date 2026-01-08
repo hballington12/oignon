@@ -6,6 +6,7 @@ const props = defineProps<{
   graphType?: 'paper' | 'author'
   showHelpHint?: boolean
   layoutMode?: LayoutMode
+  isDarkMode?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -17,6 +18,7 @@ const emit = defineEmits<{
   zoomToSource: []
   dismissHelpHint: []
   toggleLayoutMode: []
+  toggleTheme: []
 }>()
 </script>
 
@@ -198,6 +200,48 @@ const emit = defineEmits<{
         <path d="M16 2v4" />
         <rect width="18" height="18" x="3" y="4" rx="2" />
         <path d="M3 10h18" />
+      </svg>
+    </button>
+    <button
+      class="float-btn"
+      @click="emit('toggleTheme')"
+      :title="props.isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
+    >
+      <!-- Sun icon (shown in dark mode - click to go light) -->
+      <svg
+        v-if="props.isDarkMode"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2" />
+        <path d="M12 20v2" />
+        <path d="M4.93 4.93l1.41 1.41" />
+        <path d="M17.66 17.66l1.41 1.41" />
+        <path d="M2 12h2" />
+        <path d="M20 12h2" />
+        <path d="M6.34 17.66l-1.41 1.41" />
+        <path d="M19.07 4.93l-1.41 1.41" />
+      </svg>
+      <!-- Moon icon (shown in light mode - click to go dark) -->
+      <svg
+        v-else
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
       </svg>
     </button>
   </div>
