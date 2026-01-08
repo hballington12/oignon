@@ -274,8 +274,8 @@ const emit = defineEmits<{
   -webkit-tap-highlight-color: transparent;
   transition:
     background var(--transition-smooth),
-    border-color var(--transition-fast),
-    color var(--transition-fast),
+    border-color var(--transition-smooth),
+    color var(--transition-smooth),
     transform var(--transition-fast);
 }
 

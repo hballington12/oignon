@@ -21,7 +21,7 @@ import { createNodeTextures, destroyNodeTextures, type NodeTextures } from './No
 import { YearAxisOverlay } from './YearAxisOverlay'
 import { SelectionManager, type CurveNodeMapping } from './SelectionManager'
 import { AnimationRunner, animateProgress } from './AnimationRunner'
-import { easeInOutCubic, easeOutElastic, easeOutQuad } from './easing'
+import { easeInOutCubic, easeOutElastic, easeOutQuad, easeMaterial } from './easing'
 
 // Viewport zoom limits (relative to base/fit scale)
 const MIN_SCALE_FACTOR = 1
@@ -783,7 +783,7 @@ export class Renderer {
     const targetG = (targetColor >> 8) & 0xff
     const targetB = targetColor & 0xff
 
-    animateProgress(this.bgColorAnimationRunner, duration, easeInOutCubic, (progress) => {
+    animateProgress(this.bgColorAnimationRunner, duration, easeMaterial, (progress) => {
       const r = Math.round(startR + (targetR - startR) * progress)
       const g = Math.round(startG + (targetG - startG) * progress)
       const b = Math.round(startB + (targetB - startB) * progress)

@@ -131,11 +131,11 @@ const graphType = computed(() => store.graphType)
 const colormapStyles = computed(() => {
   const bg = backgroundColor.value
   if (!store.isDarkMode) {
-    // Light mode: use white-ish panel backgrounds
+    // Light mode: use matching off-white panel backgrounds
     return {
       '--bg-colormap': bg,
-      '--bg-panel-colormap': 'rgba(255, 255, 255, 0.85)',
-      '--bg-panel-colormap-light': 'rgba(255, 255, 255, 0.7)',
+      '--bg-panel-colormap': `${bg}f2`, // 95% opacity of #f5f5f0
+      '--bg-panel-colormap-light': `${bg}cc`, // 80% opacity of #f5f5f0
     }
   }
   // Dark mode: derive from colormap

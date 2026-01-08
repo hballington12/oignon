@@ -406,7 +406,7 @@ const activeComponent = computed(() => {
   height: 8px;
   background: var(--border-medium);
   border-radius: 4px;
-  transition: background var(--transition-fast);
+  transition: background var(--transition-smooth);
 }
 
 /* Pill - landscape */

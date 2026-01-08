@@ -50,7 +50,7 @@ function handleTap(id: TabId) {
   height: calc(52px + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
   border-top: 1px solid var(--border-light);
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-smooth);
 }
 
 /* Landscape mode - vertical bar on left */
@@ -66,6 +66,7 @@ function handleTap(id: TabId) {
   border-top: none;
   border-right: 1px solid var(--border-light);
   order: -1; /* Move before InfoPanel in landscape */
+  transition: border-color var(--transition-smooth);
 }
 
 .tab-button {
@@ -80,7 +81,7 @@ function handleTap(id: TabId) {
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  transition: color var(--transition-fast);
+  transition: color var(--transition-smooth);
   position: relative;
   -webkit-tap-highlight-color: transparent;
 }

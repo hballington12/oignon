@@ -23,3 +23,13 @@ export function easeOutQuad(t: number): number {
 export function easeOutCubic(t: number): number {
   return 1 - Math.pow(1 - t, 3)
 }
+
+/**
+ * Attempt to match CSS cubic-bezier(0.4, 0, 0.2, 1) - Material Design standard easing
+ * This is the same as --transition-smooth in variables.css
+ */
+export function easeMaterial(t: number): number {
+  // cubic-bezier(0.4, 0, 0.2, 1) is close to ease-out with a slight ease-in at start
+  // Using a polynomial approximation
+  return t * (2 - t) * (1 + 0.5 * t * (1 - t))
+}
