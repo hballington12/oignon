@@ -715,7 +715,7 @@ export class Renderer {
 
   private updateYearAxis() {
     if (!this.viewport) return
-    this.yearAxisOverlay.update(this.viewport, this.app.screen.height)
+    this.yearAxisOverlay.update(this.viewport, this.app.screen.height, this.app.screen.width)
   }
 
   setYearAxisVisible(visible: boolean, duration = 250) {
@@ -740,6 +740,9 @@ export class Renderer {
 
   setDarkMode(isDark: boolean, colormapIndex?: number, animate = true) {
     this.isDarkMode = isDark
+
+    // Update year axis overlay theme
+    this.yearAxisOverlay.setDarkMode(isDark)
 
     // Disable particles in light mode
     this.setParticlesVisible(isDark)
