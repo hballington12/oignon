@@ -16,8 +16,13 @@ export function usePaperDetails() {
   const abstractExpanded = ref(false)
   const detailsContent = ref<HTMLElement | null>(null)
 
-  // Background color based on active colormap
+  // Background color based on active colormap and theme
   const backgroundColor = computed(() => {
+    // Light mode: use off-white background
+    if (!store.isDarkMode) {
+      return '#f5f5f0'
+    }
+    // Dark mode: use darker colormap color
     const colormap = COLORMAPS[store.activeColormap]
     return colormap ? getDarkerBackgroundColorHex(colormap) : '#0d0d17'
   })
