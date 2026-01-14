@@ -32,6 +32,7 @@ import type { Author } from '@/types'
 
 const emit = defineEmits<{
   colormapChange: [index: number]
+  toggleParticles: []
   search: [query: string]
   buildAuthor: [id: string]
   confirmBuildAuthor: [author: Author]
@@ -311,6 +312,7 @@ const activeComponent = computed(() => {
           v-else-if="activeComponent"
           :key="activeTab"
           @colormap-change="emit('colormapChange', $event)"
+          @toggle-particles="emit('toggleParticles')"
           @search="emit('search', $event)"
           @show-details="emit('showDetails')"
         />

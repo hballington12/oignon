@@ -446,6 +446,12 @@ function handleSetDarkMode(isDark: boolean) {
   renderer.setDarkMode(isDark, store.activeColormap)
 }
 
+// Particles visibility handler
+function handleSetParticlesVisible(visible: boolean) {
+  if (!renderer) return
+  renderer.setParticlesVisible(visible)
+}
+
 // Expose for parent components
 defineExpose({
   fitToView,
@@ -454,6 +460,7 @@ defineExpose({
   zoomToNode,
   setColormap: handleColormapChange,
   setDarkMode: handleSetDarkMode,
+  setParticlesVisible: handleSetParticlesVisible,
 })
 </script>
 

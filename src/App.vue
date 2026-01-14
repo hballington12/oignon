@@ -380,6 +380,11 @@ function handleToggleTheme() {
   store.toggleTheme()
   graphCanvas.value?.setDarkMode(store.isDarkMode)
 }
+
+function handleToggleParticles() {
+  store.toggleParticles()
+  graphCanvas.value?.setParticlesVisible(store.particlesEnabled)
+}
 </script>
 
 <template>
@@ -420,6 +425,7 @@ function handleToggleTheme() {
         :active-tab="activeTab"
         :layout-mode="effectiveLayoutMode"
         @colormap-change="handleColormapChange"
+        @toggle-particles="handleToggleParticles"
         @search="handleSearch"
         @build-author="handleAuthorSearch"
         @confirm-build-author="handleAuthorClick"

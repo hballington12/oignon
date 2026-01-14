@@ -88,12 +88,12 @@ const DEFAULT_OPTIONS: Required<ParticleSystemOptions> = {
   maxSize: 10,
   drift: 40,
   speed: 0.002,
-  alpha: 0.15,
+  alpha: 0.95,
   color: 0xffffff,
   minLifetime: 25,
   maxLifetime: 50,
   fadeRatio: 0.2,
-  blur: 20,
+  blur: 10,
 }
 
 // Particle count bounds per layer

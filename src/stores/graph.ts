@@ -71,6 +71,9 @@ export const useGraphStore = defineStore('graph', () => {
   // Theme mode: dark (true) or light (false)
   const isDarkMode = ref(true)
 
+  // Particles enabled (only visible in dark mode)
+  const particlesEnabled = ref(true)
+
   // Screen orientation for auto mode
   const screenIsLandscape = ref(false)
 
@@ -219,6 +222,11 @@ export const useGraphStore = defineStore('graph', () => {
   function toggleTheme() {
     isDarkMode.value = !isDarkMode.value
     localStorage.setItem(THEME_KEY, isDarkMode.value ? 'dark' : 'light')
+  }
+
+  // Particles toggle
+  function toggleParticles() {
+    particlesEnabled.value = !particlesEnabled.value
   }
 
   // Initialize library on store creation
@@ -852,5 +860,9 @@ export const useGraphStore = defineStore('graph', () => {
     // Theme mode
     isDarkMode,
     toggleTheme,
+
+    // Particles
+    particlesEnabled,
+    toggleParticles,
   }
 })

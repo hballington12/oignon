@@ -21,7 +21,7 @@ import { createNodeTextures, destroyNodeTextures, type NodeTextures } from './No
 import { YearAxisOverlay } from './YearAxisOverlay'
 import { SelectionManager, type CurveNodeMapping } from './SelectionManager'
 import { AnimationRunner, animateProgress } from './AnimationRunner'
-import { easeInOutCubic, easeOutElastic, easeOutQuad, easeMaterial } from './easing'
+import { easeInOutCubic, easeOutCubic, easeOutElastic, easeOutQuad, easeMaterial } from './easing'
 
 // Viewport zoom limits (relative to base/fit scale)
 const MIN_SCALE_FACTOR = 1
@@ -116,8 +116,8 @@ export class Renderer {
       new ParticleSystem({
         density: 10,
         minSize: 8,
-        maxSize: 16,
-        alpha: 0.06,
+        maxSize: 32,
+        alpha: 0.45,
         drift: 60,
         speed: 0.001,
       }),
@@ -126,7 +126,7 @@ export class Renderer {
         density: 15,
         minSize: 4,
         maxSize: 10,
-        alpha: 0.1,
+        alpha: 0.55,
         drift: 40,
         speed: 0.002,
       }),
@@ -135,7 +135,7 @@ export class Renderer {
         density: 20,
         minSize: 2,
         maxSize: 6,
-        alpha: 0.15,
+        alpha: 0.75,
         drift: 25,
         speed: 0.003,
       }),
@@ -730,10 +730,36 @@ export class Renderer {
     }
   }
 
-  setParticlesVisible(visible: boolean) {
+  private particleAnimationRunner = new AnimationRunner()
+
+  setParticlesVisible(visible: boolean, duration = 300) {
+    // Ensure containers are visible during animation
     for (const ps of this.particleSystems) {
-      ps.container.visible = visible
+      ps.container.visible = true
     }
+
+    const startAlpha = this.particleSystems[0]?.container.alpha ?? (visible ? 0 : 1)
+    const targetAlpha = visible ? 1 : 0
+
+    animateProgress(
+      this.particleAnimationRunner,
+      duration,
+      easeOutCubic,
+      (progress) => {
+        const alpha = startAlpha + (targetAlpha - startAlpha) * progress
+        for (const ps of this.particleSystems) {
+          ps.container.alpha = alpha
+        }
+      },
+      () => {
+        // Hide containers when fully faded out
+        if (!visible) {
+          for (const ps of this.particleSystems) {
+            ps.container.visible = false
+          }
+        }
+      },
+    )
   }
 
   private bgColorAnimationRunner = new AnimationRunner()
