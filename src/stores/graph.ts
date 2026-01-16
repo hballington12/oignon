@@ -69,7 +69,7 @@ export const useGraphStore = defineStore('graph', () => {
   const layoutMode = ref<LayoutMode>('auto')
 
   // Theme mode: dark (true) or light (false)
-  const isDarkMode = ref(true)
+  const isDarkMode = ref(false)
 
   // Particles enabled (only visible in dark mode)
   const particlesEnabled = ref(true)
