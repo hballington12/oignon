@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { usePaperDetails } from '@/composables/usePaperDetails'
 import ExpandableAbstract from '@/components/ExpandableAbstract.vue'
 import openAlexIcon from '@/assets/tricon-outlined.png'
+import { addReference, onMessage } from '@/lib/extensionBridge'
 import type { Author } from '@/types'
 
 const emit = defineEmits<{
@@ -40,6 +41,24 @@ function handleAuthorClick(author: Author) {
     emit('buildAuthor', author)
   }
 }
+
+const addedToRefs = ref(false)
+
+function handleAddReference() {
+  if (!displayNode.value) return
+  const node = displayNode.value
+  addReference(node.id, node.order, node.metadata)
+  addedToRefs.value = true
+  setTimeout(() => {
+    addedToRefs.value = false
+  }, 2000)
+}
+
+onMessage((msg) => {
+  if (msg.type === 'referenceError') {
+    addedToRefs.value = false
+  }
+})
 </script>
 
 <template>
@@ -125,6 +144,30 @@ function handleAuthorClick(author: Author) {
                 title="Open in OpenAlex"
               >
                 <img :src="openAlexIcon" alt="OpenAlex" width="12" height="12" />
+              </button>
+              <button
+                class="header-action add-ref"
+                :class="{ added: addedToRefs }"
+                @click="handleAddReference"
+                :title="addedToRefs ? 'Added to references' : 'Add to project references'"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path v-if="addedToRefs" d="M20 6 9 17l-5-5" />
+                  <template v-else>
+                    <path d="M5 12h14" />
+                    <path d="M12 5v14" />
+                  </template>
+                </svg>
               </button>
               <button
                 class="header-action bookmark"
@@ -402,6 +445,12 @@ function handleAuthorClick(author: Author) {
   background: rgba(249, 115, 22, 0.15);
   border-color: #f97316;
   color: #f97316;
+}
+
+.header-action.add-ref.added {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: #22c55e;
+  color: #22c55e;
 }
 
 .header-action img {

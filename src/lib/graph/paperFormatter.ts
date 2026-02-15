@@ -58,6 +58,12 @@ export interface OpenAlexWork {
     score?: number
   }>
   is_retracted?: boolean
+  biblio?: {
+    volume?: string
+    issue?: string
+    first_page?: string
+    last_page?: string
+  }
 }
 
 // Slim paper type for ranking (minimal data)
@@ -179,6 +185,10 @@ export function formatPaper(work: OpenAlexWork): RawPaper {
     sdgs: sdgs?.length ? sdgs : undefined,
     keywords: keywords?.length ? keywords : undefined,
     isRetracted: work.is_retracted,
+    volume: work.biblio?.volume || undefined,
+    issue: work.biblio?.issue || undefined,
+    firstPage: work.biblio?.first_page || undefined,
+    lastPage: work.biblio?.last_page || undefined,
   }
 
   return {

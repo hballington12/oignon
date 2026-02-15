@@ -61,6 +61,10 @@ export interface PaperMetadata {
   sdgs?: SDG[] // Sustainable Development Goals
   keywords?: string[]
   isRetracted?: boolean
+  volume?: string
+  issue?: string
+  firstPage?: string
+  lastPage?: string
 }
 
 export interface GraphNode {
