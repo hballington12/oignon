@@ -10,3 +10,5 @@ Paper citation graph visualization. Please consider citing the paper if you foun
 Try it out: https://hballington12.github.io/oignon/
 
 https://github.com/user-attachments/assets/8f1f5374-8f4c-4fc3-b607-357ea4220e17
+
+Get the [mcp server](git@github.com:hballington12/mcp-oignon.git) for LLM-assisted workflows
