@@ -1,4 +1,4 @@
-# Oignon
+<img width="1536" height="1024" alt="f50df3d0-2215-40c5-a2fc-24f8938021ad" src="https://github.com/user-attachments/assets/bcc33f69-6519-403a-a2e2-cb73233625ab" />
 
 [![DOI](https://zenodo.org/badge/1113322004.svg)](https://doi.org/10.5281/zenodo.17943218)
 [![arXiv](https://img.shields.io/badge/arXiv-2512.22159-b31b1b.svg)](https://arxiv.org/abs/2512.22159)
