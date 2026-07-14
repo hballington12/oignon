@@ -7,6 +7,7 @@ const props = defineProps<{
   showHelpHint?: boolean
   layoutMode?: LayoutMode
   isDarkMode?: boolean
+  hasGraph?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -19,6 +20,7 @@ const emit = defineEmits<{
   dismissHelpHint: []
   toggleLayoutMode: []
   toggleTheme: []
+  exportGraph: []
 }>()
 </script>
 
@@ -102,8 +104,9 @@ const emit = defineEmits<{
         <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
       </svg>
     </button>
+    <!-- Multi-paper graphs have no single source, so hide the button -->
     <button
-      v-if="props.graphType !== 'author'"
+      v-if="props.graphType !== 'author' && props.graphType !== 'multi'"
       class="float-btn"
       @click="emit('zoomToSource')"
       title="Go to source"
@@ -200,6 +203,27 @@ const emit = defineEmits<{
         <path d="M16 2v4" />
         <rect width="18" height="18" x="3" y="4" rx="2" />
         <path d="M3 10h18" />
+      </svg>
+    </button>
+    <button
+      v-if="props.hasGraph"
+      class="float-btn"
+      @click="emit('exportGraph')"
+      title="Export graph"
+    >
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="7 10 12 15 17 10" />
+        <line x1="12" y1="15" x2="12" y2="3" />
       </svg>
     </button>
     <button

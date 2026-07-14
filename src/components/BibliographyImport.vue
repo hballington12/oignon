@@ -222,6 +222,9 @@ function formatCitations(count: number): string {
   gap: var(--spacing-md, 12px);
   width: 100%;
   min-height: 0;
+  /* Overlay is teleported to body, so text color must come from the theme
+     variables (overridden by .search-overlay.light-mode), not inheritance */
+  color: var(--text-primary, #ffffff);
 }
 
 .biblio-header {
@@ -279,7 +282,7 @@ function formatCitations(count: number): string {
 
 .biblio-hint {
   font-size: 12px;
-  opacity: 0.7;
+  color: var(--text-muted, rgba(255, 255, 255, 0.6));
 }
 
 .biblio-error {
@@ -390,7 +393,7 @@ function formatCitations(count: number): string {
   display: flex;
   gap: var(--spacing-sm, 8px);
   font-size: 12px;
-  opacity: 0.7;
+  color: var(--text-muted, rgba(255, 255, 255, 0.6));
   margin-top: 2px;
 }
 

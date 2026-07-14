@@ -20,6 +20,7 @@ import type { Author } from '@/types'
 import type { WorkTypeBucket } from '@/lib/workTypes'
 import { useGraphStore } from '@/stores/graph'
 import { buildGraph, buildAuthorGraph, buildMultiGraph, preprocessGraph } from '@/lib/graphBuilder'
+import { buildGraphExport, downloadGraphExport } from '@/lib/graphExport'
 import { getBackgroundColorHex, COLORMAPS } from '@/lib/colormap'
 
 const store = useGraphStore()
@@ -307,6 +308,16 @@ async function handleMultiSearch(ids: string[]) {
   }
 }
 
+function handleExportGraph() {
+  if (!store.hasGraph) return
+  const data = buildGraphExport(
+    store.nodes.values(),
+    store.graphType,
+    store.graphMetadata ?? undefined,
+  )
+  downloadGraphExport(data)
+}
+
 function handleFitToView() {
   graphCanvas.value?.fitToView()
 }
@@ -447,6 +458,8 @@ function handleToggleTypeBucket(bucket: WorkTypeBucket) {
         :show-help-hint="showHelpHint"
         :layout-mode="layoutMode"
         :is-dark-mode="store.isDarkMode"
+        :has-graph="store.hasGraph"
+        @export-graph="handleExportGraph"
         @zoom-in="handleZoomIn"
         @zoom-out="handleZoomOut"
         @fit-to-view="handleFitToView"

@@ -697,13 +697,14 @@ function formatCitations(count: number): string {
   background: var(--overlay-subtle);
   border: 1px solid var(--overlay-border);
   border-radius: 50px;
-  color: inherit;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.85));
   font-size: 13px;
   cursor: pointer;
 }
 
 .biblio-mode-btn:hover {
   background: var(--overlay-hover);
+  color: var(--text-primary, #ffffff);
 }
 
 .biblio-mode-btn svg {
