@@ -7,19 +7,34 @@
  * builds or hydrations are in flight.
  */
 
-import { analytics } from '@/composables/usePostHog'
-
 const REQUESTS_PER_SECOND = 8
 const MAX_RETRIES = 2
 const RETRY_BASE_DELAY_MS = 1000
 
+// OpenAlex "polite pool": requests carrying a mailto get faster, more reliable
+// service. This address is a public project mailbox (it ships in the client
+// bundle), never a personal one.
+const POLITE_POOL_MAILTO = 'oignonapp@gmail.com'
+
+// Append mailto to any OpenAlex URL, respecting existing query params.
+function withPolitePool(url: string): string {
+  if (!url.includes('api.openalex.org')) return url
+  if (/[?&]mailto=/.test(url)) return url
+  return url + (url.includes('?') ? '&' : '?') + 'mailto=' + POLITE_POOL_MAILTO
+}
+
 // --- API call tracking ---
+//
+// We count requests per build so the total can ride along on the single
+// `graph_built` analytics event. We deliberately do NOT emit a PostHog event
+// per request: a single build is 30-60 requests, which blows through the
+// analytics free tier for no insight. The endpoint/detail args are kept for
+// callers and local debugging.
 
 let apiCallCount = 0
 
-export function logApiCall(endpoint: string, detail?: string) {
+export function logApiCall(_endpoint: string, _detail?: string) {
   apiCallCount++
-  analytics.apiCall(endpoint, detail)
 }
 
 export function resetApiCallCount() {
@@ -51,9 +66,10 @@ async function acquireSlot(): Promise<void> {
  * Fetch with rate limiting and retry on 429 (honors Retry-After if present)
  */
 export async function apiFetch(url: string): Promise<Response> {
+  const politeUrl = withPolitePool(url)
   for (let attempt = 0; ; attempt++) {
     await acquireSlot()
-    const response = await fetch(url)
+    const response = await fetch(politeUrl)
     if (response.status !== 429 || attempt >= MAX_RETRIES) {
       return response
     }

@@ -14,17 +14,32 @@ export function usePostHog() {
   return { posthog }
 }
 
-// Analytics events - all tracking logic contained here
+type GraphType = 'paper' | 'author' | 'multi'
+
+// Analytics events - all tracking logic contained here.
+//
+// Design: one event per meaningful user action, never per API request. The key
+// funnel is activation (graph_built) -> engagement (exported / shared) and the
+// bibliography feature (bibliography_imported). Graph mode rides on graph_built
+// so we can see which of the three build modes people actually use.
 export const analytics = {
-  apiCall: (endpoint: string, detail?: string) => {
-    posthog.capture('openalex_api_call', { endpoint, detail })
+  graphBuilt: (graphType: GraphType, nodeCount: number, apiCalls?: number) => {
+    posthog.capture('graph_built', { graphType, nodeCount, apiCalls })
   },
 
-  graphBuilt: (sourceId: string, nodeCount: number) => {
-    posthog.capture('graph_built', { sourceId, nodeCount })
+  graphExported: (graphType: GraphType, paperCount: number) => {
+    posthog.capture('graph_exported', { graphType, paperCount })
   },
 
-  paperBookmarked: (paperId: string) => {
-    posthog.capture('paper_bookmarked', { paperId })
+  graphShared: (graphType: GraphType, nodeCount: number) => {
+    posthog.capture('graph_shared', { graphType, nodeCount })
+  },
+
+  bibliographyImported: (paperCount: number) => {
+    posthog.capture('bibliography_imported', { paperCount })
+  },
+
+  paperBookmarked: () => {
+    posthog.capture('paper_bookmarked')
   },
 }

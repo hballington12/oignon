@@ -19,6 +19,7 @@ import {
   DEFAULT_DISABLED_BUCKETS,
   type WorkTypeBucket,
 } from '@/lib/workTypes'
+import { analytics } from '@/composables/usePostHog'
 
 export const useGraphStore = defineStore('graph', () => {
   // Graph data
@@ -642,6 +643,7 @@ export const useGraphStore = defineStore('graph', () => {
       addedAt: Date.now(),
     })
     saveBookmarks()
+    analytics.paperBookmarked()
   }
 
   function removeBookmark(id: string) {

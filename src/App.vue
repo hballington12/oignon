@@ -22,6 +22,7 @@ import { useGraphStore } from '@/stores/graph'
 import { buildGraph, buildAuthorGraph, buildMultiGraph, preprocessGraph } from '@/lib/graphBuilder'
 import { buildGraphExport, downloadGraphExport } from '@/lib/graphExport'
 import { getBackgroundColorHex, COLORMAPS } from '@/lib/colormap'
+import { analytics } from '@/composables/usePostHog'
 
 const store = useGraphStore()
 const activeTab = ref<TabId | null>(null)
@@ -188,6 +189,7 @@ async function handleSearch(query: string) {
     const processed = preprocessGraph(rawGraph)
     store.loadGraph(processed)
     store.saveToCache()
+    analytics.graphBuilt('paper', processed.nodes.length, rawGraph.metadata.api_calls)
 
     // Add to recent graphs
     const sourceNode = processed.nodes.find((n) => n.metadata.isSource)
@@ -250,6 +252,7 @@ async function handleAuthorSearch(authorId: string) {
     const processed = preprocessGraph(rawGraph)
     store.loadGraph(processed)
     store.saveToCache()
+    analytics.graphBuilt('author', processed.nodes.length, rawGraph.metadata.api_calls)
 
     // Add to recent graphs (using author info from metadata)
     if (rawGraph.metadata.author_name) {
@@ -297,6 +300,8 @@ async function handleMultiSearch(ids: string[]) {
 
     // Add to recent graphs, titled after the first source paper
     const sourceCount = rawGraph.metadata.source_count ?? ids.length
+    analytics.graphBuilt('multi', processed.nodes.length, rawGraph.metadata.api_calls)
+    analytics.bibliographyImported(sourceCount)
     const firstSource = processed.nodes.find((n) => n.metadata.isSource)
     const title = firstSource
       ? `${firstSource.metadata.title} +${sourceCount - 1} more`
@@ -316,6 +321,7 @@ function handleExportGraph() {
     store.graphMetadata ?? undefined,
   )
   downloadGraphExport(data)
+  analytics.graphExported(data.graphType, data.paperCount)
 }
 
 function handleFitToView() {
