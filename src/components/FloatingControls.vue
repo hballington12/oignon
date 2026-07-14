@@ -3,7 +3,7 @@ import type { LayoutMode } from '@/types/mobile'
 
 const props = defineProps<{
   showYearAxis?: boolean
-  graphType?: 'paper' | 'author'
+  graphType?: 'paper' | 'author' | 'multi'
   showHelpHint?: boolean
   layoutMode?: LayoutMode
   isDarkMode?: boolean

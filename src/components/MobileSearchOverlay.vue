@@ -8,6 +8,7 @@ import {
   type AuthorAutocompleteResult,
 } from '@/lib/graph/openAlexApi'
 import { useGraphStore } from '@/stores/graph'
+import BibliographyImport from './BibliographyImport.vue'
 
 const store = useGraphStore()
 
@@ -22,6 +23,7 @@ const emit = defineEmits<{
   close: []
   build: [id: string]
   buildAuthor: [id: string]
+  buildMulti: [ids: string[]]
 }>()
 
 const query = ref('')
@@ -31,6 +33,10 @@ const loading = ref(false)
 const inputRef = ref<HTMLInputElement | null>(null)
 const selectedPaper = ref<AutocompleteResult | null>(null)
 const selectedAuthor = ref<AuthorAutocompleteResult | null>(null)
+
+// Input mode: regular search or bibliography paste
+const mode = ref<'search' | 'bibliography'>('search')
+const selectedMultiCount = ref(0)
 
 // Show building screen when store is loading
 const isBuilding = computed(() => store.loading)
@@ -48,6 +54,8 @@ watch(
     if (isOpen) {
       selectedPaper.value = null
       selectedAuthor.value = null
+      selectedMultiCount.value = 0
+      mode.value = 'search'
 
       // Pre-fill with tutorial query if provided (papers only for tutorial)
       if (props.tutorialQuery) {
@@ -154,6 +162,11 @@ function onSelectAuthor(result: AuthorAutocompleteResult) {
   emit('buildAuthor', result.id)
 }
 
+function onBuildMulti(ids: string[]) {
+  selectedMultiCount.value = ids.length
+  emit('buildMulti', ids)
+}
+
 function onBackdropClick(e: MouseEvent) {
   // Don't close while building
   if (isBuilding.value) return
@@ -200,6 +213,9 @@ function formatCitations(count: number): string {
             <div v-else-if="selectedAuthor" class="building-paper">
               {{ selectedAuthor.display_name }}
             </div>
+            <div v-else-if="selectedMultiCount > 0" class="building-paper">
+              Multi-paper graph ({{ selectedMultiCount }} papers)
+            </div>
             <div v-if="buildProgress" class="building-progress">
               <div class="progress-bar">
                 <div class="progress-fill" :style="{ width: buildProgress.percent + '%' }" />
@@ -207,6 +223,11 @@ function formatCitations(count: number): string {
               <div class="progress-message">{{ buildProgress.message }}</div>
             </div>
           </div>
+        </div>
+
+        <!-- Bibliography import state -->
+        <div v-else-if="mode === 'bibliography'" class="search-container">
+          <BibliographyImport @build="onBuildMulti" @back="mode = 'search'" />
         </div>
 
         <!-- Search state -->
@@ -241,6 +262,15 @@ function formatCitations(count: number): string {
               </svg>
             </button>
           </div>
+
+          <!-- Bibliography mode switch -->
+          <button class="biblio-mode-btn" @click="mode = 'bibliography'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+            </svg>
+            <span>Build from a bibliography (multiple papers)</span>
+          </button>
 
           <!-- Results list -->
           <div class="results-container">
@@ -654,6 +684,32 @@ function formatCitations(count: number): string {
 .overlay-enter-from,
 .overlay-leave-to {
   opacity: 0;
+}
+
+/* Bibliography mode switch */
+.biblio-mode-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm, 8px);
+  margin-top: var(--spacing-sm, 8px);
+  padding: 8px 16px;
+  background: var(--overlay-subtle);
+  border: 1px solid var(--overlay-border);
+  border-radius: 50px;
+  color: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.biblio-mode-btn:hover {
+  background: var(--overlay-hover);
+}
+
+.biblio-mode-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 /* Light mode overrides */

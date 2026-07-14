@@ -107,7 +107,7 @@ export interface GraphMetadata {
   timestamp: string
   api_calls?: number
   // Author graph specific
-  graph_type?: 'paper' | 'author'
+  graph_type?: 'paper' | 'author' | 'multi'
   author_id?: string
   author_name?: string
   author_orcid?: string
@@ -116,10 +116,15 @@ export interface GraphMetadata {
   author_cited_by_count?: number
   author_h_index?: number
   author_i10_index?: number
+  // Multi-paper graph specific
+  source_ids?: string[]
+  source_count?: number
 }
 
 export interface RawGraph {
   source_paper?: RawPaper
+  // Multi-paper graphs: all entries are flagged as sources during preprocessing
+  source_papers?: RawPaper[]
   root_seeds: RawPaper[]
   branch_seeds: RawPaper[]
   papers: RawPaper[]
@@ -130,7 +135,7 @@ export interface RawGraph {
 export interface ProcessedGraph {
   nodes: GraphNode[]
   metadata?: GraphMetadata
-  graphType?: 'paper' | 'author'
+  graphType?: 'paper' | 'author' | 'multi'
 }
 
 // Slim cache types (for localStorage efficiency)
@@ -145,8 +150,9 @@ export interface SlimGraphNode {
 export interface SlimCache {
   slim: true
   nodes: SlimGraphNode[]
-  graphType?: 'paper' | 'author'
+  graphType?: 'paper' | 'author' | 'multi'
   sourceId?: number // paper ID for paper graphs (numeric, stripped of "W" prefix)
+  sourceIds?: number[] // paper IDs for multi-paper graphs (numeric)
   authorId?: string // author OpenAlex ID for author graphs
 }
 

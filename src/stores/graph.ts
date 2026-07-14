@@ -283,6 +283,15 @@ export const useGraphStore = defineStore('graph', () => {
   const graphMetadata = computed(() => graph.value?.metadata)
   const graphType = computed(() => graph.value?.graphType)
   const isAuthorGraph = computed(() => graph.value?.graphType === 'author')
+  const isMultiGraph = computed(() => graph.value?.graphType === 'multi')
+
+  const sourceNodes = computed(() => {
+    const result: VisualNode[] = []
+    for (const node of nodes.value.values()) {
+      if (node.metadata?.isSource) result.push(node)
+    }
+    return result
+  })
 
   const selectedNodes = computed(() => {
     const result: VisualNode[] = []
@@ -459,9 +468,10 @@ export const useGraphStore = defineStore('graph', () => {
     }
 
     const isAuthor = graph.value.graphType === 'author'
+    const isMulti = graph.value.graphType === 'multi'
 
-    // Find the source node (only for paper graphs)
-    const source = !isAuthor ? graph.value.nodes.find((n) => n.metadata?.isSource) : undefined
+    // Find the source node(s) (only for paper and multi graphs)
+    const sources = !isAuthor ? graph.value.nodes.filter((n) => n.metadata?.isSource) : []
 
     return {
       slim: true,
@@ -471,19 +481,22 @@ export const useGraphStore = defineStore('graph', () => {
         connections: node.connections.map(toNumericId),
       })),
       graphType: graph.value.graphType,
-      sourceId: source ? toNumericId(source.id) : undefined,
+      sourceId: !isMulti && sources[0] ? toNumericId(sources[0].id) : undefined,
+      sourceIds: isMulti ? sources.map((n) => toNumericId(n.id)) : undefined,
       authorId: isAuthor ? graph.value.metadata?.author_id : undefined,
     }
   }
 
   function loadSlimCache(slimCache: SlimCache) {
     const nodeMap = new Map<string, GraphNode>()
-    const sourceIdStr = slimCache.sourceId ? toStringId(slimCache.sourceId) : null
+    const sourceIdSet = new Set<string>()
+    if (slimCache.sourceId) sourceIdSet.add(toStringId(slimCache.sourceId))
+    for (const id of slimCache.sourceIds || []) sourceIdSet.add(toStringId(id))
 
     // First pass: create nodes with empty citedBy
     for (const node of slimCache.nodes) {
       const id = toStringId(node.id)
-      const isSource = id === sourceIdStr
+      const isSource = sourceIdSet.has(id)
       nodeMap.set(id, {
         id,
         order: node.order,
@@ -840,10 +853,12 @@ export const useGraphStore = defineStore('graph', () => {
     // Computed
     hasGraph,
     sourceNode,
+    sourceNodes,
     selectedNodes,
     graphMetadata,
     graphType,
     isAuthorGraph,
+    isMultiGraph,
 
     // Actions
     loadGraph,

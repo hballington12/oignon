@@ -56,6 +56,26 @@ export function buildEdges(
 }
 
 /**
+ * Build citation edges from a flat set of papers (multi-paper graphs).
+ * An edge is created for every reference that points at another graph member.
+ */
+export function buildEdgesFromPapers(papers: Record<string, RawPaper>): GraphEdge[] {
+  const edges: GraphEdge[] = []
+  const allIds = new Set(Object.keys(papers))
+
+  for (const [paperId, paper] of Object.entries(papers)) {
+    for (const ref of paper.references || []) {
+      const refId = extractId(ref)
+      if (allIds.has(refId) && refId !== paperId) {
+        edges.push({ source: paperId, target: refId, type: 'cites' })
+      }
+    }
+  }
+
+  return edges
+}
+
+/**
  * Convert raw graph to processed format for the app
  */
 export function preprocessGraph(graph: RawGraph): ProcessedGraph {
@@ -68,6 +88,16 @@ export function preprocessGraph(graph: RawGraph): ProcessedGraph {
       ...graph.source_paper,
       id: sourceId,
       isSource: true,
+    }
+  }
+
+  // Multi-paper graph sources (all flagged as sources)
+  for (const paper of graph.source_papers || []) {
+    if (paper.id) {
+      const pid = extractId(paper.id)
+      if (!(pid in allPapers)) {
+        allPapers[pid] = { ...paper, id: pid, isSource: true }
+      }
     }
   }
 

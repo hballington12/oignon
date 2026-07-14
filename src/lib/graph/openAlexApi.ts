@@ -4,7 +4,10 @@
 
 import type { RawPaper } from '@/types'
 import { formatPaper, formatSlimPaper, type SlimPaper } from './paperFormatter'
-import { analytics } from '@/composables/usePostHog'
+import { apiFetch, logApiCall } from './apiClient'
+
+// Re-export call tracking for existing consumers
+export { logApiCall, resetApiCallCount, getApiCallCount } from './apiClient'
 
 // Configuration
 const OPENALEX_API = 'https://api.openalex.org'
@@ -39,23 +42,6 @@ const OPENALEX_SLIM_FIELDS = ['id', 'publication_year', 'cited_by_count', 'refer
   ',',
 )
 
-// --- API call tracking ---
-
-let apiCallCount = 0
-
-export function logApiCall(endpoint: string, detail?: string) {
-  apiCallCount++
-  analytics.apiCall(endpoint, detail)
-}
-
-export function resetApiCallCount() {
-  apiCallCount = 0
-}
-
-export function getApiCallCount() {
-  return apiCallCount
-}
-
 // --- Utilities ---
 
 export function extractId(openalexUrl: string | undefined): string {
@@ -78,7 +64,7 @@ export function chunk<T>(array: T[], size: number): T[][] {
 export async function fetchPaper(workId: string): Promise<RawPaper | null> {
   logApiCall('/works/{id}', `single paper: ${workId.slice(0, 30)}`)
   try {
-    const response = await fetch(`${OPENALEX_API}/works/${workId}`)
+    const response = await apiFetch(`${OPENALEX_API}/works/${workId}`)
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const work = await response.json()
     return formatPaper(work)
@@ -101,7 +87,7 @@ async function fetchBatchFull(batch: string[]): Promise<Record<string, RawPaper>
   logApiCall('/works', `full batch: ${batch.length} ids`)
 
   try {
-    const response = await fetch(`${OPENALEX_API}/works?${params}`)
+    const response = await apiFetch(`${OPENALEX_API}/works?${params}`)
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const data = await response.json()
 
@@ -128,7 +114,7 @@ async function fetchBatchSlim(batch: string[]): Promise<Record<string, SlimPaper
   logApiCall('/works', `slim batch: ${batch.length} ids`)
 
   try {
-    const response = await fetch(`${OPENALEX_API}/works?${params}`)
+    const response = await apiFetch(`${OPENALEX_API}/works?${params}`)
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const data = await response.json()
 
@@ -201,7 +187,7 @@ async function fetchCitationsBatch(batch: string[]): Promise<Set<string>> {
   logApiCall('/works', `citations batch: ${batch.length} ids`)
 
   try {
-    const response = await fetch(`${OPENALEX_API}/works?${params}`)
+    const response = await apiFetch(`${OPENALEX_API}/works?${params}`)
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const data = await response.json()
 
@@ -289,7 +275,7 @@ async function fetchWorkByDoi(doi: string): Promise<AutocompleteResult | null> {
   const encodedDoi = encodeURIComponent(`https://doi.org/${doi}`)
   const url = `${OPENALEX_API}/works/${encodedDoi}`
   try {
-    const response = await fetch(url)
+    const response = await apiFetch(url)
     if (!response.ok) return null
     const work = await response.json()
 
@@ -330,7 +316,7 @@ export async function fetchAutocomplete(query: string): Promise<AutocompleteResu
   })
 
   try {
-    const response = await fetch(`${OPENALEX_API}/autocomplete/works?${params}`)
+    const response = await apiFetch(`${OPENALEX_API}/autocomplete/works?${params}`)
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const data = await response.json()
 
@@ -368,7 +354,7 @@ export async function fetchAuthorAutocomplete(query: string): Promise<AuthorAuto
   })
 
   try {
-    const response = await fetch(`${OPENALEX_API}/autocomplete/authors?${params}`)
+    const response = await apiFetch(`${OPENALEX_API}/autocomplete/authors?${params}`)
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const data = await response.json()
 
@@ -411,7 +397,7 @@ export async function fetchAuthorWorks(
     logApiCall('/works', `author works for ${authorId}, cursor ${cursor}`)
 
     try {
-      const response = await fetch(`${OPENALEX_API}/works?${params}`)
+      const response = await apiFetch(`${OPENALEX_API}/works?${params}`)
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const data = await response.json()
 
@@ -454,7 +440,7 @@ export interface AuthorMetadata {
 export async function fetchAuthor(authorId: string): Promise<AuthorMetadata | null> {
   logApiCall('/authors/{id}', `author: ${authorId}`)
   try {
-    const response = await fetch(`${OPENALEX_API}/authors/${authorId}`)
+    const response = await apiFetch(`${OPENALEX_API}/authors/${authorId}`)
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const author = await response.json()
 
@@ -486,7 +472,7 @@ export async function fetchCitingPapers(workId: string, limit: number): Promise<
   logApiCall('/works', `citing papers for ${workId.slice(0, 20)}, limit ${limit}`)
 
   try {
-    const response = await fetch(`${OPENALEX_API}/works?${params}`)
+    const response = await apiFetch(`${OPENALEX_API}/works?${params}`)
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const data = await response.json()
 

@@ -29,6 +29,8 @@ import { buildEdges, preprocessGraph } from './preprocessing'
 // Re-export for external use
 export { fetchPaper, fetchAuthor } from './openAlexApi'
 export { preprocessGraph } from './preprocessing'
+export { buildMultiGraph, MAX_MULTI_SOURCES, type BuildMultiGraphOptions } from './multiGraph'
+export { parseBibliography, resolveDois, type ResolvedReference } from './bibliography'
 
 // Configuration
 const DEFAULT_N_ROOTS = 25

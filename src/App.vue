@@ -19,7 +19,7 @@ import {
 import type { Author } from '@/types'
 import type { WorkTypeBucket } from '@/lib/workTypes'
 import { useGraphStore } from '@/stores/graph'
-import { buildGraph, buildAuthorGraph, preprocessGraph } from '@/lib/graphBuilder'
+import { buildGraph, buildAuthorGraph, buildMultiGraph, preprocessGraph } from '@/lib/graphBuilder'
 import { getBackgroundColorHex, COLORMAPS } from '@/lib/colormap'
 
 const store = useGraphStore()
@@ -268,6 +268,45 @@ async function handleAuthorSearch(authorId: string) {
   }
 }
 
+function multiCacheKey(ids: string[]): string {
+  return `multi:${[...ids].sort().join('+')}`
+}
+
+async function handleMultiSearch(ids: string[]) {
+  // Check if we have this exact set of papers cached
+  const cacheKey = multiCacheKey(ids)
+  const cached = store.recentGraphs.find((g) => g.sourceId === cacheKey)
+  if (cached) {
+    store.loadRecentGraph(cached.sourceId)
+    return
+  }
+
+  store.setLoading(true, { message: 'Starting...', percent: 0, completed: 0, total: 1 })
+
+  try {
+    const rawGraph = await buildMultiGraph(ids, {
+      onProgress: (progress) => {
+        store.setLoading(true, progress)
+      },
+    })
+
+    const processed = preprocessGraph(rawGraph)
+    store.loadGraph(processed)
+    store.saveToCache()
+
+    // Add to recent graphs, titled after the first source paper
+    const sourceCount = rawGraph.metadata.source_count ?? ids.length
+    const firstSource = processed.nodes.find((n) => n.metadata.isSource)
+    const title = firstSource
+      ? `${firstSource.metadata.title} +${sourceCount - 1} more`
+      : `Multi-paper graph (${sourceCount} papers)`
+    store.addRecentGraph(cacheKey, title, processed.nodes.length)
+  } catch (e) {
+    console.error('Failed to build multi-paper graph:', e)
+    store.setLoading(false)
+  }
+}
+
 function handleFitToView() {
   graphCanvas.value?.fitToView()
 }
@@ -458,6 +497,7 @@ function handleToggleTypeBucket(bucket: WorkTypeBucket) {
       @close="handleSearchOverlayClose"
       @build="handleSearch"
       @build-author="handleAuthorSearch"
+      @build-multi="handleMultiSearch"
     />
 
     <!-- Author build confirmation modal -->
