@@ -9,26 +9,26 @@ Owner key: `[H]` = Harry only (accounts, purchases, identity), `[C]` = Claude ca
 ## Phase 0 — Recover and quick wins (no infra needed)
 
 - [x] `[H]` Recover PostHog login at us.posthog.com. DONE — US site was the key, analytics confirmed working, project is salvageable.
-- [ ] `[C]` Fix analytics event volume: remove per-request `openalex_api_call` capture, attach `api_calls` count as a property on `graph_built` instead.
-- [ ] `[C]` Add funnel events: `graph_shared`, `graph_exported`, `bibliography_imported`, plus graph mode on `graph_built`. Target metrics: activation (first graph), 14-day return, shares created, mode usage.
-- [ ] `[C]` Add OpenAlex polite-pool `mailto=` param to all API requests. Address decided: `oignonapp@gmail.com` (also the shared project account for PostHog/domain/Sponsors/socials).
-- [ ] `[C]` URL-fragment share links: compressed slim cache in `#g=...`. Works on GitHub Pages today, zero infra. Shared graphs open as a full working app with a subtle "built with oignon" affordance.
+- [x] `[C]` Fix analytics event volume: removed per-request capture; `api_calls` now rides on `graph_built`. DONE on branch `feature/analytics-and-polite-pool` (pending test + merge).
+- [x] `[C]` Add funnel events: `graph_exported`, `bibliography_imported`, `paper_bookmarked`, plus graph mode on `graph_built`. `graph_shared` defined, wired when sharing ships. DONE on same branch.
+- [x] `[C]` Add OpenAlex polite-pool `mailto=oignonapp@gmail.com` at the single `apiFetch` chokepoint. DONE on same branch.
+- [~] Sharing MOVED to Phase 1 as domain-based short links. The URL-fragment prototype (compressed slim cache in `#g=...`) is parked on branch `feature/graph-sharing`, NOT shipped: real graphs are typically 200+ nodes, which produce 8KB+ URLs that get truncated in most share contexts (Twitter, email clients). Its encode/decode + load-from-URL + `loadSharedGraph` logic is reused by the Worker method, so ~70% of it carries over.
 - [x] `[H]` Enable GitHub Sponsors — signed up. `[C]` add FUNDING.yml (pending confirmation Sponsors is approved/live).
 - [x] `[H+C]` Citability — DONE via arXiv, DOI already in README. Zenodo route dropped as redundant. `[C]` may still surface "How to cite" inside the app UI.
 
-## Phase 1 — Domain and web presence
+## Phase 1 — Domain, web presence, and sharing
 
 - [ ] `[H]` Pick and buy a domain (check `oignon.app` first, fallback `getoignon.com`).
 - [ ] `[H+C]` Migrate hosting to Cloudflare Pages (same static Vite build). Keep GitHub Pages as a redirect during transition.
+- [ ] `[C]` **Graph sharing via Worker-backed short links** (moved up from Phase 2; it's the core growth loop and depends on the domain + Cloudflare, so it belongs here). Design: a Cloudflare Worker + KV. Client compresses the slim cache (reuse the parked `feature/graph-sharing` encode logic) and POSTs it; the Worker stores it under a short code and returns `oignon.app/g/abc123`. Opening that link fetches the blob and rehydrates from OpenAlex via the already-built `loadSharedGraph` path. No auth for anonymous shares. Fire `graph_shared`. This is the domain-based method that replaces the URL-fragment approach, and it works regardless of graph size.
 - [ ] `[C]` Landing page at the root domain: headline positioning, 30-second demo recording, screenshots, "try it" straight into the app. App at `/app` or `app.` subdomain.
 - [ ] `[C]` Landing page copy built on the two wedges: open-source/no-signup/private, and "paste your .bbl, see what your bibliography is missing before your reviewer does."
 - [ ] `[C]` Changelog page (visible pulse; a dead-looking tool loses trust in academia).
 - [ ] `[C]` In-app feedback link (GitHub issues or a simple form).
 - [ ] `[C]` Repo hygiene: remove stale `v2-panel-styling` trigger from deploy.yml once `[H]` confirms the remote branch can be deleted.
 
-## Phase 2 — Sharing backend and product deepening
+## Phase 2 — Product deepening
 
-- [ ] `[C]` Cloudflare Worker + KV short share links: POST slim cache, get `oignon.app/g/abc123`. No auth needed for anonymous shares.
 - [ ] `[C]` BibTeX export (feeds oignon into people's actual writing workflow).
 - [ ] `[C]` RIS export for Zotero import (stickiness with reference managers).
 - [ ] `[C]` Visual ring/badge for source nodes in multi-paper graphs (flagged during multi-graph testing).
