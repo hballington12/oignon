@@ -23,6 +23,8 @@ import { buildGraph, buildAuthorGraph, buildMultiGraph, preprocessGraph } from '
 import { buildGraphExport, downloadGraphExport } from '@/lib/graphExport'
 import { getBackgroundColorHex, COLORMAPS } from '@/lib/colormap'
 import { analytics } from '@/composables/usePostHog'
+import MigrationBanner from '@/components/MigrationBanner.vue'
+import { isOldOrigin, isMoveBannerDismissed } from '@/lib/libraryMigration'
 
 const store = useGraphStore()
 const activeTab = ref<TabId | null>(null)
@@ -154,6 +156,9 @@ const tutorialSearchQuery = ref<string | undefined>(undefined)
 
 // Load cached graph on startup (before mount)
 store.loadFromCache()
+
+// "We've moved" banner: only on the old GitHub Pages origin, until dismissed.
+const showMoveBanner = ref(isOldOrigin() && !isMoveBannerDismissed())
 
 function normalizeDoi(input: string): string {
   // Strip common DOI URL prefixes
@@ -455,6 +460,9 @@ function handleToggleTypeBucket(bucket: WorkTypeBucket) {
     :class="{ landscape: isLandscape, 'light-mode': !store.isDarkMode }"
     :style="{ background: backgroundColor, ...colormapStyles }"
   >
+    <!-- Shown only on the old GitHub Pages origin: one-click move to oignon.dev -->
+    <MigrationBanner v-if="showMoveBanner" @dismiss="showMoveBanner = false" />
+
     <!-- Canvas area -->
     <div class="canvas-area">
       <GraphCanvas ref="graphCanvas" :show-year-axis="showYearAxis" />
