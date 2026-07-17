@@ -18,10 +18,10 @@ Owner key: `[H]` = Harry only (accounts, purchases, identity), `[C]` = Claude ca
 
 ## Phase 1 — Domain, web presence, and sharing
 
-- [ ] `[H]` Pick and buy a domain (check `oignon.app` first, fallback `getoignon.com`).
-- [ ] `[H+C]` Migrate hosting to Cloudflare Pages (same static Vite build). Keep GitHub Pages as a redirect during transition.
-- [ ] `[C]` **Graph sharing via Worker-backed short links** (moved up from Phase 2; it's the core growth loop and depends on the domain + Cloudflare, so it belongs here). Design: a Cloudflare Worker + KV. Client compresses the slim cache (reuse the parked `feature/graph-sharing` encode logic) and POSTs it; the Worker stores it under a short code and returns `oignon.app/g/abc123`. Opening that link fetches the blob and rehydrates from OpenAlex via the already-built `loadSharedGraph` path. No auth for anonymous shares. Fire `graph_shared`. This is the domain-based method that replaces the URL-fragment approach, and it works regardless of graph size.
-- [ ] `[C]` Landing page at the root domain: headline positioning, 30-second demo recording, screenshots, "try it" straight into the app. App at `/app` or `app.` subdomain.
+- [x] `[H]` Domain purchased: **oignon.dev**. Note: `.dev` is HSTS-preloaded, so HTTPS is mandatory (Cloudflare provides it automatically, no action needed, but no plain-HTTP fallback exists).
+- [ ] `[H+C]` Migrate hosting to Cloudflare Pages (same static Vite build). Keep GitHub Pages as a redirect during transition. `[C]` provides step-by-step when starting.
+- [ ] `[C]` **Graph sharing via Worker-backed short links** (moved up from Phase 2; it's the core growth loop and depends on the domain + Cloudflare, so it belongs here). Design: a Cloudflare Worker + KV. Client compresses the slim cache (reuse the parked `feature/graph-sharing` encode logic) and POSTs it; the Worker stores it under a short code and returns `oignon.dev/g/abc123`. Opening that link fetches the blob and rehydrates from OpenAlex via the already-built `loadSharedGraph` path. No auth for anonymous shares. Fire `graph_shared`. This is the domain-based method that replaces the URL-fragment approach, and it works regardless of graph size.
+- [ ] `[C]` Landing page at the root domain (`oignon.dev`): headline positioning, 30-second demo recording, screenshots, "try it" straight into the app. App at `oignon.dev/app` or `app.oignon.dev`.
 - [ ] `[C]` Landing page copy built on the two wedges: open-source/no-signup/private, and "paste your .bbl, see what your bibliography is missing before your reviewer does."
 - [ ] `[C]` Changelog page (visible pulse; a dead-looking tool loses trust in academia).
 - [ ] `[C]` In-app feedback link (GitHub issues or a simple form).
