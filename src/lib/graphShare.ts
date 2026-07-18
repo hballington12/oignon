@@ -68,7 +68,7 @@ export async function fetchSharedGraph(code: string): Promise<SlimCache | null> 
   }
 }
 
-/** Replace /g/<code> with / (no reload, no history entry) once it's loaded. */
+/** Replace /g/<code> with the app base (no reload, no history) once loaded. */
 export function clearSharePath(): void {
-  window.history.replaceState(null, '', '/')
+  window.history.replaceState(null, '', import.meta.env.BASE_URL)
 }

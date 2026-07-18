@@ -1,0 +1,8 @@
+# Routing for the Cloudflare Pages deploy. The app lives at /app; oignon.dev
+# root is the landing page.
+#
+# Share links: /g/<code> is a client-side route handled by the app, so serve the
+# app shell for it (200 rewrite, URL stays /g/<code>). The app reads the code
+# from the path and fetches the graph from /api/share/<code>.
+# /api/* is handled by Pages Functions and takes precedence over this.
+/g/* /app/index.html 200

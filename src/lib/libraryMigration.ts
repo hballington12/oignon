@@ -18,7 +18,9 @@
 import LZString from 'lz-string'
 
 const OLD_HOST = 'hballington12.github.io'
-const NEW_ORIGIN = 'https://oignon.dev'
+// The migration link must land on the APP (/app), not the static landing page
+// at the root, so the app's boot code runs the import.
+const NEW_APP_URL = 'https://oignon.dev/app/'
 
 // Everything we own is namespaced. We skip the transient active-graph cache
 // (regenerates on its own, and it's large) and origin-local UI flags.
@@ -96,7 +98,7 @@ function encodeWithBudget(bundle: LibraryBundle): { blob: string; trimmedRecents
 
 export function buildMigrationUrl(): { url: string; trimmedRecents: number } {
   const { blob, trimmedRecents } = encodeWithBudget(collectLibrary())
-  return { url: `${NEW_ORIGIN}/${MIGRATE_FRAGMENT}${blob}`, trimmedRecents }
+  return { url: `${NEW_APP_URL}${MIGRATE_FRAGMENT}${blob}`, trimmedRecents }
 }
 
 // --- import side (runs on the new origin) ---
