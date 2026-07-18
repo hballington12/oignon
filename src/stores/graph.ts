@@ -567,6 +567,23 @@ export const useGraphStore = defineStore('graph', () => {
     return false
   }
 
+  // Load a slim cache received from a share link and persist it as the active
+  // graph, so a refresh keeps showing it. Metadata rehydrates from OpenAlex the
+  // same way a cached graph does.
+  function loadSharedGraph(slimCache: SlimCache): boolean {
+    try {
+      if (!slimCache?.slim || !Array.isArray(slimCache.nodes) || slimCache.nodes.length === 0) {
+        return false
+      }
+      loadSlimCache(slimCache)
+      saveToCache()
+      return true
+    } catch (e) {
+      console.warn('Failed to load shared graph:', e)
+      return false
+    }
+  }
+
   async function runMetadataHydration(nodeIds: string[]) {
     hydratingMetadata.value = true
 
@@ -881,6 +898,8 @@ export const useGraphStore = defineStore('graph', () => {
     clearPendingBuild,
     saveToCache,
     loadFromCache,
+    loadSharedGraph,
+    buildSlimCache,
     clearCache,
 
     // Library actions

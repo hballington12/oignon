@@ -25,6 +25,12 @@ import { getBackgroundColorHex, COLORMAPS } from '@/lib/colormap'
 import { analytics } from '@/composables/usePostHog'
 import MigrationBanner from '@/components/MigrationBanner.vue'
 import { isOldOrigin, isMoveBannerDismissed } from '@/lib/libraryMigration'
+import {
+  createShareLink,
+  readShareCodeFromUrl,
+  fetchSharedGraph,
+  clearSharePath,
+} from '@/lib/graphShare'
 
 const store = useGraphStore()
 const activeTab = ref<TabId | null>(null)
@@ -154,8 +160,23 @@ const graphCanvas = ref<InstanceType<typeof GraphCanvas> | null>(null)
 const mobileInfoPanel = ref<InstanceType<typeof MobileInfoPanel> | null>(null)
 const tutorialSearchQuery = ref<string | undefined>(undefined)
 
-// Load cached graph on startup (before mount)
-store.loadFromCache()
+// On startup, a share link (/g/<code>) wins over the local cache: fetch the
+// shared graph and load it. Otherwise fall back to the last cached graph.
+const shareCode = readShareCodeFromUrl()
+if (shareCode) {
+  store.setLoading(true, { message: 'Loading shared graph…', percent: 0, completed: 0, total: 1 })
+  fetchSharedGraph(shareCode)
+    .then((slim) => {
+      if (slim && store.loadSharedGraph(slim)) {
+        clearSharePath()
+      } else {
+        store.loadFromCache()
+      }
+    })
+    .finally(() => store.setLoading(false))
+} else {
+  store.loadFromCache()
+}
 
 // "We've moved" banner: only on the old GitHub Pages origin, until dismissed.
 const showMoveBanner = ref(isOldOrigin() && !isMoveBannerDismissed())
@@ -329,6 +350,43 @@ function handleExportGraph() {
   analytics.graphExported(data.graphType, data.paperCount)
 }
 
+const shareCopied = ref(false)
+const shareBusy = ref(false)
+let shareCopiedTimer: ReturnType<typeof setTimeout> | undefined
+
+async function handleShareGraph() {
+  if (!store.hasGraph || shareBusy.value) return
+  shareBusy.value = true
+  try {
+    const url = await createShareLink(store.buildSlimCache())
+
+    let copied = false
+    try {
+      await navigator.clipboard.writeText(url)
+      copied = true
+    } catch {
+      // Clipboard can be blocked (permissions, insecure context). Fall back to
+      // a prompt so the user can still grab the link.
+      window.prompt('Copy this link to share your graph:', url)
+    }
+
+    analytics.graphShared(store.graphType ?? 'paper', store.nodes.size)
+
+    if (copied) {
+      shareCopied.value = true
+      clearTimeout(shareCopiedTimer)
+      shareCopiedTimer = setTimeout(() => {
+        shareCopied.value = false
+      }, 2000)
+    }
+  } catch (e) {
+    console.error('Failed to create share link:', e)
+    window.alert('Sorry, sharing failed. Please try again.')
+  } finally {
+    shareBusy.value = false
+  }
+}
+
 function handleFitToView() {
   graphCanvas.value?.fitToView()
 }
@@ -473,7 +531,10 @@ function handleToggleTypeBucket(bucket: WorkTypeBucket) {
         :layout-mode="layoutMode"
         :is-dark-mode="store.isDarkMode"
         :has-graph="store.hasGraph"
+        :share-copied="shareCopied"
+        :share-busy="shareBusy"
         @export-graph="handleExportGraph"
+        @share-graph="handleShareGraph"
         @zoom-in="handleZoomIn"
         @zoom-out="handleZoomOut"
         @fit-to-view="handleFitToView"

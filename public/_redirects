@@ -1,0 +1,5 @@
+# Share links: /g/<code> is a client-side route, so serve the app shell for it
+# (200 rewrite, not a redirect, so the URL stays /g/<code>). The app reads the
+# code from the path and fetches the graph from /api/share/<code>.
+# /api/* is handled by Pages Functions and takes precedence over this.
+/g/* /index.html 200

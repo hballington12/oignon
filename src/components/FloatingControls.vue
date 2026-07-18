@@ -8,6 +8,8 @@ const props = defineProps<{
   layoutMode?: LayoutMode
   isDarkMode?: boolean
   hasGraph?: boolean
+  shareCopied?: boolean
+  shareBusy?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -21,6 +23,7 @@ const emit = defineEmits<{
   toggleLayoutMode: []
   toggleTheme: []
   exportGraph: []
+  shareGraph: []
 }>()
 </script>
 
@@ -208,6 +211,61 @@ const emit = defineEmits<{
     <button
       v-if="props.hasGraph"
       class="float-btn"
+      :class="{ active: props.shareCopied }"
+      :disabled="props.shareBusy"
+      @click="emit('shareGraph')"
+      :title="props.shareCopied ? 'Link copied!' : 'Share graph'"
+    >
+      <!-- Spinner while creating the link -->
+      <svg
+        v-if="props.shareBusy"
+        class="share-spinner"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+      >
+        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+      </svg>
+      <!-- Checkmark while the copied confirmation is showing -->
+      <svg
+        v-else-if="props.shareCopied"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
+      <!-- Share/link icon -->
+      <svg
+        v-else
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <circle cx="18" cy="5" r="3" />
+        <circle cx="6" cy="12" r="3" />
+        <circle cx="18" cy="19" r="3" />
+        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+      </svg>
+    </button>
+    <button
+      v-if="props.hasGraph"
+      class="float-btn"
       @click="emit('exportGraph')"
       title="Export graph"
     >
@@ -320,6 +378,21 @@ const emit = defineEmits<{
   background: var(--bg-item-active);
   color: var(--text-primary);
   border-color: var(--border-medium);
+}
+
+.float-btn:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.share-spinner {
+  animation: share-spin 0.8s linear infinite;
+}
+
+@keyframes share-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Help hint styles */
