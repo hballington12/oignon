@@ -504,9 +504,10 @@ class Component extends DCLogic {
       this.cur.S += (f0.S - this.cur.S) * k0; this.cur.x += (f0.x - this.cur.x) * k0; this.cur.y += (f0.y - this.cur.y) * k0;
       var w0 = g.world; w0.scale.set(this.cur.S); w0.x = this.cur.x; w0.y = this.cur.y;
       g.setAssemble(this._introP || 0);
-      // keep the intro veil side-only too, so the graph is bright from the very
-      // first frame and there's no jump when the flow scenes take over.
-      if (this.scrimEl) { var lDi = landscape ? 0.82 : 0; this.scrimEl.style.background = 'linear-gradient(90deg, rgba(4,5,12,' + lDi.toFixed(3) + ') 0%, rgba(4,5,12,' + (lDi * 0.5).toFixed(3) + ') 30%, rgba(4,5,12,0) 56%)'; }
+      // no side scrim during intro — the loading gate already has its own
+      // full-screen overlay for legibility, so an extra flat scrim here just
+      // shows up as a hard-edged dark band behind the gate content.
+      if (this.scrimEl) this.scrimEl.style.background = 'transparent';
       // pre-warm node + particle tints to the exact frac flow will start at —
       // otherwise the very first flow tick applies a big tint jump in one frame.
       if (this._colormapSweep !== false) this._setColormapFrac(this._cmPhase || 0);
