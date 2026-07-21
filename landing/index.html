@@ -434,6 +434,14 @@ class Component extends DCLogic {
       self._bindScroll();
       self._fillSelectPanel(self._selectDemoId);
       self._panelShown = self._selectDemoId;
+      // Battery/perf: fully stop the Pixi ticker (WebGL render + our _tick)
+      // while the tab is backgrounded, instead of relying on the browser's
+      // rAF throttle alone. Resumes instantly on refocus.
+      self._onVis = function () {
+        if (!self.graph || !self.graph.app) return;
+        if (document.hidden) self.graph.app.ticker.stop(); else self.graph.app.ticker.start();
+      };
+      document.addEventListener('visibilitychange', self._onVis);
       self._startCalloutLoop();
       self._observeReveals();
       self._bindPointer();
@@ -1193,6 +1201,7 @@ class Component extends DCLogic {
     if (this._onScroll) { window.removeEventListener('scroll', this._onScroll); window.removeEventListener('resize', this._onScroll); }
     if (this._onPointer) { window.removeEventListener('pointermove', this._onPointer); window.removeEventListener('pointerdown', this._onPointer); }
     if (this._onRuntimeReady) window.removeEventListener('oignon-runtime-ready', this._onRuntimeReady);
+    if (this._onVis) document.removeEventListener('visibilitychange', this._onVis);
     if (this._io) this._io.disconnect();
   }
 }
