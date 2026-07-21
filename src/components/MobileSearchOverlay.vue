@@ -9,6 +9,7 @@ import {
 } from '@/lib/graph/openAlexApi'
 import { useGraphStore } from '@/stores/graph'
 import BibliographyImport from './BibliographyImport.vue'
+import AppLinks from './AppLinks.vue'
 
 const store = useGraphStore()
 
@@ -360,6 +361,9 @@ function formatCitations(count: number): string {
               <span>Search by title, author, or DOI</span>
             </div>
           </div>
+
+          <!-- Project links: feedback, changelog, source -->
+          <AppLinks />
         </div>
       </div>
     </Transition>
