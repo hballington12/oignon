@@ -40,7 +40,7 @@ Owner key: `[H]` = Harry only (accounts, purchases, identity), `[C]` = Claude ca
 - [x] `[C]` Security headers (`landing/_headers`, site-wide): nosniff, X-Frame-Options DENY, Referrer-Policy, Permissions-Policy. Verified served on preview. Full CSP deferred (needs testing vs inline landing scripts + OpenAlex/PostHog).
 - [x] `[C]` Legal/brand: license set to MIT (code); `TRADEMARK.md` carve-out (name + logo reserved, © Harry Ballington); README License-and-brand section; `PRIVACY.md` updated to disclose share-link KV storage + Privacy link in app footer.
 - [ ] `[H]` **Cloudflare rate-limiting rule on `POST /api/share`** (highest security item; the endpoint is unauthenticated). Dashboard → Security → WAF → Rate limiting rules. Optionally Turnstile on share creation.
-- [ ] `[H]` Trademark clearance: search EUIPO + USPTO for "oignon" in software classes (Nice 9/42) + web/GitHub/app-store. Dictionary word (FR "onion"), field-specific; likely clear. Use ™ now; register only if it grows.
+- [x] `[H]` Trademark clearance DONE: EUIPO + USPTO searched. No "oignon" mark in software classes (9/42) — hits are food (SOIGNON goat cheese), an onion farm (descriptive, food class), and appliances (USPTO class 11). Clear to use "oignon" for research software (arbitrary=strong mark there). Use ™ now; register logo+wordmark in 9/42 only if it grows.
 - [ ] `[H]` Confirm IP ownership with Wuppertal tech-transfer/legal (university-employee IP may be claimable) before public launch / any monetization.
 - [ ] `[C]` (optional) Content-Security-Policy, tested on preview. `[C]` (optional) share TTL if KV storage growth becomes a concern (weigh vs link permanence for citability).
 
