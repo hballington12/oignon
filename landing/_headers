@@ -1,0 +1,13 @@
+# Security headers for the Cloudflare Pages deploy (applied site-wide).
+# Assembled into dist/ root by scripts/assemble-landing.mjs.
+#
+# Baseline hardening. A full Content-Security-Policy is intentionally left out
+# for now: the landing page uses inline scripts and the app connects to OpenAlex
+# + PostHog, so a CSP needs careful per-directive testing on a preview before it
+# can go live without breaking things. These headers are safe as-is.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=(), usb=(), interest-cohort=()
+  X-XSS-Protection: 0

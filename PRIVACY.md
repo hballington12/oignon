@@ -1,10 +1,10 @@
 # Privacy Policy
 
-**Last updated:** 17 Dec 2025
+**Last updated:** 21 Jul 2026
 
 ## Overview
 
-Oignon is a citation graph visualization tool. We are committed to transparency about data practices. In short: we collect minimal data, store nothing on our servers, and do not track you.
+Oignon is a citation graph visualization tool. We are committed to transparency about data practices. In short: we collect minimal data, do not require an account, and do not track you as an individual. Your library stays on your device. The only data stored on our servers is a graph you explicitly choose to share via a share link (see "Shared Graphs" below).
 
 ## Data Stored on Your Device
 
@@ -21,9 +21,13 @@ This data never leaves your device and is not transmitted to our servers. You ca
 
 - We do not require account creation or login
 - We do not collect personal information
-- We do not store any user data on our servers
 - We do not track your location
 - We do not access contacts, camera, or other device features
+- We do not store your library (bookmarks, followed authors, recent graphs) on our servers — it stays on your device
+
+## Shared Graphs
+
+When you use the **Share** feature to create a link, the structure of that graph — a compact list of paper identifiers and their connections, with no personal information — is stored on our infrastructure (Cloudflare Workers KV) so that anyone with the link can open it. A share link is not secret: anyone who has it can view the graph. We do not record who created a share, and we do not link shares to any individual. If you do not create a share link, nothing about your graphs is sent to our servers.
 
 ## Third-Party Services
 
@@ -39,4 +43,4 @@ If our data practices change, we will update this policy and revise the "Last up
 
 ## Contact
 
-If you have questions about this policy, contact us at: ballington@uni-wuppertal.de
+If you have questions about this policy, contact us at: oignonapp@gmail.com
