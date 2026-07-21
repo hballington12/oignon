@@ -1,0 +1,54 @@
+/* ============================================================
+   Oignon — Effects: radii, blur, shadows, transitions, z-index
+   ============================================================ */
+
+:root {
+  /* ---- Corner radii ---- */
+  --radius-badge: 3px;        /* status chips */
+  --radius-sm: 4px;           /* small inline actions */
+  --radius-btn: 6px;          /* buttons */
+  --radius-control: 8px;      /* control buttons, swatches, tooltips */
+  --radius-item: 10px;        /* list items / confirm buttons */
+  --radius-panel: 12px;       /* glass panels + floating buttons */
+  --radius-modal: 16px;       /* confirm modal */
+  --radius-card: 20px;        /* results card */
+  --radius-sheet: 24px;       /* building card */
+  --radius-pill: 50px;        /* search bar / mode switch */
+  --radius-full: 9999px;
+
+  /* ---- Backdrop blur (frosted glass) ---- */
+  --blur-panel: 12px;
+  --blur-float: 8px;
+  --blur-overlay: 8px;
+
+  /* ---- Shadows ---- */
+  --shadow-panel: 0 4px 6px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-tooltip: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-btn: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --shadow-glow-green: 0 0 8px rgba(74, 222, 128, 0.4);
+  --shadow-glow-node: 0 0 12px rgba(150, 210, 255, 0.7), 0 0 24px rgba(96, 165, 250, 0.4);
+
+  /* ---- Transitions ---- */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1); /* @kind other */
+  --transition-fast: 0.15s ease;   /* @kind other */
+  --transition-normal: 0.2s ease;  /* @kind other */
+  --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* @kind other */
+
+  /* Press feedback: buttons scale down slightly on :active */
+  --press-scale: 0.92;        /* @kind other */
+  --press-scale-strong: 0.9;  /* @kind other */
+
+  /* ---- Z-index layers ---- */
+  --z-canvas: 1;    /* @kind other */
+  --z-floating: 5;  /* @kind other */
+  --z-overlay: 50;  /* @kind other */
+  --z-panel: 100;   /* @kind other */
+  --z-toggle: 101;  /* @kind other */
+  --z-tooltip: 1000; /* @kind other */
+
+  /* ---- Progress bar ---- */
+  --progress-height: 4px;                  /* @kind spacing */
+  --progress-bg: rgba(255, 255, 255, 0.1); /* @kind color */
+  --progress-fill: var(--accent-green);    /* @kind color */
+}

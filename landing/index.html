@@ -1,95 +1,1200 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" href="/app/favicon.ico" />
-    <title>oignon — open-source citation graphs</title>
-    <meta
-      name="description"
-      content="Explore the literature as a citation graph. Open source, no signup, nothing leaves your browser. Paste a bibliography and see what your literature review is missing."
-    />
-    <style>
-      :root {
-        color-scheme: dark;
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>oignon — open-source citation graphs</title>
+<meta name="description" content="Explore the literature as a citation graph. Open source, no signup, nothing leaves your browser. Paste a bibliography and see what your literature review is missing.">
+<link rel="icon" type="image/svg+xml" href="/assets/icon-gradient.svg">
+<link rel="canonical" href="https://oignon.dev/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://oignon.dev/">
+<meta property="og:title" content="oignon — open-source citation graphs">
+<meta property="og:description" content="Explore the literature as a citation graph. No signup, nothing leaves your browser. Paste a bibliography and see what your review is missing.">
+<meta property="og:image" content="https://oignon.dev/assets/icon-gradient.svg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="oignon — open-source citation graphs">
+<meta name="twitter:description" content="Explore the literature as a citation graph. No signup, nothing leaves your browser.">
+<meta name="twitter:image" content="https://oignon.dev/assets/icon-gradient.svg">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/oignon-design-system-47e557a3-0bdb-4701-be8a-3592c123a74d/tokens/colors.css">
+<link rel="stylesheet" href="_ds/oignon-design-system-47e557a3-0bdb-4701-be8a-3592c123a74d/tokens/typography.css">
+<link rel="stylesheet" href="_ds/oignon-design-system-47e557a3-0bdb-4701-be8a-3592c123a74d/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/oignon-design-system-47e557a3-0bdb-4701-be8a-3592c123a74d/tokens/effects.css">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+html{overflow-x:hidden}
+body{background:#04050c;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent-link);text-decoration:none}
+a:hover{color:var(--accent-blue-light)}
+@keyframes oi-bob{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(9px);opacity:1}}
+@keyframes oi-pulse{0%,100%{box-shadow:0 0 18px rgba(74,222,128,.25)}50%{box-shadow:0 0 36px rgba(74,222,128,.55)}}
+@media (max-height:640px){.oi-scroll-cue{display:none !important}}
+@media (max-height:660px){.oi-hero-col{justify-content:flex-start !important}}
+</style>
+<script src="graph-data.js"></script>
+<script src="graph-meta.js"></script>
+<script type="module" src="oignon-runtime.js"></script>
+</helmet>
+<div ref="{{ rootRef }}" style="position:relative;width:100%;background:#04050c">
+
+  <div ref="{{ mountRef }}" style="position:fixed;inset:0;width:100vw;height:100vh;z-index:0;pointer-events:none;overflow:hidden"></div>
+  <!-- Continuous legibility veils over the graph (z1): a static top/bottom
+       vignette (nav + footer), and a side-scrim whose dark mass tracks the
+       active scene so there are never hard section seams. -->
+  <div style="position:fixed;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,rgba(4,5,12,.5) 0%,rgba(4,5,12,0) 9%,rgba(4,5,12,0) 89%,rgba(4,5,12,.55) 100%)"></div>
+  <div ref="{{ scrimRef }}" style="position:fixed;inset:0;z-index:1;pointer-events:none;background:linear-gradient(90deg,rgba(4,5,12,.82) 0%,rgba(4,5,12,.41) 30%,rgba(4,5,12,0) 56%)"></div>
+  <!-- Dog-leg callout cards, anchored to nodes, cycled with hero scroll -->
+  <div ref="{{ calloutRef }}" style="position:fixed;inset:0;z-index:6;pointer-events:none;opacity:0;transition:opacity .4s ease">
+    <svg ref="{{ leaderRef }}" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none">
+      <polyline ref="{{ leaderLineRef }}" fill="none" stroke="rgba(210,225,255,.5)" stroke-width="1.3"></polyline>
+      <circle ref="{{ leaderDotRef }}" r="3.4" fill="#ffffff"></circle>
+    </svg>
+    <sc-for list="{{ callouts }}" as="c" hint-placeholder-count="0">
+      <div data-callout-index="{{ $index }}" style="position:absolute;left:-9999px;top:0;width:290px;opacity:0;transform:translateY(-50%);transition:opacity .45s cubic-bezier(.16,1,.3,1);background:rgba(6,8,18,.82);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--border-light);border-radius:12px;box-shadow:0 12px 34px rgba(0,0,0,.55);padding:14px 15px">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:9px">
+          <sc-if value="{{ c.isSource }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;font-weight:700;letter-spacing:.4px;padding:2px 7px;border-radius:4px;background:var(--status-source);color:var(--on-status)">SOURCE</span></sc-if>
+          <sc-if value="{{ c.isArticle }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;font-weight:700;letter-spacing:.4px;padding:2px 7px;border-radius:4px;background:rgba(255,255,255,.1);color:var(--text-secondary)">ARTICLE</span></sc-if>
+          <span style="font-size:11px;color:var(--text-dim);font-family:ui-monospace,Menlo,monospace">{{ c.year }}</span>
+        </div>
+        <div style="font-size:13.5px;font-weight:600;color:#fff;line-height:1.34;margin-bottom:8px">{{ c.title }}</div>
+        <div style="font-size:12px;color:var(--text-muted);line-height:1.4;margin-bottom:11px">{{ c.authorsStr }}</div>
+        <div style="font-size:11.5px;color:var(--text-secondary);font-style:italic;margin-bottom:11px">{{ c.venue }}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--border-subtle)">
+          <span style="font-size:11px;color:var(--text-dim)">{{ c.field }}</span>
+          <span style="font-size:12px;font-weight:700;color:var(--text-secondary);font-family:ui-monospace,Menlo,monospace">{{ c.citesStr }} cites</span>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- Interactive hover/tap callout (overrides the automatic ones) -->
+  <div ref="{{ userLayerRef }}" style="position:fixed;inset:0;z-index:7;pointer-events:none;opacity:0;transition:opacity .32s cubic-bezier(.16,1,.3,1)">
+    <svg style="position:absolute;inset:0;width:100%;height:100%;overflow:visible">
+      <polyline ref="{{ uLineRef }}" fill="none" stroke="rgba(210,225,255,.6)" stroke-width="1.3"></polyline>
+      <circle ref="{{ uDotRef }}" r="3.6" fill="#ffffff"></circle>
+    </svg>
+    <div ref="{{ uCardRef }}" style="position:absolute;left:-9999px;top:0;width:290px;transform:translateY(8px) scale(.985);transition:transform .32s cubic-bezier(.16,1,.3,1);background:rgba(6,8,18,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--border-light);border-radius:12px;box-shadow:0 12px 34px rgba(0,0,0,.6);padding:14px 15px">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:9px">
+        <span ref="{{ uBadgeRef }}" style="font-size:10px;font-weight:700;letter-spacing:.4px;padding:2px 7px;border-radius:4px;background:rgba(255,255,255,.1);color:var(--text-secondary)">ARTICLE</span>
+        <span ref="{{ uYearRef }}" style="font-size:11px;color:var(--text-dim);font-family:ui-monospace,Menlo,monospace"></span>
+      </div>
+      <div ref="{{ uTitleRef }}" style="font-size:13.5px;font-weight:600;color:#fff;line-height:1.34;margin-bottom:8px">Loading…</div>
+      <div ref="{{ uAuthorsRef }}" style="font-size:12px;color:var(--text-muted);line-height:1.4;margin-bottom:11px"></div>
+      <div ref="{{ uVenueRef }}" style="font-size:11.5px;color:var(--text-secondary);font-style:italic;margin-bottom:11px"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--border-subtle)">
+        <span ref="{{ uFieldRef }}" style="font-size:11px;color:var(--text-dim)"></span>
+        <span ref="{{ uCitesRef }}" style="font-size:12px;font-weight:700;color:var(--text-secondary);font-family:ui-monospace,Menlo,monospace"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOADING GATE: DOI types, graph builds, then "Enter" releases the hero -->
+  <div ref="{{ asmRef }}" onClick="{{ onIntroSkip }}" style="position:fixed;inset:0;z-index:30;pointer-events:auto;opacity:1;transition:opacity .7s ease;display:flex;align-items:center;justify-content:center;background:rgba(4,5,12,.35)">
+    <div style="width:min(560px,90vw);text-align:center;padding:0 20px">
+      <img src="assets/mark-white.svg" alt="oignon" style="width:46px;height:46px;margin:0 auto 30px;display:block;opacity:.95">
+      <div style="display:flex;align-items:center;gap:12px;width:100%;max-width:460px;margin:0 auto;padding:15px 22px;background:rgba(0,0,0,.55);border:1px solid var(--border-medium);border-radius:50px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 8px 30px rgba(0,0,0,.45)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+        <div style="flex:1;text-align:left;font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:15px;color:#fff;white-space:nowrap;overflow:hidden"><span ref="{{ doiTextRef }}"></span><span ref="{{ caretRef }}" style="display:inline-block;width:1px;height:17px;background:var(--accent-green);vertical-align:middle;margin-left:1px"></span></div>
+      </div>
+      <div ref="{{ buildRowRef }}" style="max-width:460px;margin:22px auto 0;opacity:0;transition:opacity .4s ease">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:8px"><span ref="{{ buildLabelRef }}">Fetching citations from OpenAlex…</span><span ref="{{ buildPctRef }}" style="font-family:ui-monospace,Menlo,monospace;color:var(--accent-green)">0%</span></div>
+        <div style="height:6px;border-radius:50px;background:rgba(255,255,255,.08);overflow:hidden"><div ref="{{ buildBarRef }}" style="height:100%;width:0%;border-radius:50px;background:var(--accent-green);box-shadow:0 0 8px rgba(74,222,128,.6);transition:width .12s linear"></div></div>
+      </div>
+      <div ref="{{ gateCueRef }}" style="margin-top:28px;opacity:0;transform:translateY(6px);transition:opacity .5s ease,transform .5s ease;display:flex;flex-direction:column;align-items:center;gap:20px">
+        <div style="display:flex;align-items:center;justify-content:center;gap:10px">
+          <span style="display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--accent-green)"><span style="width:8px;height:8px;border-radius:50%;background:var(--accent-green);box-shadow:0 0 10px rgba(74,222,128,.8)"></span>Graph built</span>
+          <span style="font-size:13px;color:var(--text-muted);font-family:ui-monospace,Menlo,monospace">121 papers · 580 citations</span>
+        </div>
+        <button ref="{{ enterBtnRef }}" onClick="{{ onEnter }}" style="display:inline-flex;align-items:center;gap:9px;padding:16px 38px;background:var(--accent-green);color:#07130b;border:none;border-radius:12px;font-weight:700;font-size:16px;font-family:inherit;cursor:pointer;animation:oi-pulse 2.2s ease-in-out infinite" style-hover="filter:brightness(1.08)">Enter</button>
+      </div>
+    </div>
+  </div>
+
+  <nav ref="{{ navRef }}" style="position:fixed;top:0;left:0;right:0;z-index:20;opacity:0;transition:opacity .8s ease .2s;display:flex;align-items:center;justify-content:space-between;padding:22px clamp(20px,5vw,64px);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)">
+    <a href="/" style="display:flex;align-items:center;gap:11px;color:#fff">
+      <img src="assets/mark-white.svg" alt="oignon" style="width:30px;height:30px;display:block">
+      <span style="font-size:21px;font-weight:600;letter-spacing:-.02em">oignon</span>
+    </a>
+    <div style="display:flex;align-items:center;gap:clamp(14px,2vw,30px)">
+      <a href="https://github.com/hballington12/oignon" style="font-size:14px;color:var(--text-muted)" style-hover="color:#fff">GitHub</a>
+      <a href="https://arxiv.org/abs/2512.22159" style="font-size:14px;color:var(--text-muted)" style-hover="color:#fff">Paper</a>
+      <a href="/app/" style="display:inline-flex;align-items:center;gap:7px;padding:9px 18px;background:var(--accent-green);color:#07130b;border-radius:10px;font-weight:700;font-size:14px" style-hover="filter:brightness(1.08)">Launch the app →</a>
+    </div>
+  </nav>
+
+  <!-- HERO — title, then callouts bridge into "How it works" -->
+  <section ref="{{ heroRef }}" data-scene="hero" style="position:relative;z-index:2;height:200vh">
+    <div style="position:relative;height:100vh">
+      <div class="oi-hero-col" style="position:relative;height:100%;display:flex;flex-direction:column;justify-content:center;padding:92px clamp(20px,7vw,96px) 40px;overflow-y:auto">
+        <div style="max-width:min(500px,38vw)">
+          <div data-reveal="" style="opacity:0;transform:translateY(24px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1);display:flex;align-items:center;gap:14px;margin-bottom:30px">
+            <img src="assets/mark-white.svg" alt="" style="width:52px;height:52px;display:block">
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1">oignon</span>
+              <span style="font-size:11px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--accent-blue-light)">Open-source citation graph tool</span>
+            </div>
+          </div>
+          <h1 data-reveal="" style="opacity:1;margin:0;font-weight:600;font-size:clamp(2.6rem,6.4vw,5.6rem);line-height:1.06;letter-spacing:-.04em">
+            <span style="display:block;overflow:hidden;padding-bottom:.12em"><span data-li="" style="display:block;transform:translateY(110%);transition:transform 1.1s cubic-bezier(.16,1,.3,1);transition-delay:.05s">The new age</span></span>
+            <span style="display:block;overflow:hidden;padding-bottom:.12em"><span data-li="" style="display:block;transform:translateY(110%);transition:transform 1.1s cubic-bezier(.16,1,.3,1);transition-delay:.16s">of referencing</span></span>
+          </h1>
+          <p data-reveal="" style="opacity:0;transform:translateY(24px);transition:opacity .9s cubic-bezier(.16,1,.3,1) .35s,transform .9s cubic-bezier(.16,1,.3,1) .35s;margin:32px 0 0;font-size:clamp(1.02rem,1.4vw,1.3rem);line-height:1.55;color:rgba(255,255,255,.72)">
+            High-quality bibliographies at the touch of a button. Start with a paper, an author, or a DOI and <span style="color:#fff;font-weight:500">become an expert in minutes.</span>
+          </p>
+          <div data-reveal="" style="opacity:0;transform:translateY(24px);transition:opacity .9s cubic-bezier(.16,1,.3,1) .5s,transform .9s cubic-bezier(.16,1,.3,1) .5s;display:flex;flex-wrap:wrap;gap:14px;margin-top:38px">
+            <a href="/app/" style="display:inline-flex;align-items:center;gap:8px;padding:16px 32px;background:var(--accent-green);color:#07130b;border-radius:12px;font-weight:700;font-size:16px" style-hover="filter:brightness(1.08)">Launch the app →</a>
+            <a href="https://github.com/hballington12/oignon" style="display:inline-flex;align-items:center;gap:8px;padding:16px 26px;color:var(--text-secondary);border:1px solid var(--border-medium);border-radius:12px;font-weight:600;font-size:15px" style-hover="background:rgba(255,255,255,.06);color:#fff">Star on GitHub</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS — the onion algorithm: relevance scoring -->
+  <section data-scene="algorithm" style="position:relative;z-index:2;min-height:100vh;display:flex;align-items:center;padding:120px clamp(20px,7vw,96px)">
+    <div style="max-width:600px">
+      <div data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1);font-size:13px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--accent-blue-light);margin-bottom:20px">How it works</div>
+      <h2 data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity 1s cubic-bezier(.16,1,.3,1) .06s,transform 1s cubic-bezier(.16,1,.3,1) .06s;margin:0 0 24px;font-weight:600;font-size:clamp(2.2rem,5vw,4.2rem);line-height:1.03;letter-spacing:-.035em">Every paper<br>earns its place.</h2>
+      <p data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity .9s cubic-bezier(.16,1,.3,1) .12s,transform .9s cubic-bezier(.16,1,.3,1) .12s;margin:0;font-size:clamp(1.05rem,1.4vw,1.28rem);line-height:1.6;color:rgba(255,255,255,.72);max-width:510px">oignon uses a snowballing strategy to explore the literature — back to find a field's roots, and <b style="color:#fff">forward</b> to find the newest work built on top of them.</p>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:20px;margin:34px 0 30px">
+        <div data-reveal="" style="opacity:0;transform:translateY(24px);transition:opacity .8s cubic-bezier(.16,1,.3,1) .16s,transform .8s cubic-bezier(.16,1,.3,1) .16s">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <div style="flex:none;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(125,211,252,.12);border:1px solid rgba(125,211,252,.28)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7dd3fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="m19 12-7 7-7-7"></path></svg></div>
+            <div style="font-size:15px;font-weight:700;color:#fff">Root <span style="color:var(--text-dim);font-weight:500">— looking back</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px;font-size:13.5px">
+            <div style="display:flex;justify-content:space-between;color:var(--text-secondary)"><span>Cited count</span><span style="color:var(--text-dim)">Importance</span></div>
+            <div style="display:flex;justify-content:space-between;color:var(--text-secondary)"><span>Cocited count</span><span style="color:var(--text-dim)">Relevance</span></div>
+            <div style="display:flex;justify-content:space-between;color:var(--text-secondary)"><span>Cociting count</span><span style="color:var(--text-dim)">Similarity</span></div>
+            <div style="display:flex;justify-content:space-between;padding-top:7px;border-top:1px solid var(--border-subtle);font-weight:700"><span style="color:#fff">Total rank</span><span style="color:var(--accent-green)">Overall score</span></div>
+          </div>
+        </div>
+        <div data-reveal="" style="opacity:0;transform:translateY(24px);transition:opacity .8s cubic-bezier(.16,1,.3,1) .24s,transform .8s cubic-bezier(.16,1,.3,1) .24s">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <div style="flex:none;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.28)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"></path><path d="m5 12 7-7 7 7"></path></svg></div>
+            <div style="font-size:15px;font-weight:700;color:#fff">Branch <span style="color:var(--text-dim);font-weight:500">— looking <b style="color:#fff">forward</b></span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px;font-size:13.5px">
+            <div style="display:flex;justify-content:space-between;color:var(--text-secondary)"><span>Citing count</span><span style="color:var(--text-dim)">Relevance</span></div>
+            <div style="display:flex;justify-content:space-between;color:var(--text-secondary)"><span>Cociting count</span><span style="color:var(--text-dim)">Similarity</span></div>
+            <div style="display:flex;justify-content:space-between;color:var(--text-secondary)"><span>Cocited count</span><span style="color:var(--text-dim)">Relevance + importance</span></div>
+            <div style="display:flex;justify-content:space-between;padding-top:7px;border-top:1px solid var(--border-subtle);font-weight:700"><span style="color:#fff">Total rank</span><span style="color:var(--accent-green)">Overall score</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity .9s cubic-bezier(.16,1,.3,1) .34s,transform .9s cubic-bezier(.16,1,.3,1) .34s;width:min(470px,100%);background:rgba(0,0,0,.6);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border-light);border-radius:12px;box-shadow:0 4px 6px rgba(0,0,0,.3),0 1px 3px rgba(0,0,0,.4);padding:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px">
+          <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim)">Relevance score</span>
+          <span style="font-size:11px;color:var(--text-faint);font-family:ui-monospace,'SF Mono',Menlo,monospace">worked example</span>
+        </div>
+        <div style="display:flex;height:12px;border-radius:50px;overflow:hidden;margin-bottom:14px;background:rgba(255,255,255,.05)">
+          <div style="width:45%;background:#7dd3fc"></div>
+          <div style="width:30%;background:#60a5fa"></div>
+          <div style="width:25%;background:#3b82f6"></div>
+        </div>
+        <div style="background:rgba(255,255,255,.05);border-radius:6px;padding:6px 11px;margin-bottom:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-subtle)"><span style="display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--text-secondary)"><span style="width:8px;height:8px;border-radius:50%;background:#7dd3fc"></span>Cited count</span><span style="font-size:13px;font-weight:600;color:var(--text-secondary);font-family:ui-monospace,'SF Mono',Menlo,monospace">9</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-subtle)"><span style="display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--text-secondary)"><span style="width:8px;height:8px;border-radius:50%;background:#60a5fa"></span>Cocited count</span><span style="font-size:13px;font-weight:600;color:var(--text-secondary);font-family:ui-monospace,'SF Mono',Menlo,monospace">6</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-subtle)"><span style="display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--text-secondary)"><span style="width:8px;height:8px;border-radius:50%;background:#3b82f6"></span>Cociting count</span><span style="font-size:13px;font-weight:600;color:var(--text-secondary);font-family:ui-monospace,'SF Mono',Menlo,monospace">5</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0 3px"><span style="font-size:12.5px;font-weight:700;color:#fff">Total rank</span><span style="font-size:14px;font-weight:700;color:var(--accent-green);font-family:ui-monospace,'SF Mono',Menlo,monospace">20</span></div>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);line-height:1.5;padding-top:12px;border-top:1px solid var(--border-subtle)">Scored live in your browser, against the open <a href="https://openalex.org">OpenAlex</a> dataset.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SELECT A PAPER — graph focuses the node, connectors light up, panel right -->
+  <section data-scene="select" style="position:relative;z-index:2;min-height:100vh;display:flex;align-items:center;justify-content:flex-end;padding:120px clamp(20px,7vw,96px)">
+    <div style="max-width:560px;display:flex;flex-direction:column;gap:26px">
+      <div>
+        <div data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1);font-size:13px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--accent-blue-light);margin-bottom:20px">Select a paper</div>
+        <h2 data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity 1s cubic-bezier(.16,1,.3,1) .06s,transform 1s cubic-bezier(.16,1,.3,1) .06s;margin:0 0 22px;font-weight:600;font-size:clamp(2rem,4.6vw,4rem);line-height:1.02;letter-spacing:-.035em">A quick glance at your fingertips.</h2>
+        <p data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity .9s cubic-bezier(.16,1,.3,1) .14s,transform .9s cubic-bezier(.16,1,.3,1) .14s;margin:0;font-size:clamp(1.02rem,1.35vw,1.25rem);line-height:1.6;color:rgba(255,255,255,.72);max-width:460px">Tap any node to see its connections. Oignon fetches the key metadata instantly — no friction slowing down your workflow.</p>
+      </div>
+      <!-- Paper details panel (recreated from PaperDetailsContent) -->
+      <div data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity .9s cubic-bezier(.16,1,.3,1) .22s,transform .9s cubic-bezier(.16,1,.3,1) .22s;width:min(400px,100%);background:rgba(0,0,0,.6);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border-light);border-radius:12px;box-shadow:0 4px 6px rgba(0,0,0,.3),0 1px 3px rgba(0,0,0,.4);padding:16px;overflow:hidden">
+        <div ref="{{ panelWrapRef }}" style="transition:opacity .28s ease">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+          <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim)">Paper</span>
+          <span style="font-size:10px;font-weight:600;letter-spacing:.3px;padding:2px 6px;border-radius:3px;background:var(--status-source);color:var(--on-status)">SELECTED</span>
+          <span ref="{{ panelTypeRef }}" style="font-size:10px;font-weight:600;letter-spacing:.3px;padding:2px 6px;border-radius:3px;background:rgba(255,255,255,.08);color:var(--text-muted)">ARTICLE</span>
+        </div>
+        <h3 ref="{{ panelTitleRef }}" style="margin:0 0 6px;font-size:16px;font-weight:600;color:#fff;line-height:1.3">Loading…</h3>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px"><span style="color:var(--text-dim)">Source:</span> <span ref="{{ panelSourceRef }}" style="color:var(--text-secondary);font-style:italic"></span></div>
+        <div ref="{{ panelAuthorsRef }}" style="font-size:13px;color:var(--text-muted);line-height:1.4;margin-bottom:12px"></div>
+        <div style="background:rgba(255,255,255,.05);border-radius:6px;padding:8px 10px;margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle)"><span style="font-size:11px;color:var(--text-dim)">Year</span><span ref="{{ panelYearRef }}" style="font-size:13px;font-weight:600;color:var(--text-secondary);font-family:ui-monospace,'SF Mono',Menlo,monospace"></span></div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle)"><span style="font-size:11px;color:var(--text-dim)">Global citations</span><span ref="{{ panelGlobalRef }}" style="font-size:13px;font-weight:600;color:var(--text-secondary);font-family:ui-monospace,'SF Mono',Menlo,monospace"></span></div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle)"><span style="font-size:11px;color:var(--text-dim)">In-graph citations</span><span ref="{{ panelInGraphRef }}" style="font-size:13px;font-weight:600;color:var(--text-secondary);font-family:ui-monospace,'SF Mono',Menlo,monospace"></span></div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0"><span style="font-size:11px;color:var(--text-dim)">References</span><span ref="{{ panelRefsRef }}" style="font-size:13px;font-weight:600;color:var(--text-secondary);font-family:ui-monospace,'SF Mono',Menlo,monospace"></span></div>
+        </div>
+        <div style="position:relative;max-height:76px;overflow:hidden;margin-bottom:12px;-webkit-mask-image:linear-gradient(#000 55%,transparent);mask-image:linear-gradient(#000 55%,transparent)">
+          <p ref="{{ panelAbstractRef }}" style="margin:0;font-size:13px;color:var(--text-secondary);line-height:1.55"></p>
+        </div>
+        <div style="background:rgba(255,255,255,.05);border-radius:6px;padding:8px 10px">
+          <div style="display:flex;gap:8px;padding:3px 0;border-bottom:1px solid var(--border-subtle)"><span style="font-size:11px;color:var(--text-dim);min-width:64px">Topic</span><span ref="{{ panelTopicRef }}" style="font-size:12px;color:var(--text-secondary)"></span></div>
+          <div style="display:flex;gap:8px;padding:3px 0;border-bottom:1px solid var(--border-subtle)"><span style="font-size:11px;color:var(--text-dim);min-width:64px">Field</span><span ref="{{ panelFieldRef }}" style="font-size:12px;color:var(--text-secondary)"></span></div>
+          <div style="display:flex;gap:8px;padding:3px 0"><span style="font-size:11px;color:var(--text-dim);min-width:64px">Domain</span><span ref="{{ panelDomainRef }}" style="font-size:12px;color:var(--text-secondary)"></span></div>
+        </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SEE THE WHOLE FIELD — text left, graph right -->
+  <section data-scene="field" style="position:relative;z-index:2;min-height:100vh;display:flex;align-items:center;justify-content:flex-start;padding:0 clamp(20px,7vw,96px)">
+    <div style="max-width:540px">
+      <div data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1);font-size:13px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--accent-blue-light);margin-bottom:20px">By-year layout</div>
+      <h2 data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity 1s cubic-bezier(.16,1,.3,1) .06s,transform 1s cubic-bezier(.16,1,.3,1) .06s;margin:0 0 26px;font-weight:600;font-size:clamp(2.2rem,5vw,4.4rem);line-height:1.02;letter-spacing:-.035em">Finally, a readable citation graph.</h2>
+      <p data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity .9s cubic-bezier(.16,1,.3,1) .14s,transform .9s cubic-bezier(.16,1,.3,1) .14s;margin:0 0 22px;font-size:clamp(1.05rem,1.4vw,1.3rem);line-height:1.6;color:rgba(255,255,255,.72)">Most tools force-simulate node positions, which favours structure over meaning and collapses into an unreadable hairball as a graph grows.</p>
+      <p data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity .9s cubic-bezier(.16,1,.3,1) .2s,transform .9s cubic-bezier(.16,1,.3,1) .2s;margin:0 0 22px;font-size:clamp(1.05rem,1.4vw,1.3rem);line-height:1.6;color:rgba(255,255,255,.72)">Oignon lays every paper on its publication year instead. The seminal work swells where references converge; gaps in your reading show up as empty space.</p>
+      <p data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity .9s cubic-bezier(.16,1,.3,1) .26s,transform .9s cubic-bezier(.16,1,.3,1) .26s;margin:0;font-size:clamp(1.05rem,1.4vw,1.3rem);line-height:1.6;color:rgba(255,255,255,.72)">And because oignon reads <b style="color:#fff">forward</b> as well as back, you see not just a field's roots but the newest work extending it — coverage most tools stop short of.</p>
+    </div>
+  </section>
+
+  <!-- FEATURES — graph dims behind, centered grid -->
+  <section data-scene="features" style="position:relative;z-index:2;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:120px clamp(20px,7vw,96px)">
+    <div style="max-width:1180px;margin:0 auto;width:100%">
+      <div data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1);font-size:13px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--accent-blue-light);margin-bottom:20px">Why oignon</div>
+      <h2 data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity 1s cubic-bezier(.16,1,.3,1) .06s,transform 1s cubic-bezier(.16,1,.3,1) .06s;margin:0 0 56px;font-weight:600;font-size:clamp(2rem,4.4vw,3.8rem);line-height:1.03;letter-spacing:-.035em;max-width:16ch">Built for how research actually works.</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px">
+        <div data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity .8s cubic-bezier(.16,1,.3,1),transform .8s cubic-bezier(.16,1,.3,1);background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:28px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)"><div style="font-size:18px;font-weight:600;margin-bottom:9px">Free, and runs in your browser</div><div style="font-size:14.5px;color:var(--text-muted);line-height:1.55">No signup, no server round-trips. Free to use, built on the open OpenAlex dataset.</div></div>
+        <div data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity .8s cubic-bezier(.16,1,.3,1) .07s,transform .8s cubic-bezier(.16,1,.3,1) .07s;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:28px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)"><div style="font-size:18px;font-weight:600;margin-bottom:9px">Readable graphs</div><div style="font-size:14.5px;color:var(--text-muted);line-height:1.55">Laid out by year, not physics. The shape of an entire field, at a glance — no hairball.</div></div>
+        <div data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity .8s cubic-bezier(.16,1,.3,1) .14s,transform .8s cubic-bezier(.16,1,.3,1) .14s;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:28px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)"><div style="font-size:18px;font-weight:600;margin-bottom:9px">Build in one click</div><div style="font-size:14.5px;color:var(--text-muted);line-height:1.55">Search a title, author, or DOI, or paste a bibliography. The graph assembles itself in seconds.</div></div>
+        <div data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity .8s cubic-bezier(.16,1,.3,1) .21s,transform .8s cubic-bezier(.16,1,.3,1) .21s;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:28px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)"><div style="font-size:18px;font-weight:600;margin-bottom:9px">Share your graphs</div><div style="font-size:14.5px;color:var(--text-muted);line-height:1.55">Export an image, or share a one-click link with your peers.</div></div>
+        <div data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity .8s cubic-bezier(.16,1,.3,1) .28s,transform .8s cubic-bezier(.16,1,.3,1) .28s;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:28px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)"><div style="font-size:18px;font-weight:600;margin-bottom:9px">Open source and MCP-ready</div><div style="font-size:14.5px;color:var(--text-muted);line-height:1.55">No hallucinated papers — supercharge your LLM workflow with <b style="color:#fff">real</b> data.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA + FOOTER -->
+  <section data-scene="cta" style="position:relative;z-index:2;min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:0 clamp(20px,7vw,96px)">
+    <img src="assets/icon-gradient.svg" alt="" data-reveal="" style="opacity:0;transform:translateY(24px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1);width:64px;height:64px;border-radius:16px;margin-bottom:34px">
+    <h2 data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity 1s cubic-bezier(.16,1,.3,1) .06s,transform 1s cubic-bezier(.16,1,.3,1) .06s;margin:0;font-weight:600;font-size:clamp(2.6rem,7vw,6rem);line-height:1;letter-spacing:-.04em;max-width:14ch">Become an expert in minutes.</h2>
+    <div data-reveal="" style="opacity:0;transform:translateY(24px);transition:opacity .9s cubic-bezier(.16,1,.3,1) .18s,transform .9s cubic-bezier(.16,1,.3,1) .18s;margin-top:40px">
+      <a href="/app/" style="display:inline-flex;align-items:center;gap:9px;padding:18px 40px;background:var(--accent-green);color:#07130b;border-radius:13px;font-weight:700;font-size:17px" style-hover="filter:brightness(1.08)">Launch the app →</a>
+    </div>
+    <footer style="position:absolute;bottom:0;left:0;right:0;display:flex;flex-wrap:wrap;gap:16px 26px;align-items:center;justify-content:center;padding:30px clamp(20px,7vw,96px);border-top:1px solid rgba(255,255,255,.07);font-size:13px;color:var(--text-dim)">
+      <span style="color:var(--text-muted)">oignon — open-source citation graphs</span>
+      <a href="https://github.com/hballington12/oignon" style-hover="color:#fff">GitHub</a>
+      <a href="https://arxiv.org/abs/2512.22159" style-hover="color:#fff">Paper</a>
+      <a href="https://doi.org/10.5281/zenodo.17943218" style-hover="color:#fff">DOI</a>
+      <a href="/" style-hover="color:#fff">oignon.dev</a>
+      <span style="margin-left:auto;color:var(--text-faint)">Built on the open OpenAlex dataset · H. Ballington</span>
+    </footer>
+  </section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: &quot;100%&quot;, &quot;height&quot;: &quot;100%&quot; },
+  &quot;skipIntro&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Loading gate&quot; },
+  &quot;flyInSpeed&quot;: { &quot;editor&quot;: &quot;range&quot;, &quot;default&quot;: 0.5, &quot;min&quot;: 0.3, &quot;max&quot;: 3, &quot;step&quot;: 0.1, &quot;tsType&quot;: &quot;number&quot;, &quot;unit&quot;: &quot;x&quot;, &quot;section&quot;: &quot;Loading gate&quot; },
+  &quot;curveIntensity&quot;: { &quot;editor&quot;: &quot;range&quot;, &quot;default&quot;: 0.5, &quot;min&quot;: 0.05, &quot;max&quot;: 0.6, &quot;step&quot;: 0.005, &quot;tsType&quot;: &quot;number&quot;, &quot;section&quot;: &quot;Graph rendering&quot; },
+  &quot;particleBrightness&quot;: { &quot;editor&quot;: &quot;range&quot;, &quot;default&quot;: 6, &quot;min&quot;: 0.5, &quot;max&quot;: 6, &quot;step&quot;: 0.1, &quot;tsType&quot;: &quot;number&quot;, &quot;unit&quot;: &quot;x&quot;, &quot;section&quot;: &quot;Graph rendering&quot; },
+  &quot;showParticles&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Graph rendering&quot; },
+  &quot;mcDensity&quot;: { &quot;editor&quot;: &quot;range&quot;, &quot;default&quot;: 0.05, &quot;min&quot;: 0.05, &quot;max&quot;: 0.75, &quot;step&quot;: 0.05, &quot;tsType&quot;: &quot;number&quot;, &quot;section&quot;: &quot;Hero streamlines&quot; },
+  &quot;mcHold&quot;: { &quot;editor&quot;: &quot;range&quot;, &quot;default&quot;: 1.5, &quot;min&quot;: 0.5, &quot;max&quot;: 6, &quot;step&quot;: 0.5, &quot;tsType&quot;: &quot;number&quot;, &quot;unit&quot;: &quot;s&quot;, &quot;section&quot;: &quot;Hero streamlines&quot; },
+  &quot;sceneEase&quot;: { &quot;editor&quot;: &quot;range&quot;, &quot;default&quot;: 5, &quot;min&quot;: 2, &quot;max&quot;: 12, &quot;step&quot;: 0.5, &quot;tsType&quot;: &quot;number&quot;, &quot;section&quot;: &quot;Scroll sync&quot; },
+  &quot;graphScrollSpeed&quot;: { &quot;editor&quot;: &quot;range&quot;, &quot;default&quot;: 1, &quot;min&quot;: 0, &quot;max&quot;: 3, &quot;step&quot;: 0.1, &quot;tsType&quot;: &quot;number&quot;, &quot;unit&quot;: &quot;x&quot;, &quot;section&quot;: &quot;Scroll sync&quot; },
+  &quot;colormapSweep&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Scroll sync&quot; },
+  &quot;selectFocus&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Scroll sync&quot; },
+  &quot;heroLength&quot;: { &quot;editor&quot;: &quot;range&quot;, &quot;default&quot;: 130, &quot;min&quot;: 110, &quot;max&quot;: 300, &quot;step&quot;: 10, &quot;tsType&quot;: &quot;number&quot;, &quot;unit&quot;: &quot;vh&quot;, &quot;section&quot;: &quot;Scroll sync&quot; }
+}">
+class Component extends DCLogic {
+  renderVals() {
+    var self = this;
+    var raw = (typeof window !== 'undefined' && window.OIGNON_CALLOUTS) || [];
+    var callouts = raw.map(function (c) {
+      var au = c.authors || [];
+      var authorsStr = au.slice(0, 3).join(', ') + (au.length > 3 ? ', et al.' : '');
+      var title = c.title.length > 96 ? c.title.slice(0, 94).trim() + '…' : c.title;
+      var isSrc = c.badge === 'SOURCE';
+      return {
+        isSource: isSrc, isArticle: !isSrc, year: String(c.year), title: title,
+        authorsStr: authorsStr, venue: c.venue, field: c.field,
+        citesStr: Number(c.cites).toLocaleString()
+      };
+    });
+    return {
+      callouts: callouts,
+      mountRef: function (el) { self.mountEl = el; },
+      rootRef: function (el) { self.rootEl = el; },
+      scrimRef: function (el) { self.scrimEl = el; },
+      heroRef: function (el) { self.heroEl = el; },
+      calloutRef: function (el) { self.calloutEl = el; },
+      leaderRef: function (el) { self.leaderEl = el; },
+      leaderLineRef: function (el) { self.leaderLine = el; },
+      leaderDotRef: function (el) { self.leaderDot = el; },
+      navRef: function (el) { self.navEl = el; },
+      enterBtnRef: function (el) { self.enterBtnEl = el; },
+      onEnter: function () { self._onEnter(); },
+      onIntroSkip: function () { self._onIntroSkip(); },
+      asmRef: function (el) { self.asmEl = el; },
+      doiTextRef: function (el) { self.doiTextEl = el; },
+      caretRef: function (el) { self.caretEl = el; },
+      buildRowRef: function (el) { self.buildRowEl = el; },
+      buildLabelRef: function (el) { self.buildLabelEl = el; },
+      buildPctRef: function (el) { self.buildPctEl = el; },
+      buildBarRef: function (el) { self.buildBarEl = el; },
+      gateCueRef: function (el) { self.gateCueEl = el; },
+      userLayerRef: function (el) { self.userLayerEl = el; },
+      uLineRef: function (el) { self.uLineEl = el; },
+      uDotRef: function (el) { self.uDotEl = el; },
+      uCardRef: function (el) { self.uCardEl = el; },
+      uBadgeRef: function (el) { self.uBadgeEl = el; },
+      uYearRef: function (el) { self.uYearEl = el; },
+      uTitleRef: function (el) { self.uTitleEl = el; },
+      uAuthorsRef: function (el) { self.uAuthorsEl = el; },
+      uVenueRef: function (el) { self.uVenueEl = el; },
+      uFieldRef: function (el) { self.uFieldEl = el; },
+      uCitesRef: function (el) { self.uCitesEl = el; },
+      panelWrapRef: function (el) { self.panelWrapEl = el; },
+      panelTypeRef: function (el) { self.panelTypeEl = el; },
+      panelTitleRef: function (el) { self.panelTitleEl = el; },
+      panelSourceRef: function (el) { self.panelSourceEl = el; },
+      panelAuthorsRef: function (el) { self.panelAuthorsEl = el; },
+      panelYearRef: function (el) { self.panelYearEl = el; },
+      panelGlobalRef: function (el) { self.panelGlobalEl = el; },
+      panelInGraphRef: function (el) { self.panelInGraphEl = el; },
+      panelRefsRef: function (el) { self.panelRefsEl = el; },
+      panelAbstractRef: function (el) { self.panelAbstractEl = el; },
+      panelTopicRef: function (el) { self.panelTopicEl = el; },
+      panelFieldRef: function (el) { self.panelFieldEl = el; },
+      panelDomainRef: function (el) { self.panelDomainEl = el; }
+    };
+  }
+
+  componentDidMount() {
+    var self = this, tries = 0;
+    function ready() { return window.OignonRuntime && self.mountEl; }
+    if (ready()) { this._init(); return; }
+    var onReady = function () { if (!self._dead && self.mountEl) self._init(); };
+    window.addEventListener('oignon-runtime-ready', onReady, { once: true });
+    this._onRuntimeReady = onReady;
+    (function poll() {
+      if (self._dead || self._started) return;
+      if (ready()) { self._init(); return; }
+      if (tries++ > 400) return;
+      setTimeout(poll, 25);
+    })();
+  }
+
+  componentDidUpdate() {
+    if (this.engine) this.engine.setOptions();
+  }
+
+  _init() {
+    if (this._started) return;
+    this._started = true;
+    var self = this;
+    var RT = window.OignonRuntime;
+    var graph = new RT.OignonGraph();
+    this.graph = graph;
+    graph.init(this.mountEl).then(function () {
+      if (self._dead) { graph.destroy(); return; }
+      var grid = RT.buildGrid(window.OIGNON_GRAPH_DATA);
+      self.grid1 = grid;
+      self.grid2 = window.OIGNON_GRAPH_DATA_2 ? RT.buildGrid(window.OIGNON_GRAPH_DATA_2) : grid;
+      self.activeGridId = 1;
+      graph.render(grid);
+      self.grid = grid;
+
+      // per-curve Monte-Carlo streamline phases (hero shimmer)
+      var nc = graph.batchedCurves ? graph.batchedCurves.curveCount : 0;
+      self._mcPhase = new Float32Array(nc);
+      self._mcSpeed = new Float32Array(nc);
+      for (var i = 0; i < nc; i++) { self._mcPhase[i] = Math.random(); self._mcSpeed[i] = 0.6 + Math.random() * 0.9; }
+
+      self.heroT = 1; self.heroTTarget = 1; self.heroScroll = 0.5;
+      self.cur = null; self._t0 = performance.now();
+      self._applyOptions();
+      // the loading gate owns the entrance — no auto pop-in here
+
+      // drive framing + streamlines on the Pixi ticker
+      graph.app.ticker.add(function (ticker) { try { self._tick(ticker.deltaMS / 1000); } catch (e) { if (!self._tickErr) { self._tickErr = e.message + ' | ' + (e.stack || '').split('\n')[1]; console.error('tick error', e); } } });
+
+      // adapter the callouts/scroll expect
+      self.engine = {
+        getNodeScreen: function (id) { return self._nodeScreen(id); },
+        setHeroT: function (v) { self.heroTTarget = v; },
+        setHeroScroll: function (v) { self.heroScroll = v; },
+        setOptions: function () { self._applyOptions(); },
+        resize: function () {}
+      };
+
+      self._bindScroll();
+      self._fillSelectPanel(self._selectDemoId);
+      self._panelShown = self._selectDemoId;
+      self._startCalloutLoop();
+      self._observeReveals();
+      self._bindPointer();
+      self._startIntro();
+      self._tick(0.016);            // paint one frame immediately
+      graph.app.render();
+    }).catch(function (e) { console.error('oignon runtime init failed', e); });
+  }
+
+  _applyOptions() {
+    var o = this.props;
+    var bright = o.particleBrightness != null ? o.particleBrightness : 2.4;
+    var show = o.showParticles !== false;
+    this._mcHold = o.mcHold != null ? o.mcHold : 2.5;
+    this._mcDensity = o.mcDensity != null ? o.mcDensity : 0.30;
+    this._graphScroll = o.graphScrollSpeed != null ? o.graphScrollSpeed : 1;
+    this._flyInSpeed = o.flyInSpeed != null ? o.flyInSpeed : 1;
+    this._colormapSweep = o.colormapSweep !== false;
+    this._selectFocus = o.selectFocus !== false;
+    this._sceneEase = o.sceneEase != null ? o.sceneEase : 5;
+    var heroLen = o.heroLength != null ? o.heroLength : 130;
+    if (window.innerWidth <= window.innerHeight) heroLen *= 0.74;   // portrait: less scroll to traverse
+    if (this.heroEl) this.heroEl.style.height = heroLen + 'vh';
+    if (this.graph) {
+      this.graph.particleSystems.forEach(function (ps) { ps.setAlphaScale(bright); ps.container.visible = show; });
+      this.graph.setCurveAlpha(o.curveIntensity != null ? o.curveIntensity : 0.5);
+    }
+  }
+
+  // screen (CSS px) position + radius of a node under the current world transform
+  _nodeScreen(id) {
+    if (!this.graph || !this.grid) return null;
+    var n = this.grid.nodes.get(id); if (!n) return null;
+    var w = this.graph.world;
+    return { x: w.x + n.x * w.scale.x, y: w.y + n.y * w.scale.y, r: n.radius * w.scale.x };
+  }
+
+  // fit the graph into a normalized screen rect (contained)
+  _frame(rect, pad) {
+    var g = this.graph, W = g.app.screen.width, H = g.app.screen.height, gr = this.grid;
+    var rx0 = rect[0] * W, ry0 = rect[1] * H, rx1 = rect[2] * W, ry1 = rect[3] * H;
+    var S = Math.min((rx1 - rx0) / gr.canvasWidth, (ry1 - ry0) / gr.canvasHeight) * pad;
+    return { S: S, x: (rx0 + rx1) / 2 - (gr.canvasWidth / 2) * S, y: (ry0 + ry1) / 2 - (gr.canvasHeight / 2) * S };
+  }
+
+  _tick(dt) {
+    var g = this.graph; if (!g || !g.app || !this.grid) return;
+    dt = Math.min(0.05, dt || 0.016);
+    var W = g.app.screen.width, H = g.app.screen.height, landscape = W > H;
+    this._landscape = landscape;
+    var st = this.state || { scene: 'intro', scenePos: 0 };
+    var now = (performance.now() - this._t0) / 1000;
+    var lerp = function (a, b, t) { return a + (b - a) * t; };
+    var clamp01 = function (x) { return x < 0 ? 0 : x > 1 ? 1 : x; };
+    var ss = function (a, b, x) { var t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+
+    // ----- INTRO: the loading-gate fly-in owns framing -----
+    if (st.scene === 'intro') {
+      // Pull the target rect/pad straight from scene 0 (hero) rather than a
+      // separate literal — the fly-in then lands EXACTLY where flow picks up,
+      // with no scale/position pop at handoff.
+      var specs0 = landscape ? this._sceneL : this._sceneP;
+      var s0 = specs0 ? specs0[0] : null;
+      var hr = s0 ? s0.rect : (landscape ? [0.40, 0.10, 1.06, 1.06] : [0.20, 0.26, 1.20, 1.04]);
+      var f0 = this._frame(hr, s0 ? s0.pad : 0.96);
+      if (!this.cur) this.cur = { S: f0.S, x: f0.x, y: f0.y };
+      var k0 = Math.min(1, dt * 6);
+      this.cur.S += (f0.S - this.cur.S) * k0; this.cur.x += (f0.x - this.cur.x) * k0; this.cur.y += (f0.y - this.cur.y) * k0;
+      var w0 = g.world; w0.scale.set(this.cur.S); w0.x = this.cur.x; w0.y = this.cur.y;
+      g.setAssemble(this._introP || 0);
+      // keep the intro veil side-only too, so the graph is bright from the very
+      // first frame and there's no jump when the flow scenes take over.
+      if (this.scrimEl) { var lDi = landscape ? 0.82 : 0; this.scrimEl.style.background = 'linear-gradient(90deg, rgba(4,5,12,' + lDi.toFixed(3) + ') 0%, rgba(4,5,12,' + (lDi * 0.5).toFixed(3) + ') 30%, rgba(4,5,12,0) 56%)'; }
+      // pre-warm node + particle tints to the exact frac flow will start at —
+      // otherwise the very first flow tick applies a big tint jump in one frame.
+      if (this._colormapSweep !== false) this._setColormapFrac(this._cmPhase || 0);
+      this._runStreamlines(dt, now, ss(0.72, 1, this._introP || 0));
+      return;
+    }
+
+    // ----- FLOW: one continuous camera interpolated across the section scenes.
+    // The graph never disperses; it reframes, dims, and recolours per section,
+    // so every section keeps a live visual and nothing whips off-screen. -----
+    var specs = landscape ? this._sceneL : this._sceneP;
+    if (!specs) return;
+    var pos = Math.max(0, Math.min(specs.length - 1, st.scenePos || 0));
+    var a = Math.floor(pos), b = Math.min(specs.length - 1, a + 1), f = pos - a;
+    var fe = this._pop(f);   // holds at each scene, then pops through the transition
+    var sa = specs[a], sb = specs[b];
+    var rect = [0, 1, 2, 3].map(function (i) { return lerp(sa.rect[i], sb.rect[i], fe); });
+    var pad = lerp(sa.pad, sb.pad, fe);
+    var dim = lerp(sa.dim, sb.dim, fe);
+    var curveA = lerp(sa.curve, sb.curve, fe);
+    var sx = lerp(sa.sx, sb.sx, fe), sp = lerp(sa.sp, sb.sp, fe), sf = lerp(sa.sf, sb.sf, fe);
+    this._sceneDim = dim;
+    // Dark ONLY on the text side, fully transparent over the graph so it stays
+    // crisp. leftDark/rightDark cross through 0 at sx=0.5, so the side flip is
+    // continuous (centred scenes get no veil — the graph self-dims there).
+    if (this.scrimEl) {
+      var lD = sp * clamp01((0.5 - sx) / 0.34), rD = sp * clamp01((sx - 0.5) / 0.34);
+      this.scrimEl.style.background =
+        'linear-gradient(90deg, rgba(4,5,12,' + lD.toFixed(3) + ') 0%, rgba(4,5,12,' + (lD * 0.5).toFixed(3) + ') 30%, rgba(4,5,12,0) 56%),' +
+        'linear-gradient(270deg, rgba(4,5,12,' + rD.toFixed(3) + ') 0%, rgba(4,5,12,' + (rD * 0.5).toFixed(3) + ') 30%, rgba(4,5,12,0) 56%)';
+    }
+
+    var fr = this._frame(rect, pad);
+    var tx = fr.x, ty = fr.y, tS = fr.S;
+    var driftK = this._introDoneT ? clamp01((performance.now() - this._introDoneT - 2500) / 1500) : 1;
+    tx += Math.sin(now * 0.25) * 6 * driftK; ty += Math.cos(now * 0.19) * 6 * driftK;
+    ty += Math.sin(fe * Math.PI) * H * 0.06 * (this._graphScroll || 0);   // zero at rest, peaks mid-swing
+    if (!this.cur) this.cur = { S: tS, x: tx, y: ty };
+    var k = Math.min(1, dt * (this._sceneEase || 5));
+    this.cur.S += (tS - this.cur.S) * k; this.cur.x += (tx - this.cur.x) * k; this.cur.y += (ty - this.cur.y) * k;
+    var w = g.world; w.scale.set(this.cur.S); w.x = this.cur.x; w.y = this.cur.y;
+
+    var presence = 1 - dim;                       // container-level dim behind text-heavy sections
+    g.nodesContainer.alpha = presence;
+    if (g.focusLayer) g.focusLayer.alpha = presence;
+    if (g.particleLayer) g.particleLayer.alpha = lerp(1, 0.45, dim);
+    g.curvesContainer.alpha = 1;
+    g.setCurveAlpha((this.props.curveIntensity != null ? this.props.curveIntensity : 0.5) * curveA);
+
+    // colour sweep: while the "whole field" section is on screen the graph
+    // drifts slowly through the scientific colormaps on a TIMER (not the
+    // scroll). If the user scrolls away mid-blend, the CURRENT transition
+    // keeps running (ignoring scroll) until it reaches a clean colormap, then
+    // holds there — a fade never gets cut off half-way.
+    if (this._colormapSweep !== false) {
+      var inField = pos > 2.55 && pos < 3.6;
+      var wasInField = this._cmInField;
+      this._cmInField = inField;
+      if (inField) {
+        this._cmPhase = (this._cmPhase || 0) + dt * 0.22;
+        this._cmFinishTarget = null;
+      } else {
+        if (wasInField) {
+          var cur = this._cmPhase || 0, frac0 = cur - Math.floor(cur);
+          this._cmFinishTarget = frac0 > 0.002 ? Math.ceil(cur) : null;
+        }
+        if (this._cmFinishTarget != null) {
+          this._cmPhase = Math.min(this._cmFinishTarget, (this._cmPhase || 0) + dt * 0.22);
+          if (this._cmPhase >= this._cmFinishTarget - 1e-6) { this._cmPhase = this._cmFinishTarget; this._cmFinishTarget = null; }
+        }
       }
-      * {
-        box-sizing: border-box;
-        margin: 0;
+      this._setColormapFrac((this._cmPhase || 0) % 8.999);
+    }
+
+    this._runStreamlines(dt, now, 1);
+  }
+
+  // Steep logistic curve, normalized so _pop(0)=0 and _pop(1)=1: holds near
+  // each scene's rest state, then pops through the middle of the transition —
+  // used instead of a linear blend so the camera doesn't scale continuously
+  // across the whole scroll range between scenes.
+  _pop(f) {
+    var k = 14;
+    var s = function (x) { return 1 / (1 + Math.exp(-k * (x - 0.5))); };
+    var s0 = s(0), s1 = s(1);
+    return (s(f) - s0) / (s1 - s0);
+  }
+
+  // Monte-Carlo streamlines + hover/auto selection (SelectionManager port): the
+  // active node's curves draw in easeInOutCubic while the rest dim; otherwise
+  // curves shimmer on a background cycle. gate scales the whole pass (intro).
+  _runStreamlines(dt, now, gate) {
+    var g = this.graph, bc = g.batchedCurves;
+    if (!bc || !this._curvesReleased()) return;
+    var nowMs = performance.now();
+    var selT = this._selT || 0;
+    selT += ((this.hoverId ? 1 : 0) - selT) * Math.min(1, dt * 6);
+    if (selT < 0.005) selT = 0;
+    this._selT = selT;
+    g.setSelect(selT);
+    var rise = 3.0, hold = this._mcHold, fall = 1.2, on = rise + hold + fall;
+    var cycle = on / Math.max(0.05, this._mcDensity);
+    var eio = function (t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
+    var selDraw = this.hoverId ? eio(Math.min(1, (nowMs - (this._selStart || nowMs)) / 900)) : (this._selDrawLast || 0);
+    if (this.hoverId) this._selDrawLast = selDraw;
+    var maps = g.curveNodeMappings || [], nodeC = g.nodeContainers, nc = bc.curveCount;
+    for (var i = 0; i < nc; i++) {
+      var lt = ((now * this._mcSpeed[i] + this._mcPhase[i] * cycle) % cycle);
+      var mc, fade;
+      if (lt < rise) { mc = eio(lt / rise); fade = 1; }
+      else if (lt < rise + hold) { mc = 1; fade = 1; }
+      else if (lt < on) { mc = 1; fade = 1 - eio((lt - rise - hold) / fall); }
+      else { mc = 0; fade = 0; }
+      mc *= gate; fade *= gate;
+      var m = maps[i];
+      if (m) { var scn = nodeC.get(m.sourceNodeId); if (scn) fade *= scn.alpha; }
+      var isSel = this._selCurves && this._selCurves[i];
+      bc.setProgress(i, isSel ? mc + (selDraw - mc) * selT : mc);
+      bc.setFade(i, isSel ? fade + (1 - fade) * selT : fade);
+      bc.setSel(i, isSel ? 1 : 0);
+    }
+    bc.updateProgress();
+  }
+
+  // Smoothly blend the colormap: the filter takes a fractional index for a
+  // continuous curve/background morph; node tints + particles retint on each
+  // integer step via the runtime's own setColormap.
+  // writes into a reused scratch array (no per-call allocation)
+  _cmColor(stops, t, out) {
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+    var lo = stops[0], hi = stops[stops.length - 1];
+    for (var i = 0; i < stops.length - 1; i++) { if (t >= stops[i].t && t <= stops[i + 1].t) { lo = stops[i]; hi = stops[i + 1]; break; } }
+    var r = hi.t - lo.t, lt = r > 0 ? (t - lo.t) / r : 0;
+    out[0] = (lo.r + lt * (hi.r - lo.r)) * 255; out[1] = (lo.g + lt * (hi.g - lo.g)) * 255; out[2] = (lo.b + lt * (hi.b - lo.b)) * 255;
+    return out;
+  }
+  _mix(a, b, t) { return (Math.round(a[0] + (b[0] - a[0]) * t) << 16) | (Math.round(a[1] + (b[1] - a[1]) * t) << 8) | Math.round(a[2] + (b[2] - a[2]) * t); }
+
+  // Build once: flat arrays of {tint target, sample point} so the per-frame
+  // blend never touches the Map/grid lookups again.
+  _buildCmCache() {
+    var g = this.graph, nc = [];
+    for (var it = g.nodeContainers.entries(), e = it.next(); !e.done; e = it.next()) {
+      var n = g.grid.nodes.get(e.value[0]); if (!n) continue;
+      nc.push({ c: e.value[1].children[1], t: 0.5 + (n.normalizedCitations || 0) * 0.5 });
+    }
+    this._cmNodeCache = nc;
+    var pc = [];
+    for (var pi = 0; pi < g.particleSystems.length; pi++) {
+      var arr = g.particleSystems[pi].particles;
+      for (var pk = 0; pk < arr.length; pk++) { var pt = arr[pk]; if (pt._cmS == null) pt._cmS = 0.25 + Math.random() * 0.75; pc.push(pt); }
+    }
+    this._cmParticleCache = pc;
+  }
+
+  // Continuous colormap blend: the shader filter already blends the curves for
+  // a fractional index; this also blends node tints, background particle
+  // tints, and the canvas background between the two adjacent maps — but only
+  // redoes that (heavier) pass when the fraction actually moved, so idle
+  // sections (holding at an integer index) cost nothing per frame.
+  _setColormapFrac(frac) {
+    var g = this.graph, RT = window.OignonRuntime; if (!g || !g.colorMapFilter || !RT) return;
+    g.colorMapFilter.colormap = frac;
+    if (this._cmLastFrac != null && Math.abs(frac - this._cmLastFrac) < 0.0015) return;
+    this._cmLastFrac = frac;
+    if (!this._cmNodeCache) this._buildCmCache();
+    var CM = RT.COLORMAPS, N = CM.length;
+    var base = Math.floor(frac), t = frac - base;
+    var lo = ((base % N) + N) % N, hi = (lo + 1) % N;
+    var loS = CM[lo].stops, hiS = CM[hi].stops;
+    var a = this._cmA || (this._cmA = [0, 0, 0]), b = this._cmB || (this._cmB = [0, 0, 0]);
+    var nc = this._cmNodeCache;
+    for (var i = 0; i < nc.length; i++) { var it2 = nc[i]; it2.c.tint = this._mix(this._cmColor(loS, it2.t, a), this._cmColor(hiS, it2.t, b), t); }
+    g.app.renderer.background.color = this._mix(this._cmColor(loS, 0.05, a), this._cmColor(hiS, 0.05, b), t);
+    var pc = this._cmParticleCache;
+    for (var pk = 0; pk < pc.length; pk++) { var pt = pc[pk]; pt.sprite.tint = this._mix(this._cmColor(loS, pt._cmS, a), this._cmColor(hiS, pt._cmS, b), t); }
+    if (lo !== this._cmIdx) { this._cmIdx = lo; g.grid.colormapIndex = lo; }
+  }
+
+  _curvesReleased() {
+    // let the initial draw-in animation own the curves until it finishes
+    return this.graph && this.graph._curveAnim % 2 === 0 ? true : (performance.now() - this._t0 > 3200);
+  }
+
+  _bindScroll() {
+    var self = this;
+    var scroller = document.scrollingElement || document.documentElement;
+    this.activeCallout = -1; this.heroActive = false;
+    this.state = { scene: 'intro', scenePos: 0 };
+    this._selectDemoId = 'W1681813588';   // the paper lit in the "select" scene
+
+    // Per-scene graph state, indexed to the [data-scene] sections in order:
+    // 0 hero · 1 algorithm · 2 select · 3 field · 4 features · 5 cta.
+    // rect = normalized screen box the whole graph is fit into; dim = how far
+    // the graph recedes behind text; curve = connector-alpha multiplier.
+    // sx = horizontal centre of the dark veil (0 left … 1 right, on the text
+    // side); sp = peak darkness there; sf = floor darkness elsewhere.
+    this._sceneL = [
+      { rect: [0.40, 0.10, 1.06, 1.06], pad: 0.96, dim: 0.00, curve: 1.00, sx: 0.12, sp: 0.82, sf: 0.30 },
+      { rect: [0.44, 0.06, 1.06, 1.02], pad: 0.90, dim: 0.06, curve: 1.00, sx: 0.15, sp: 0.84, sf: 0.32 },
+      { rect: [-0.06, 0.06, 0.56, 1.02], pad: 0.90, dim: 0.00, curve: 1.00, sx: 0.85, sp: 0.84, sf: 0.32 },
+      { rect: [0.40, 0.02, 1.06, 1.02], pad: 0.98, dim: 0.06, curve: 1.00, sx: 0.22, sp: 0.72, sf: 0.30 },
+      { rect: [0.00, 0.00, 1.00, 1.00], pad: 1.06, dim: 0.55, curve: 0.50, sx: 0.50, sp: 0.80, sf: 0.60 },
+      { rect: [0.05, 0.00, 0.95, 1.00], pad: 1.06, dim: 0.46, curve: 0.55, sx: 0.50, sp: 0.78, sf: 0.56 }
+    ];
+    // Portrait: graph pushed off to alternating sides (rect shifted past the
+    // edge) rather than centred, and everything runs a touch dimmer overall.
+    this._sceneP = [
+      { rect: [0.20, 0.26, 1.20, 1.04], pad: 1.00, dim: 0.08, curve: 1.00, sx: 0.50, sp: 0.62, sf: 0.34 },
+      { rect: [0.20, 0.30, 1.20, 1.02], pad: 1.00, dim: 0.42, curve: 0.70, sx: 0.50, sp: 0.82, sf: 0.54 },
+      { rect: [-0.20, 0.28, 0.80, 1.02], pad: 1.00, dim: 0.26, curve: 1.00, sx: 0.50, sp: 0.80, sf: 0.50 },
+      { rect: [0.20, 0.18, 1.20, 1.02], pad: 1.06, dim: 0.38, curve: 0.80, sx: 0.50, sp: 0.74, sf: 0.46 },
+      { rect: [0.00, 0.00, 1.00, 1.00], pad: 1.12, dim: 0.65, curve: 0.42, sx: 0.50, sp: 0.84, sf: 0.64 },
+      { rect: [0.00, 0.00, 1.00, 1.00], pad: 1.12, dim: 0.55, curve: 0.46, sx: 0.50, sp: 0.82, sf: 0.60 }
+    ];
+
+    function onScroll() {
+      var vh = scroller.clientHeight, top = scroller.scrollTop;
+      if (!self.sceneEls || !self.sceneEls.length) self.sceneEls = self.rootEl ? Array.prototype.slice.call(self.rootEl.querySelectorAll('[data-scene]')) : [];
+      var els = self.sceneEls, n = els.length, pos = 0;
+      if (n > 1) {
+        var anchors = els.map(function (el) { return el.offsetTop + el.offsetHeight / 2 - vh / 2; });
+        if (top <= anchors[0]) pos = 0;
+        else if (top >= anchors[n - 1]) pos = n - 1;
+        else { for (var i = 0; i < n - 1; i++) { if (top >= anchors[i] && top < anchors[i + 1]) { pos = i + (top - anchors[i]) / ((anchors[i + 1] - anchors[i]) || 1); break; } } }
       }
-      body {
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-        background: #0f0f17;
-        color: #e8e8f0;
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 24px;
-        line-height: 1.5;
+      self.state = { scene: self._introActive ? 'intro' : 'flow', scenePos: pos };
+      if (self.calloutEl) self.calloutEl.style.opacity = '0';
+      self._applyResponsiveHeights();
+    }
+    this._onScroll = onScroll;
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    onScroll();
+  }
+
+  // Portrait needs far less scroll distance to traverse the same sections —
+  // compress each section's min-height (the hero's own length is handled by
+  // heroLength/_applyOptions).
+  _applyResponsiveHeights() {
+    var portrait = window.innerWidth <= window.innerHeight;
+    if (portrait === this._portraitApplied) return;
+    this._portraitApplied = portrait;
+    var self = this;
+    (this.sceneEls || []).forEach(function (el) {
+      if (el === self.heroEl) return;
+      el.style.minHeight = portrait ? '66vh' : '100vh';
+    });
+    // the hero's own scroll length also depends on orientation — recompute it
+    // here too (not just at mount) so rotating/resizing keeps it in sync.
+    var o = this.props || {};
+    var heroLen = o.heroLength != null ? o.heroLength : 130;
+    if (portrait) heroLen *= 0.74;
+    if (this.heroEl) this.heroEl.style.height = heroLen + 'vh';
+  }
+
+  // -------- loading gate: type DOI -> build -> "Enter the graph" --------
+  _startIntro() {
+    var self = this;
+    this._introActive = true; this._introP = 0; this._introReady = false; this._introEntered = false;
+    var scroller = document.scrollingElement || document.documentElement;
+    scroller.scrollTop = 0;
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    // hold hero reveals for the post-Enter payoff
+    if (this.state) this.state = { scene: 'intro', heroLocal: 0 };
+    // hide any callout the initial pre-intro onScroll() may have shown
+    this.heroActive = false; this.activeCallout = -1;
+    if (this.calloutEl) this.calloutEl.style.opacity = '0';
+    this._showCallout(-1);
+    if (this._onScroll) this._onScroll();
+    if (this.props.skipIntro) { this._finishIntro(true); return; }
+    var doi = window.OIGNON_DEMO_DOI || '10.1016/j.jqsrt.2007.01.034';
+    var TYPE = 1200, GAP = 280, BUILD = 1700;
+    var buildStart = TYPE + GAP, buildEnd = buildStart + BUILD;
+    var clamp01 = function (x) { return x < 0 ? 0 : x > 1 ? 1 : x; };
+    this._introT0 = performance.now();
+    function frame() {
+      if (self._dead || self._introEntered) return;
+      var e = performance.now() - self._introT0;
+      if (self._introSkip && e < buildEnd) { self._introT0 -= (buildEnd - e); e = buildEnd; self._introSkip = false; }
+      var chars = Math.round(clamp01(e / TYPE) * doi.length);
+      if (self.doiTextEl) self.doiTextEl.textContent = doi.slice(0, chars);
+      if (self.caretEl) self.caretEl.style.opacity = e < buildEnd ? (Math.floor(e / 450) % 2 === 0 ? '1' : '0.2') : '0';
+      if (e > buildStart) {
+        var bp = clamp01((e - buildStart) / BUILD);
+        if (self.buildRowEl) self.buildRowEl.style.opacity = '1';
+        if (self.buildBarEl) self.buildBarEl.style.width = (bp * 100).toFixed(0) + '%';
+        if (self.buildPctEl) self.buildPctEl.textContent = (bp * 100).toFixed(0) + '%';
+        var stages = ['Fetching source paper…', 'Building roots…', 'Expanding roots…', 'Fetching citing papers…', 'Building branches…', 'Ranking branches…', 'Laying out by year…'];
+        if (self.buildLabelEl) self.buildLabelEl.textContent = bp >= 1 ? 'Graph ready' : stages[Math.min(stages.length - 1, Math.floor(bp * stages.length))];
       }
-      main {
-        max-width: 620px;
-        text-align: center;
+      if (e >= buildEnd) {
+        self._introReady = true;
+        if (self.gateCueEl) { self.gateCueEl.style.opacity = '1'; self.gateCueEl.style.transform = 'translateY(0)'; }
+        if (self.enterBtnEl) self.enterBtnEl.focus({ preventScroll: true });
+        return;   // gate holds until Enter
       }
-      h1 {
-        font-size: clamp(2.2rem, 6vw, 3.4rem);
-        letter-spacing: -0.02em;
+      self._introRaf = requestAnimationFrame(frame);
+    }
+    this._introRaf = requestAnimationFrame(frame);
+    // Enter key releases the gate too
+    this._onKey = function (ev) { if (ev.key === 'Enter') self._onEnter(); };
+    window.addEventListener('keydown', this._onKey);
+  }
+
+  _onIntroSkip() {
+    if (this._introActive && !this._introReady) this._introSkip = true;
+  }
+
+  _onEnter() {
+    var self = this;
+    if (!this._introReady || this._introEntered) return;
+    this._introEntered = true;
+    this._finishIntro(false);
+  }
+
+  // release the gate: fade the overlay, unlock scroll, reveal brand + hero,
+  // and fly the graph in. instant=true skips all theatrics (skipIntro tweak).
+  _finishIntro(instant) {
+    var self = this;
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+    if (this.asmEl) { this.asmEl.style.opacity = '0'; this.asmEl.style.pointerEvents = 'none'; }
+    if (this.navEl) this.navEl.style.opacity = '1';
+    if (this._onKey) { window.removeEventListener('keydown', this._onKey); this._onKey = null; }
+    if (instant) {
+      this._introP = 1; this._introActive = false; this._introEntered = true;
+      this._introDoneT = 0;
+      if (this.graph) { this.graph._restoreNodes(); this.graph.resetNodePositions(); }
+      this._revealHero();
+      if (this._onScroll) this._onScroll();
+      return;
+    }
+    setTimeout(function () { self._revealHero(); }, 350);
+    var FLY = 2600 / (this._flyInSpeed || 1);
+    var t0 = performance.now();
+    function fly() {
+      if (self._dead) return;
+      var p = Math.min(1, (performance.now() - t0) / FLY);
+      self._introP = p;
+      if (p < 1) { self._introRaf = requestAnimationFrame(fly); return; }
+      self._introDoneT = performance.now();
+      self._introActive = false;
+      if (self.graph) self.graph.resetNodePositions();   // one-time settle; flow never re-touches x/y per-frame
+      if (self._onScroll) self._onScroll();
+    }
+    this._introRaf = requestAnimationFrame(fly);
+  }
+
+  _revealHero() {
+    var self = this;
+    (this._heldReveals || []).forEach(function (el) { self._reveal(el); });
+    this._heldReveals = [];
+  }
+
+  _observeReveals() {
+    var self = this;
+    var els = this.rootEl ? this.rootEl.querySelectorAll('[data-reveal]') : [];
+    var vh = window.innerHeight || 800;
+    // hero reveals are HELD during the loading gate and released on Enter
+    this._heldReveals = [];
+    // reveal anything already in view immediately (correct first paint even
+    // before the first animation frame), observe the rest
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (ents) {
+        ents.forEach(function (e) { if (e.isIntersecting) { self._reveal(e.target); io.unobserve(e.target); } });
+      }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+      els.forEach(function (el) {
+        if (self._introActive !== false && self.heroEl && self.heroEl.contains(el)) { self._heldReveals.push(el); return; }
+        if (el.getBoundingClientRect().top < vh * 0.92) self._reveal(el);
+        else io.observe(el);
+      });
+      this._io = io;
+    } else {
+      els.forEach(function (el) { self._reveal(el); });
+    }
+  }
+
+  _reveal(el) {
+    el.style.opacity = '1';
+    el.style.transform = 'none';
+    el.querySelectorAll('[data-li]').forEach(function (li) { li.style.transform = 'translateY(0)'; });
+  }
+
+  _showCallout(idx) {
+    if (!this.calloutEl) return;
+    var cards = this.calloutEl.querySelectorAll('[data-callout-index]');
+    cards.forEach(function (c, i) { c.style.opacity = (i === idx) ? '1' : '0'; });
+    if (this.leaderEl) this.leaderEl.style.opacity = (idx >= 0) ? '1' : '0';
+  }
+
+  _bindPointer() {
+    var self = this;
+    this._metaCache = {};
+    var raw = (window.OIGNON_CALLOUTS || []);
+    this._calloutById = {};
+    raw.forEach(function (c) { self._calloutById[c.id] = c; });
+    var onMove = function (ev) {
+      var t = ev.touches && ev.touches[0] ? ev.touches[0] : ev;
+      self._ptr = { x: t.clientX, y: t.clientY };
+    };
+    this._onPointer = onMove;
+    window.addEventListener('pointermove', onMove, { passive: true });
+    window.addEventListener('pointerdown', onMove, { passive: true });
+  }
+
+  // nearest visible node to a screen point, else null
+  _hitTest(px, py) {
+    if (!this.graph || !this.grid) return null;
+    var best = null, bestD = Infinity;
+    var nodes = this.grid.nodes, containers = this.graph.nodeContainers;
+    for (var it = nodes.keys(), k = it.next(); !k.done; k = it.next()) {
+      var id = k.value;
+      var c = containers.get(id); if (!c || c.alpha < 0.08) continue;
+      var s = this.engine.getNodeScreen(id); if (!s) continue;
+      var dx = s.x - px, dy = s.y - py, d = Math.hypot(dx, dy);
+      var reach = Math.max(s.r + 14, 18);
+      if (d < reach && d < bestD) { bestD = d; best = id; }
+    }
+    return best;
+  }
+
+  // swap the rendered graph dataset (1 = hero roots graph, 2 = balanced
+  // roots+branches graph used from the assembly scene onward)
+  _useGrid(which) {
+    if (this.activeGridId === which || !this.graph) return;
+    var grid = which === 1 ? this.grid1 : this.grid2;
+    this.activeGridId = which;
+    this.grid = grid;
+    this.graph.setData(grid);
+    this._applyOptions();   // re-apply curve alpha to the rebuilt mesh
+    this._selCurves = null; this.hoverId = null;
+    if (which === 1) this.graph._restoreNodes();
+    this.cur = null;   // re-seed camera smoothing for the new canvas size
+  }
+
+  _fillUserCard(id) {
+    var node = this.grid.nodes.get(id);
+    var inGraph = node ? node.citedBy.length : 0;
+    var isSrc = node && node.metadata && node.metadata.isSource;
+    if (this.uBadgeEl) {
+      this.uBadgeEl.textContent = isSrc ? 'SOURCE' : 'ARTICLE';
+      this.uBadgeEl.style.background = isSrc ? 'var(--status-source)' : 'rgba(255,255,255,.1)';
+      this.uBadgeEl.style.color = isSrc ? 'var(--on-status)' : 'var(--text-secondary)';
+    }
+    if (this.uCitesEl) this.uCitesEl.textContent = inGraph + (inGraph === 1 ? ' link' : ' links');
+    // bundled metadata (graph-meta.js) — no live fetching
+    var bm = (window.OIGNON_META || {})[id];
+    if (bm) {
+      this._renderMeta({ year: bm.y, title: bm.t, authors: bm.a, venue: bm.v, field: bm.f });
+      if (this.uCitesEl && bm.c) this.uCitesEl.textContent = Number(bm.c).toLocaleString() + ' cites';
+    } else {
+      var known = this._calloutById[id];
+      if (known) this._renderMeta(known);
+      else {
+        if (this.uYearEl) this.uYearEl.textContent = node ? node.order : '';
+        if (this.uTitleEl) this.uTitleEl.textContent = 'Untitled work';
+        if (this.uAuthorsEl) this.uAuthorsEl.textContent = '';
+        if (this.uVenueEl) this.uVenueEl.textContent = '';
+        if (this.uFieldEl) this.uFieldEl.textContent = '';
       }
-      .tag {
-        color: #a78bfa;
-        font-weight: 600;
-        margin-top: 8px;
-        font-size: 1.1rem;
+    }
+  }
+
+  // "Select a paper" full-record panel — crossfades to whichever node is
+  // currently focused in the graph (real hover, or the auto-lit default).
+  _updateSelectPanel(id) {
+    if (!id || id === this._panelShown) return;
+    var self = this;
+    if (this._panelFadeT) clearTimeout(this._panelFadeT);
+    if (this.panelWrapEl) this.panelWrapEl.style.opacity = '0';
+    this._panelFadeT = setTimeout(function () {
+      self._fillSelectPanel(id);
+      self._panelShown = id;
+      if (self.panelWrapEl) self.panelWrapEl.style.opacity = '1';
+    }, 220);
+  }
+
+  _fillSelectPanel(id) {
+    var m = (window.OIGNON_META || {})[id] || {};
+    var rawNodes = ((window.OIGNON_GRAPH_DATA || {}).nodes) || [];
+    var raw = rawNodes.find(function (n) { return n.id === id; });
+    var gnode = this.grid ? this.grid.nodes.get(id) : null;
+    var isSrc = !!(raw && raw.src) || !!(gnode && gnode.metadata && gnode.metadata.isSource);
+    var refsCount = raw ? (raw.conn || []).length : 0;
+    var inGraph = gnode ? gnode.citedBy.length : 0;
+    var au = m.a || [];
+    var physicalFields = ['Physics and Astronomy', 'Chemistry', 'Engineering', 'Energy', 'Materials Science', 'Computer Science', 'Mathematics'];
+    var domain = physicalFields.indexOf(m.f) >= 0 ? 'Physical Sciences' : (m.f ? 'Life Sciences' : '—');
+    if (this.panelTypeEl) {
+      this.panelTypeEl.textContent = isSrc ? 'SOURCE' : 'ARTICLE';
+      this.panelTypeEl.style.background = isSrc ? 'var(--status-source)' : 'rgba(255,255,255,.08)';
+      this.panelTypeEl.style.color = isSrc ? 'var(--on-status)' : 'var(--text-muted)';
+    }
+    if (this.panelTitleEl) this.panelTitleEl.textContent = m.t || 'Untitled work';
+    if (this.panelSourceEl) this.panelSourceEl.textContent = m.v || 'arXiv';
+    if (this.panelAuthorsEl) this.panelAuthorsEl.textContent = au.slice(0, 4).join(', ') + (au.length > 4 ? ', et al.' : '');
+    if (this.panelYearEl) this.panelYearEl.textContent = m.y != null ? m.y : '—';
+    if (this.panelGlobalEl) this.panelGlobalEl.textContent = m.c != null ? Number(m.c).toLocaleString() : '—';
+    if (this.panelInGraphEl) this.panelInGraphEl.textContent = inGraph;
+    if (this.panelRefsEl) this.panelRefsEl.textContent = refsCount;
+    if (this.panelAbstractEl) this.panelAbstractEl.textContent = m.ab || '';
+    if (this.panelTopicEl) this.panelTopicEl.textContent = m.tp || '—';
+    if (this.panelFieldEl) this.panelFieldEl.textContent = m.f || '—';
+    if (this.panelDomainEl) this.panelDomainEl.textContent = domain;
+  }
+
+  _renderMeta(m) {
+    if (this.uYearEl) this.uYearEl.textContent = m.year || '';
+    if (this.uTitleEl) this.uTitleEl.textContent = (m.title && m.title.length > 96) ? m.title.slice(0, 94).trim() + '…' : (m.title || '');
+    if (this.uAuthorsEl) { var a = m.authors || []; this.uAuthorsEl.textContent = a.slice(0, 3).join(', ') + (a.length > 3 ? ', et al.' : ''); }
+    if (this.uVenueEl) this.uVenueEl.textContent = m.venue || '';
+    if (this.uFieldEl) this.uFieldEl.textContent = m.field || '';
+  }
+
+  // elbow leader + card placement for a node screen pos s
+  _placeDogleg(s, card, line, dot, drawT) {
+    drawT = drawT == null ? 1 : Math.max(0, Math.min(1, drawT));
+    var vw = window.innerWidth, vh = window.innerHeight, landscape = vw > vh;
+    var cardW = 290, cardH = card.offsetHeight || 180;
+    // offset proportional to the node's distance from the viewport's vertical
+    // centre: mid-screen nodes get a card centred on them; higher nodes push
+    // the card up, lower nodes push it down (leader never re-crosses the graph)
+    var rel = Math.max(-1, Math.min(1, (s.y - vh / 2) / (vh / 2)));
+    var offset = rel * (vh * 0.30);
+    var cardTop = Math.max(80, Math.min(vh - cardH - 20, (s.y + offset) - cardH / 2));
+    var cy = cardTop + cardH / 2;
+    // side is INVERTED relative to the node's graph half: left-half nodes
+    // annotate to the RIGHT, right-half nodes annotate to the LEFT
+    var gcx = (this.grid && this.cur) ? (this.cur.x + (this.grid.canvasWidth / 2) * this.cur.S) : vw / 2;
+    var gap = Math.max(46, s.r + 26);
+    var toRight = s.x < gcx;
+    var cardLeft, anchorX;
+    if (toRight) {
+      cardLeft = Math.min(vw - cardW - 14, s.x + gap); anchorX = cardLeft - 8;
+    } else {
+      cardLeft = Math.max(14, s.x - gap - cardW); anchorX = cardLeft + cardW + 8;
+    }
+    card.style.left = cardLeft + 'px';
+    card.style.top = cardTop + 'px';
+    var midX = (s.x + anchorX) / 2;
+    if (line) {
+      line.setAttribute('points', s.x + ',' + s.y + ' ' + midX + ',' + s.y + ' ' + midX + ',' + cy + ' ' + anchorX + ',' + cy);
+      // draw the dog-leg in/out from the node outward via dash offset
+      var L = 0; try { L = line.getTotalLength(); } catch (e) { L = Math.abs(anchorX - s.x) + Math.abs(cy - s.y); }
+      line.style.strokeDasharray = L;
+      line.style.strokeDashoffset = (L * (1 - drawT)).toFixed(1);
+    }
+    if (dot) { dot.setAttribute('cx', s.x); dot.setAttribute('cy', s.y); }
+  }
+
+
+  _startCalloutLoop() {
+    var self = this;
+    function loop() {
+      if (self._dead) return;
+      self._updateHover();
+      self._positionCallout();
+      self._raf2 = requestAnimationFrame(loop);
+    }
+    self._raf2 = requestAnimationFrame(loop);
+  }
+
+  _updateHover() {
+    if (!this.engine) return;
+    // The graph is only interactive when a scene is SETTLED and not dimmed
+    // behind content — this stops the slide between scenes from dragging nodes
+    // under the cursor and flashing hover pop-ups mid-transition.
+    var pos = (this.state && this.state.scenePos) || 0;
+    var settled = Math.abs(pos - Math.round(pos)) < 0.18;
+    // Portrait/mobile: the graph is a backdrop only — no hover/selection.
+    var interactive = !!this._landscape && settled && (this._sceneDim || 0) < 0.3 && this.state && this.state.scene === 'flow';
+    var realId = (interactive && this._ptr) ? this._hitTest(this._ptr.x, this._ptr.y) : null;
+    // In the "select" scene, auto-light the demo paper when the user isn't
+    // hovering — so the section shows the real focus behaviour on its own.
+    var autoId = null;
+    if (!realId && this._selectFocus !== false && this.state && this.state.scene === 'flow'
+        && Math.abs(pos - 2) < 0.5) autoId = this._selectDemoId;
+    this._autoHover = !realId && !!autoId;
+    var id = realId || autoId;
+    if (id !== this.hoverId) {
+      this.hoverId = id;
+      this._legStart = performance.now();
+      this._legDir = id ? 1 : 0;
+      if (id) {
+        this._fillUserCard(id);
+        this._lastHoverId = id;
+        // start the selection draw-in + collect this node's curves + neighbours
+        this._selStart = performance.now();
+        this._selCurves = {};
+        this._focusIds = new Set([id]);
+        var maps = (this.graph && this.graph.curveNodeMappings) || [];
+        for (var i = 0; i < maps.length; i++) {
+          if (maps[i].sourceNodeId === id || maps[i].targetNodeId === id) {
+            this._selCurves[maps[i].curveIndex] = 1;
+            this._focusIds.add(maps[i].sourceNodeId);
+            this._focusIds.add(maps[i].targetNodeId);
+          }
+        }
       }
-      p.lead {
-        color: #b9b9c9;
-        margin-top: 20px;
-        font-size: 1.1rem;
-      }
-      .cta {
-        display: inline-block;
-        margin-top: 32px;
-        padding: 14px 30px;
-        background: #7c3aed;
-        color: #fff;
-        text-decoration: none;
-        border-radius: 12px;
-        font-weight: 700;
-        font-size: 1.05rem;
-      }
-      .cta:hover {
-        background: #6d28d9;
-      }
-      .foot {
-        margin-top: 28px;
-        font-size: 0.9rem;
-        color: #7c7c8c;
-      }
-      .foot a {
-        color: #a78bfa;
-      }
-      .note {
-        margin-top: 40px;
-        font-size: 0.8rem;
-        color: #55556a;
-      }
-    </style>
-  </head>
-  <body>
-    <main>
-      <h1>oignon</h1>
-      <div class="tag">Open-source citation graphs</div>
-      <p class="lead">
-        Explore the literature as a graph. No signup, no quota, nothing leaves your browser. Paste a
-        bibliography and see what your literature review is missing before your reviewer does.
-      </p>
-      <a class="cta" href="/app/">Launch the app →</a>
-      <p class="foot">
-        <a href="https://github.com/hballington12/oignon">GitHub</a> ·
-        <a href="https://arxiv.org/abs/2512.22159">Paper</a>
-      </p>
-      <p class="note">Placeholder landing page — replace with the real design (see landing/README.md).</p>
-    </main>
-  </body>
+      // on hover-out keep _selCurves/_focusIds so the fade eases on the same set
+      this._updateSelectPanel(id || this._selectDemoId);
+    }
+    var showCard = id && !this._autoHover;
+    if (this.userLayerEl) this.userLayerEl.style.opacity = showCard ? '1' : '0';
+    if (this.uCardEl) this.uCardEl.style.transform = showCard ? 'translateY(0) scale(1)' : 'translateY(8px) scale(.985)';
+    // node dim/focus eases SLOWLY (unrelated nodes fade out, not snap-dim)
+    if (this.graph && this.graph.setNodeFocus) {
+      // real hover fully dims the field for drama; the auto-lit default keeps
+      // the whole field clearly visible (and hoverable) with a gentle dim.
+      var dTarget = this.hoverId ? (this._autoHover ? 0.45 : 1) : 0;
+      this._dimT = (this._dimT || 0) + (dTarget - (this._dimT || 0)) * 0.055;
+      if (this._dimT < 0.01 && !this.hoverId) { this._dimT = 0; this.graph.setNodeFocus(null, 0); }
+      else this.graph.setNodeFocus(this._focusIds, this._dimT);
+    }
+  }
+
+  _positionCallout() {
+    // leader draws in / retracts over 0.8s, independent of the card fade
+    var legT = 0;
+    if (this._legStart != null) {
+      var e = Math.min(1, (performance.now() - this._legStart) / 800);
+      var eio = e < 0.5 ? 4 * e * e * e : 1 - Math.pow(-2 * e + 2, 3) / 2;
+      legT = this._legDir ? eio : 1 - eio;
+    }
+    var retracting = !this.hoverId && legT > 0.001;
+    var id = this.hoverId || (retracting ? this._lastHoverId : null);
+    if (id && this.uCardEl && this.engine) {
+      var su = this.engine.getNodeScreen(id);
+      if (su) this._placeDogleg(su, this.uCardEl, this.uLineEl, this.uDotEl, legT);
+      if (this.calloutEl) this.calloutEl.style.opacity = '0';
+      return;
+    }
+    return;
+  }
+
+  _positionCalloutLegacy() {
+    if (this.calloutEl && this.heroActive) this.calloutEl.style.opacity = '1';
+    var idx = this.activeCallout;
+    if (idx < 0 || !this.heroActive || !this.engine || !this.calloutEl) return;
+    var data = (window.OIGNON_CALLOUTS || [])[idx]; if (!data) return;
+    var s = this.engine.getNodeScreen(data.id); if (!s) return;
+    var card = this.calloutEl.querySelector('[data-callout-index="' + idx + '"]'); if (!card) return;
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var cardW = 290, cardH = card.offsetHeight || 190;
+    var frac = s.y / vh;
+    var dir = frac < 0.42 ? 1 : (frac > 0.58 ? -1 : (idx % 2 === 0 ? -1 : 1));
+    var offset = dir * Math.min(150, vh * 0.17);
+    var cardTop = Math.max(80, Math.min(vh - cardH - 22, (s.y + offset) - cardH / 2));
+    var cy = cardTop + cardH / 2;
+    // never cross into the hero text column: keep the card right of it
+    var textRight = Math.min(500, vw * 0.38) + (vw * 0.07) + 40;
+    var minLeft = Math.max(14, textRight);
+    // prefer annotating from the RIGHT of the node; fall back to the LEFT only
+    // when that still clears the text column, else pin at minLeft on the right
+    var gap = Math.max(64, s.r + 38);
+    var cardLeft, anchorX;
+    if (s.x + gap + cardW <= vw - 14) {
+      cardLeft = s.x + gap; anchorX = cardLeft - 8;
+    } else {
+      var leftTry = s.x - gap - cardW;
+      if (leftTry >= minLeft) { cardLeft = leftTry; anchorX = cardLeft + cardW + 8; }
+      else { cardLeft = Math.min(vw - cardW - 14, Math.max(minLeft, s.x + gap)); anchorX = cardLeft - 8; }
+    }
+    if (cardLeft < minLeft) cardLeft = minLeft;
+    card.style.left = cardLeft + 'px';
+    card.style.top = cardTop + 'px';
+    card.style.transform = 'none';
+    var midX = (s.x + anchorX) / 2;
+    if (this.leaderLine) this.leaderLine.setAttribute('points', s.x + ',' + s.y + ' ' + midX + ',' + s.y + ' ' + midX + ',' + cy + ' ' + anchorX + ',' + cy);
+    if (this.leaderDot) { this.leaderDot.setAttribute('cx', s.x); this.leaderDot.setAttribute('cy', s.y); }
+  }
+
+  componentWillUnmount() {
+    this._dead = true;
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+    if (this.graph) this.graph.destroy();
+    if (this._raf2) cancelAnimationFrame(this._raf2);
+    if (this._introRaf) cancelAnimationFrame(this._introRaf);
+    if (this._onKey) window.removeEventListener('keydown', this._onKey);
+    if (this._onScroll) { window.removeEventListener('scroll', this._onScroll); window.removeEventListener('resize', this._onScroll); }
+    if (this._onPointer) { window.removeEventListener('pointermove', this._onPointer); window.removeEventListener('pointerdown', this._onPointer); }
+    if (this._onRuntimeReady) window.removeEventListener('oignon-runtime-ready', this._onRuntimeReady);
+    if (this._io) this._io.disconnect();
+  }
+}
+</script>
+</body>
 </html>

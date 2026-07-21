@@ -1,0 +1,102 @@
+/* ============================================================
+   Oignon — Colors
+   Ported verbatim from oignon-v2 src/assets/styles/variables.css
+   plus semantic aliases. Dark theme is the default; a
+   `.light-mode` scope mirrors the app's light theme.
+   ============================================================ */
+
+:root {
+  /* ---- Backgrounds ---- */
+  --bg-body: #2a2a3e;
+  --bg-container: #1a1a2e;
+  --bg-panel: rgba(0, 0, 0, 0.6);
+  --bg-panel-solid: rgba(30, 30, 50, 0.95);
+  --bg-input: rgba(255, 255, 255, 0.1);
+  --bg-input-focus: rgba(255, 255, 255, 0.15);
+  --bg-item: rgba(255, 255, 255, 0.05);
+  --bg-item-hover: rgba(255, 255, 255, 0.08);
+  --bg-item-active: rgba(255, 255, 255, 0.12);
+  --bg-tooltip: rgba(0, 0, 0, 0.9);
+
+  /* ---- Text (white opacity ladder) ---- */
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.9);
+  --text-tertiary: rgba(255, 255, 255, 0.8);
+  --text-muted: rgba(255, 255, 255, 0.6);
+  --text-dim: rgba(255, 255, 255, 0.5);
+  --text-faint: rgba(255, 255, 255, 0.4);
+  --text-placeholder: rgba(255, 255, 255, 0.4);
+
+  /* ---- Accents ---- */
+  --accent-green: #4ade80;          /* primary action / progress */
+  --accent-green-light: #86efac;
+  --accent-blue: #3b82f6;
+  --accent-blue-light: #60a5fa;
+  --accent-red: #f87171;
+  --accent-orange: #f97316;         /* bookmark active */
+  --brand-violet: #5a2ca0;          /* brand identity — logo & app icon */
+  --brand-violet-light: #8b5cf6;    /* gradient highlight / hover glow */
+  --brand-violet-dark: #3d1a70;
+  --accent-link: rgba(130, 180, 255, 0.9);
+  --accent-link-bg: rgba(130, 180, 255, 0.1);
+  --accent-link-bg-hover: rgba(130, 180, 255, 0.2);
+
+  /* ---- Semantic status (badges) ---- */
+  --status-source: #22c55e;         /* Source paper */
+  --status-open: #22c55e;           /* Open Access */
+  --status-closed: #6b7280;         /* Closed Access */
+  --status-top: #38bdf8;            /* Top-percentile (colormap-derived at runtime) */
+  --status-retracted: #ef4444;
+  --status-neutral: #374151;
+  --on-status: #0d0d17;             /* dark text on bright status chips */
+
+  /* ---- Borders (white opacity ladder) ---- */
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --border-light: rgba(255, 255, 255, 0.1);
+  --border-medium: rgba(255, 255, 255, 0.15);
+  --border-strong: rgba(255, 255, 255, 0.25);
+  --border-focus: rgba(255, 255, 255, 0.4);
+
+  /* ---- Node / graph palette (Freeze default colormap) ---- */
+  --node-core: #ffffff;             /* selected / source node core */
+  --node-fill: #b6e3ee;             /* pale cyan node body */
+  --node-stroke: #7fd0e6;
+  --node-dim: #1f3a6b;              /* faded background node */
+  --edge: #3b82f6;                  /* citation edge */
+  --edge-glow: rgba(96, 165, 250, 0.7);
+
+  /* ---- Semantic surface aliases ---- */
+  --surface-canvas: var(--bg-container);
+  --surface-panel: var(--bg-panel);
+  --surface-card: var(--bg-item);
+  --surface-chip: var(--bg-item);
+}
+
+/* Light theme — mirrors App.vue `.light-mode`. Scope a subtree with
+   class="light-mode" (or data-theme="light") to opt in. */
+.light-mode,
+[data-theme="light"] {
+  --bg-body: #f5f5f0;
+  --bg-container: #f5f5f0;
+  --bg-panel: rgba(255, 255, 255, 0.7);
+  --bg-panel-solid: rgba(245, 245, 240, 0.95);
+  --bg-input: rgba(0, 0, 0, 0.06);
+  --bg-input-focus: rgba(0, 0, 0, 0.1);
+  --bg-item: rgba(0, 0, 0, 0.04);
+  --bg-item-hover: rgba(0, 0, 0, 0.08);
+  --bg-item-active: rgba(0, 0, 0, 0.12);
+
+  --text-primary: #1a1a1a;
+  --text-secondary: rgba(0, 0, 0, 0.85);
+  --text-tertiary: rgba(0, 0, 0, 0.75);
+  --text-muted: rgba(0, 0, 0, 0.65);
+  --text-dim: rgba(0, 0, 0, 0.55);
+  --text-faint: rgba(0, 0, 0, 0.45);
+  --text-placeholder: rgba(0, 0, 0, 0.5);
+
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-light: rgba(0, 0, 0, 0.1);
+  --border-medium: rgba(0, 0, 0, 0.15);
+  --border-strong: rgba(0, 0, 0, 0.25);
+  --border-focus: rgba(0, 0, 0, 0.4);
+}

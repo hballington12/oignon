@@ -1,0 +1,20 @@
+/* ============================================================
+   Oignon — Spacing
+   4px base step.
+   ============================================================ */
+
+:root {
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-2xl: 28px;
+
+  /* Component sizing */
+  --control-btn-size: 36px;   /* viewport control buttons */
+  --float-btn-size: 44px;     /* floating controls (touch target) */
+  --icon-btn-sm: 24px;        /* inline header actions */
+  --toggle-size: 32px;        /* colormap / type-filter swatches */
+  --tab-bar-height: 52px;
+}
