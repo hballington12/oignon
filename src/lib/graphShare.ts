@@ -49,11 +49,15 @@ export async function createShareLink(slim: SlimCache): Promise<string> {
   return `${window.location.origin}/g/${code}`
 }
 
-const SHARE_PATH = /^\/g\/([A-Za-z0-9]+)\/?$/
+const SHARE_HASH = /^#g=([A-Za-z0-9]+)$/
 
-/** If the current URL is a share link, return its code. */
+/**
+ * If the current URL carries a shared graph, return its code. Share links
+ * (/g/<code>) redirect into the app as /app/#g=<code>, so the code arrives in
+ * the fragment.
+ */
 export function readShareCodeFromUrl(): string | null {
-  const match = window.location.pathname.match(SHARE_PATH)
+  const match = window.location.hash.match(SHARE_HASH)
   return match?.[1] ?? null
 }
 
@@ -68,7 +72,7 @@ export async function fetchSharedGraph(code: string): Promise<SlimCache | null> 
   }
 }
 
-/** Replace /g/<code> with the app base (no reload, no history) once loaded. */
+/** Strip the #g=<code> fragment (no reload, no history entry) once loaded. */
 export function clearSharePath(): void {
-  window.history.replaceState(null, '', import.meta.env.BASE_URL)
+  window.history.replaceState(null, '', window.location.pathname + window.location.search)
 }

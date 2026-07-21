@@ -1,17 +1,15 @@
-// GET /g/:code — serve the app shell for a share link.
+// GET /g/:code — redirect a share link into the app, carrying the code in the
+// fragment (/app/#g=:code). The app reads it client-side and fetches the graph
+// from /api/share/:code.
 //
-// This is a Pages Function rather than a `_redirects` rewrite on purpose:
-// Functions have deterministic routing precedence, whereas a
-// `/g/* /app/index.html 200` rewrite was silently shadowed by Cloudflare's SPA
-// fallback, which served the root landing page (support.js/graph-data.js) at
-// /g/<code> and broke every share link.
-//
-// We serve /app/index.html verbatim (URL stays /g/<code>). The app boots with
-// base /app/, reads the code from the path, and fetches the graph from
-// /api/share/:code.
+// Why a redirect (not an ASSETS rewrite):
+//   - Functions have routing precedence over Cloudflare's SPA fallback, which
+//     otherwise served the root landing page at /g/<code> and broke share links.
+//   - A 302 is dependency-free. Serving /app/index.html via env.ASSETS 500'd
+//     (the ASSETS binding isn't reliably available here); Response.redirect
+//     needs no bindings and can't fail that way.
 export async function onRequest(context) {
-  const { request, env } = context
-  const appShell = new URL(request.url)
-  appShell.pathname = '/app/index.html'
-  return env.ASSETS.fetch(new Request(appShell.toString(), request))
+  const { request, params } = context
+  const origin = new URL(request.url).origin
+  return Response.redirect(`${origin}/app/#g=${params.code}`, 302)
 }
