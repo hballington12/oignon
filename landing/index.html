@@ -34,8 +34,37 @@ a{color:var(--accent-link);text-decoration:none}
 a:hover{color:var(--accent-blue-light)}
 @keyframes oi-bob{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(9px);opacity:1}}
 @keyframes oi-pulse{0%,100%{box-shadow:0 0 18px rgba(74,222,128,.25)}50%{box-shadow:0 0 36px rgba(74,222,128,.55)}}
-@media (max-height:640px){.oi-scroll-cue{display:none !important}}
 @media (max-height:660px){.oi-hero-col{justify-content:flex-start !important}}
+/* ---- Ultra-portrait (W < H/2): single column, graph as a fixed top band ----
+   Two-zone (graph-beside-text) has no horizontal room at &lt;1:2. Here the graph
+   pins to a top band and each section is a FIXED lower-zone card; scrolling
+   drives scenePos and _layoutUltraStage whips the active card in with a sigmoid.
+   The tall .oi-scroll-spacer provides the scroll distance (fixed cards have no
+   flow height). Class toggled from _applyResponsiveHeights. */
+/* While the loading gate is up, hard-hide the fixed text stage in ultra (the
+   cards are position:fixed and would otherwise show through the gate). */
+.oi-ultra.oi-intro-active [data-scene]{opacity:0 !important;pointer-events:none !important}
+.oi-scroll-spacer{display:none}
+.oi-ultra .oi-scroll-spacer{display:block}
+.oi-ultra [data-scene]{position:fixed !important;inset:0 !important;min-height:0 !important;height:100svh !important;display:flex !important;flex-direction:column !important;justify-content:flex-start !important;align-items:stretch !important;padding:42vh 22px 5vh !important;overflow:hidden !important;pointer-events:none;z-index:2}
+.oi-ultra [data-scene] > div{max-width:100% !important;width:100% !important;margin:0 !important;pointer-events:auto;will-change:transform,opacity}
+.oi-ultra [data-scene="select"] > div{gap:20px !important}
+/* frosted dim panel behind each ultra text section so copy stands out over the graph */
+.oi-ultra [data-scene]:not([data-scene="hero"]) > div,
+.oi-ultra .oi-hero-col > div{background:rgba(6,8,18,.62) !important;backdrop-filter:blur(16px) !important;-webkit-backdrop-filter:blur(16px) !important;border:1px solid rgba(255,255,255,.07) !important;border-radius:20px !important;padding:24px 20px !important;box-shadow:0 16px 44px rgba(0,0,0,.5)}
+/* only the non-hero (potentially tall) sections scroll internally; the hero panel
+   sizes to its content so logo + title + copy + button stay in one container.
+   overflow:hidden (not auto) — the single PAGE scrollbar drives panel.scrollTop,
+   so there is never a second, nested scrollbar. */
+.oi-ultra [data-scene]:not([data-scene="hero"]) > div{max-height:64vh;overflow:hidden}
+.oi-ultra [data-scene="hero"] > div{height:auto !important;min-height:0 !important}
+.oi-ultra .oi-hero-col{display:flex !important;flex-direction:column !important;height:auto !important;min-height:0 !important;padding:0 !important;overflow:visible !important;justify-content:flex-start !important;align-items:center !important;text-align:center}
+.oi-ultra .oi-hero-col > div{max-width:100% !important;width:100% !important;display:flex;flex-direction:column;align-items:center;gap:20px}
+.oi-ultra .oi-hero-col [data-reveal]{margin:0 !important}
+.oi-ultra .oi-hero-col > div > div:last-child{justify-content:center}
+.oi-ultra [data-scene="cta"]{text-align:center}
+.oi-ultra [data-scene="hero"]{justify-content:flex-end !important;padding-bottom:11vh !important}
+.oi-ultra [data-scene="cta"] > div,.oi-ultra [data-scene="cta"] > img{margin-left:auto !important;margin-right:auto !important}
 </style>
 <script src="graph-data.js"></script>
 <script src="graph-meta.js"></script>
@@ -49,6 +78,12 @@ a:hover{color:var(--accent-blue-light)}
        active scene so there are never hard section seams. -->
   <div style="position:fixed;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,rgba(4,5,12,.5) 0%,rgba(4,5,12,0) 9%,rgba(4,5,12,0) 89%,rgba(4,5,12,.55) 100%)"></div>
   <div ref="{{ scrimRef }}" style="position:fixed;inset:0;z-index:1;pointer-events:none;background:linear-gradient(90deg,rgba(4,5,12,.82) 0%,rgba(4,5,12,.41) 30%,rgba(4,5,12,0) 56%)"></div>
+  <!-- Persistent "scroll for more" cue — fixed so it stays on-screen at any
+       viewport size; fades out once the user starts leaving the hero. -->
+  <div ref="{{ scrollCueRef }}" style="position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:5;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;transition:opacity .4s ease">
+    <span style="font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.55)">Scroll for more</span>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:oi-bob 1.8s ease-in-out infinite"><path d="M12 5v14"></path><path d="m19 12-7 7-7-7"></path></svg>
+  </div>
   <!-- Dog-leg callout cards, anchored to nodes, cycled with hero scroll -->
   <div ref="{{ calloutRef }}" style="position:fixed;inset:0;z-index:6;pointer-events:none;opacity:0;transition:opacity .4s ease">
     <svg ref="{{ leaderRef }}" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none">
@@ -277,10 +312,12 @@ a:hover{color:var(--accent-blue-light)}
 
   <!-- CTA + FOOTER -->
   <section data-scene="cta" style="position:relative;z-index:2;min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:0 clamp(20px,7vw,96px)">
-    <img src="assets/icon-gradient.svg" alt="" data-reveal="" style="opacity:0;transform:translateY(24px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1);width:64px;height:64px;border-radius:16px;margin-bottom:34px">
-    <h2 data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity 1s cubic-bezier(.16,1,.3,1) .06s,transform 1s cubic-bezier(.16,1,.3,1) .06s;margin:0;font-weight:600;font-size:clamp(2.6rem,7vw,6rem);line-height:1;letter-spacing:-.04em;max-width:14ch">Become an expert in minutes.</h2>
-    <div data-reveal="" style="opacity:0;transform:translateY(24px);transition:opacity .9s cubic-bezier(.16,1,.3,1) .18s,transform .9s cubic-bezier(.16,1,.3,1) .18s;margin-top:40px">
-      <a href="/app/" style="display:inline-flex;align-items:center;gap:9px;padding:18px 40px;background:var(--accent-green);color:#07130b;border-radius:13px;font-weight:700;font-size:17px" style-hover="filter:brightness(1.08)">Launch the app →</a>
+    <div style="display:flex;flex-direction:column;align-items:center">
+      <img src="assets/icon-gradient.svg" alt="" data-reveal="" style="opacity:0;transform:translateY(24px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1);width:64px;height:64px;border-radius:16px;margin-bottom:34px">
+      <h2 data-reveal="" style="opacity:0;transform:translateY(28px);transition:opacity 1s cubic-bezier(.16,1,.3,1) .06s,transform 1s cubic-bezier(.16,1,.3,1) .06s;margin:0;font-weight:600;font-size:clamp(2.6rem,7vw,6rem);line-height:1;letter-spacing:-.04em;max-width:14ch">Become an expert in minutes.</h2>
+      <div data-reveal="" style="opacity:0;transform:translateY(24px);transition:opacity .9s cubic-bezier(.16,1,.3,1) .18s,transform .9s cubic-bezier(.16,1,.3,1) .18s;margin-top:40px">
+        <a href="/app/" style="display:inline-flex;align-items:center;gap:9px;padding:18px 40px;background:var(--accent-green);color:#07130b;border-radius:13px;font-weight:700;font-size:17px" style-hover="filter:brightness(1.08)">Launch the app →</a>
+      </div>
     </div>
     <footer style="position:absolute;bottom:0;left:0;right:0;display:flex;flex-wrap:wrap;gap:16px 26px;align-items:center;justify-content:center;padding:30px clamp(20px,7vw,96px);border-top:1px solid rgba(255,255,255,.07);font-size:13px;color:var(--text-dim)">
       <span style="color:var(--text-muted)">oignon — open-source citation graphs</span>
@@ -291,6 +328,10 @@ a:hover{color:var(--accent-blue-light)}
       <span style="margin-left:auto;color:var(--text-faint)">Built on the open OpenAlex dataset · H. Ballington</span>
     </footer>
   </section>
+
+  <!-- Ultra-portrait scroll driver: provides scroll distance for the fixed
+       text-stage cards (sized per-mode in _applyResponsiveHeights). -->
+  <div ref="{{ ultraSpacerRef }}" class="oi-scroll-spacer" style="width:1px;pointer-events:none"></div>
 
 </div>
 </x-dc>
@@ -346,6 +387,8 @@ class Component extends DCLogic {
       buildPctRef: function (el) { self.buildPctEl = el; },
       buildBarRef: function (el) { self.buildBarEl = el; },
       gateCueRef: function (el) { self.gateCueEl = el; },
+      scrollCueRef: function (el) { self.scrollCueEl = el; },
+      ultraSpacerRef: function (el) { self.ultraSpacerEl = el; },
       userLayerRef: function (el) { self.userLayerEl = el; },
       uLineRef: function (el) { self.uLineEl = el; },
       uDotRef: function (el) { self.uDotEl = el; },
@@ -492,6 +535,7 @@ class Component extends DCLogic {
     dt = Math.min(0.05, dt || 0.016);
     var W = g.app.screen.width, H = g.app.screen.height, landscape = W > H;
     this._landscape = landscape;
+    this._ultra = W < H * 0.5;   // ultra-portrait: single-column, graph as a top band
     var st = this.state || { scene: 'intro', scenePos: 0 };
     var now = (performance.now() - this._t0) / 1000;
     var lerp = function (a, b, t) { return a + (b - a) * t; };
@@ -503,7 +547,7 @@ class Component extends DCLogic {
       // Pull the target rect/pad straight from scene 0 (hero) rather than a
       // separate literal — the fly-in then lands EXACTLY where flow picks up,
       // with no scale/position pop at handoff.
-      var specs0 = landscape ? this._sceneL : this._sceneP;
+      var specs0 = this._ultra ? this._sceneU : (landscape ? this._sceneL : this._sceneP);
       var s0 = specs0 ? specs0[0] : null;
       var hr = s0 ? s0.rect : (landscape ? [0.40, 0.10, 1.06, 1.06] : [0.20, 0.26, 1.20, 1.04]);
       var f0 = this._frame(hr, s0 ? s0.pad : 0.96);
@@ -526,7 +570,7 @@ class Component extends DCLogic {
     // ----- FLOW: one continuous camera interpolated across the section scenes.
     // The graph never disperses; it reframes, dims, and recolours per section,
     // so every section keeps a live visual and nothing whips off-screen. -----
-    var specs = landscape ? this._sceneL : this._sceneP;
+    var specs = this._ultra ? this._sceneU : (landscape ? this._sceneL : this._sceneP);
     if (!specs) return;
     var pos = Math.max(0, Math.min(specs.length - 1, st.scenePos || 0));
     var a = Math.floor(pos), b = Math.min(specs.length - 1, a + 1), f = pos - a;
@@ -541,7 +585,8 @@ class Component extends DCLogic {
     // Dark ONLY on the text side, fully transparent over the graph so it stays
     // crisp. leftDark/rightDark cross through 0 at sx=0.5, so the side flip is
     // continuous (centred scenes get no veil — the graph self-dims there).
-    if (this.scrimEl) {
+    // Ultra-portrait uses a VERTICAL scrim instead (set once on mode change).
+    if (this.scrimEl && !this._ultra) {
       var lD = sp * clamp01((0.5 - sx) / 0.34), rD = sp * clamp01((sx - 0.5) / 0.34);
       this.scrimEl.style.background =
         'linear-gradient(90deg, rgba(4,5,12,' + lD.toFixed(3) + ') 0%, rgba(4,5,12,' + (lD * 0.5).toFixed(3) + ') 30%, rgba(4,5,12,0) 56%),' +
@@ -551,8 +596,10 @@ class Component extends DCLogic {
     var fr = this._frame(rect, pad);
     var tx = fr.x, ty = fr.y, tS = fr.S;
     var driftK = this._introDoneT ? clamp01((performance.now() - this._introDoneT - 2500) / 1500) : 1;
-    tx += Math.sin(now * 0.25) * 6 * driftK; ty += Math.cos(now * 0.19) * 6 * driftK;
-    ty += Math.sin(fe * Math.PI) * H * 0.06 * (this._graphScroll || 0);   // zero at rest, peaks mid-swing
+    var DRIFT = 0;   // TEMP: world drift disabled to isolate a visual artifact
+    tx += Math.sin(now * 0.25) * 6 * driftK * DRIFT; ty += Math.cos(now * 0.19) * 6 * driftK * DRIFT;
+    var PARALLAX = 0;   // TEMP: scroll-driven parallax disabled to isolate a visual artifact
+    ty += Math.sin(fe * Math.PI) * H * 0.06 * (this._graphScroll || 0) * PARALLAX;
     if (!this.cur) this.cur = { S: tS, x: tx, y: ty };
     var k = Math.min(1, dt * (this._sceneEase || 5));
     this.cur.S += (tS - this.cur.S) * k; this.cur.x += (tx - this.cur.x) * k; this.cur.y += (ty - this.cur.y) * k;
@@ -731,12 +778,31 @@ class Component extends DCLogic {
       { rect: [0.00, 0.00, 1.00, 1.00], pad: 1.12, dim: 0.65, curve: 0.42, sx: 0.50, sp: 0.84, sf: 0.64 },
       { rect: [0.00, 0.00, 1.00, 1.00], pad: 1.12, dim: 0.55, curve: 0.46, sx: 0.50, sp: 0.82, sf: 0.60 }
     ];
+    // Ultra-portrait (W < H/2): the graph fills a TOP BAND, inset below the nav
+    // so its top is never cut; contained-fit keeps the whole graph visible and
+    // its lower part fades out under the vertical scrim while the text sits below.
+    var band = [0.02, 0.075, 0.98, 0.52];
+    this._sceneU = [
+      { rect: band, pad: 0.98, dim: 0.02, curve: 1.00, sx: 0.5, sp: 0, sf: 0 },
+      { rect: band, pad: 0.96, dim: 0.04, curve: 1.00, sx: 0.5, sp: 0, sf: 0 },
+      { rect: band, pad: 0.96, dim: 0.02, curve: 1.00, sx: 0.5, sp: 0, sf: 0 },
+      { rect: band, pad: 0.98, dim: 0.04, curve: 1.00, sx: 0.5, sp: 0, sf: 0 },
+      { rect: band, pad: 1.00, dim: 0.06, curve: 0.80, sx: 0.5, sp: 0, sf: 0 },
+      { rect: band, pad: 1.00, dim: 0.05, curve: 0.85, sx: 0.5, sp: 0, sf: 0 }
+    ];
 
     function onScroll() {
       var vh = scroller.clientHeight, top = scroller.scrollTop;
       if (!self.sceneEls || !self.sceneEls.length) self.sceneEls = self.rootEl ? Array.prototype.slice.call(self.rootEl.querySelectorAll('[data-scene]')) : [];
+      self._applyResponsiveHeights();   // resolve mode + size the ultra spacer first
       var els = self.sceneEls, n = els.length, pos = 0;
-      if (n > 1) {
+      var ultra = window.innerWidth < window.innerHeight * 0.5;
+      if (ultra && n > 1) {
+        // single-scrollbar timeline: page scroll → pos + active panel's internal scroll
+        var m = self._ultraMap(top / vh);
+        pos = m.pos;
+        self._layoutUltraStage(pos, els, m.active, m.u);
+      } else if (n > 1) {
         var anchors = els.map(function (el) { return el.offsetTop + el.offsetHeight / 2 - vh / 2; });
         if (top <= anchors[0]) pos = 0;
         else if (top >= anchors[n - 1]) pos = n - 1;
@@ -744,7 +810,9 @@ class Component extends DCLogic {
       }
       self.state = { scene: self._introActive ? 'intro' : 'flow', scenePos: pos };
       if (self.calloutEl) self.calloutEl.style.opacity = '0';
-      self._applyResponsiveHeights();
+      // scroll cue: hidden during the intro gate, then fades out over the
+      // first slice of hero scroll and stays gone for the rest of the page.
+      if (self.scrollCueEl) self.scrollCueEl.style.opacity = (self._introActive || pos > 0.12) ? '0' : '1';
     }
     this._onScroll = onScroll;
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -752,30 +820,116 @@ class Component extends DCLogic {
     onScroll();
   }
 
-  // Portrait needs far less scroll distance to traverse the same sections —
-  // compress each section's min-height (the hero's own length is handled by
-  // heroLength/_applyOptions).
+  // Responsive layout mode: landscape · portrait · ultra (single column).
+  // landscape/portrait size each section's scroll length inline; ultra swaps in
+  // the fixed text-stage CSS, sizes the scroll spacer, and force-reveals the
+  // reveal-on-scroll elements (fixed cards never trip the IntersectionObserver).
+  _ultraStep = 0.6;   // fraction of a viewport of scroll per scene, in ultra
   _applyResponsiveHeights() {
-    var portrait = window.innerWidth <= window.innerHeight;
-    if (portrait === this._portraitApplied) return;
-    this._portraitApplied = portrait;
+    var W = window.innerWidth, H = window.innerHeight;
+    var mode = W > H ? 'landscape' : (W < H * 0.5 ? 'ultra' : 'portrait');
+    if (mode === this._layoutMode) return;
+    var prev = this._layoutMode;
+    this._layoutMode = mode;
     var self = this;
-    (this.sceneEls || []).forEach(function (el) {
-      if (el === self.heroEl) return;
-      el.style.minHeight = portrait ? '66vh' : '100vh';
+    var ultra = mode === 'ultra', portrait = mode !== 'landscape';
+    if (this.rootEl) this.rootEl.classList.toggle('oi-ultra', ultra);
+    var els = this.sceneEls || [];
+    els.forEach(function (el) {
+      if (el !== self.heroEl) el.style.minHeight = ultra ? '' : (portrait ? '66vh' : '100vh');
+      // leaving ultra: clear the stage transforms/opacity we stamped on sections
+      if (!ultra && prev === 'ultra') { el.style.transform = ''; el.style.opacity = ''; el.style.pointerEvents = ''; }
     });
-    // the hero's own scroll length also depends on orientation — recompute it
-    // here too (not just at mount) so rotating/resizing keeps it in sync.
+    if (ultra) {
+      // vertical scrim: graph band shows through the top, solid canvas below
+      if (this.scrimEl) this.scrimEl.style.background = 'linear-gradient(180deg,rgba(4,5,12,0) 0%,rgba(4,5,12,0) 30%,rgba(4,5,12,.82) 46%,#04050c 57%,#04050c 100%)';
+      // scroll distance for the fixed cards: (n-1) steps + one viewport
+      // build the scroll timeline (measures each panel's internal overflow) and
+      // size the single scroll spacer from it. Deferred one frame so the ultra
+      // CSS (fixed cards, max-height windows) is applied before measuring.
+      var self2 = this;
+      requestAnimationFrame(function () { self2._buildUltraTimeline(); });
+    }
     var o = this.props || {};
     var heroLen = o.heroLength != null ? o.heroLength : 130;
     if (portrait) heroLen *= 0.74;
-    if (this.heroEl) this.heroEl.style.height = heroLen + 'vh';
+    if (this.heroEl) this.heroEl.style.height = ultra ? '' : heroLen + 'vh';
+  }
+
+  // Ultra scroll timeline: one page scrollbar, no nested ones. Each section
+  // gets a DWELL segment (its internal overflow, so continued scrolling scrolls
+  // the panel's content via panel.scrollTop under overflow:hidden) plus a base
+  // pause, and each pair of sections a TRANSITION segment (the whip). The single
+  // scroll spacer is sized to the total so the page provides exactly that scroll.
+  _buildUltraTimeline() {
+    if (this._layoutMode !== 'ultra') return;
+    var els = this.sceneEls || []; if (!els.length) return;
+    var vh = window.innerHeight, T = 0.5, BASE = 0.16;
+    var panels = [], segs = [], total = 0;
+    for (var i = 0; i < els.length; i++) {
+      var panel = els[i] === this.heroEl ? els[i].querySelector('.oi-hero-col > div') : els[i].firstElementChild;
+      var ov = panel ? Math.max(0, panel.scrollHeight - panel.clientHeight) : 0;
+      panels.push({ el: panel, ov: ov });
+      var dwell = BASE + ov / vh;
+      segs.push({ type: 'dwell', i: i, len: dwell });
+      total += dwell;
+      if (i < els.length - 1) { segs.push({ type: 'trans', i: i, len: T }); total += T; }
+    }
+    this._ultraPanels = panels; this._ultraSegs = segs; this._ultraTotal = total;
+    if (this.ultraSpacerEl) this.ultraSpacerEl.style.height = ((total + 1) * 100).toFixed(1) + 'vh';
+    if (this._onScroll) this._onScroll();   // re-map with the new timeline
+  }
+
+  // Map page-scroll offset s (in viewport units) → { pos, active, u } where pos
+  // drives the card/graph camera and u is the active panel's internal progress.
+  _ultraMap(s) {
+    var segs = this._ultraSegs; if (!segs || !segs.length) return { pos: 0, active: 0, u: 0 };
+    var acc = 0;
+    for (var k = 0; k < segs.length; k++) {
+      var seg = segs[k], end = acc + seg.len, last = k === segs.length - 1;
+      if (s < end || last) {
+        var local = seg.len > 0 ? (s - acc) / seg.len : 1;
+        local = local < 0 ? 0 : local > 1 ? 1 : local;
+        if (seg.type === 'dwell') return { pos: seg.i, active: seg.i, u: local };
+        return { pos: seg.i + this._pop(local), active: seg.i, u: 1 };   // transition: current fully scrolled
+      }
+      acc = end;
+    }
+    return { pos: segs.length ? this.sceneEls.length - 1 : 0, active: this.sceneEls.length - 1, u: 1 };
+  }
+
+  // Ultra text-stage — the SINGLE owner of card visibility in ultra. Each
+  // [data-scene] section is position:fixed;inset:0; this drives the section's
+  // own opacity + transform so the active card whips into place (steep sigmoid)
+  // while the others fade/slide out, and sets each panel's internal scrollTop so
+  // tall content scrolls under the one page scrollbar. Inner [data-reveal] is
+  // animated once by the IntersectionObserver / _revealHero.
+  _layoutUltraStage(pos, els, active, u) {
+    var vh = window.innerHeight;
+    if (this._introActive) {
+      for (var j = 0; j < els.length; j++) { els[j].style.opacity = '0'; els[j].style.transform = ''; els[j].style.pointerEvents = 'none'; }
+      return;
+    }
+    var travel = vh * 0.14, panels = this._ultraPanels || [];
+    for (var i = 0; i < els.length; i++) {
+      var d = i - pos;                     // >0 below (upcoming), <0 above (past)
+      var sig = 1 / (1 + Math.exp(-7 * d));       // 0..1, .5 at d=0
+      var y = (sig - 0.5) * 2 * travel;           // past: up, future: down
+      var ad = Math.abs(d);
+      var op = ad >= 0.62 ? 0 : (ad <= 0.18 ? 1 : 1 - (ad - 0.18) / 0.44);
+      els[i].style.transform = 'translateY(' + y.toFixed(1) + 'px)';
+      els[i].style.opacity = op.toFixed(3);
+      els[i].style.pointerEvents = ad < 0.5 ? 'auto' : 'none';
+      var p = panels[i];
+      if (p && p.el) p.el.scrollTop = (active == null) ? 0 : (i < active ? p.ov : (i > active ? 0 : (u || 0) * p.ov));
+    }
   }
 
   // -------- loading gate: type DOI -> build -> "Enter the graph" --------
   _startIntro() {
     var self = this;
     this._introActive = true; this._introP = 0; this._introReady = false; this._introEntered = false;
+    if (this.rootEl) this.rootEl.classList.add('oi-intro-active');
     var scroller = document.scrollingElement || document.documentElement;
     scroller.scrollTop = 0;
     document.documentElement.style.overflow = 'hidden';
@@ -844,14 +998,21 @@ class Component extends DCLogic {
     if (this._onKey) { window.removeEventListener('keydown', this._onKey); this._onKey = null; }
     if (instant) {
       this._introP = 1; this._introActive = false; this._introEntered = true;
+      if (this.rootEl) this.rootEl.classList.remove('oi-intro-active');
       this._introDoneT = 0;
       if (this.graph) { this.graph._restoreNodes(); this.graph.resetNodePositions(); }
-      this._revealHero();
       if (this._onScroll) this._onScroll();
+      this._revealHero();
       return;
     }
-    setTimeout(function () { self._revealHero(); }, 350);
-    var FLY = 2600 / (this._flyInSpeed || 1);
+    // In ultra the hero card is held at opacity:0 for the whole fly-in, so
+    // revealing at 350ms would play the line-mask while it's invisible (looks
+    // like a hard cut once it appears). Reveal mid-fly only when the hero is
+    // actually visible during the fly (landscape/portrait); ultra reveals at
+    // the end, just after the card is shown.
+    var ultraMode = window.innerWidth < window.innerHeight * 0.5;
+    if (!ultraMode) setTimeout(function () { self._revealHero(); }, 350);
+    var FLY = ultraMode ? 2000 : 2600 / (this._flyInSpeed || 1);   // ultra: text in by ~2s
     var t0 = performance.now();
     function fly() {
       if (self._dead) return;
@@ -860,8 +1021,10 @@ class Component extends DCLogic {
       if (p < 1) { self._introRaf = requestAnimationFrame(fly); return; }
       self._introDoneT = performance.now();
       self._introActive = false;
+      if (self.rootEl) self.rootEl.classList.remove('oi-intro-active');
       if (self.graph) self.graph.resetNodePositions();   // one-time settle; flow never re-touches x/y per-frame
-      if (self._onScroll) self._onScroll();
+      if (self._onScroll) self._onScroll();               // shows the hero card
+      if (ultraMode) setTimeout(function () { self._revealHero(); }, 60);   // then play its reveal
     }
     this._introRaf = requestAnimationFrame(fly);
   }
