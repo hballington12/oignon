@@ -13,10 +13,10 @@ https://github.com/user-attachments/assets/8f1f5374-8f4c-4fc3-b607-357ea4220e17
 
 Get the [mcp server](https://github.com/hballington12/mcp-oignon) for LLM-assisted workflows
 
-## License and brand
+## Other
 
-The **code** is open source under the [MIT License](LICENSE) — fork it, build on it, reuse it.
+The code is open source under the [MIT License](LICENSE).
 
-The **oignon name and logo are not covered by the MIT License** and are reserved (© 2025 Harry Ballington). You may fork the code, but please give your fork its own name and icon rather than passing it off as oignon. See [TRADEMARK.md](TRADEMARK.md).
+The oignon name and logo are not covered by the license and are reserved (© 2025 Harry Ballington). See [TRADEMARK.md](TRADEMARK.md).
 
 See [PRIVACY.md](PRIVACY.md) for the privacy policy.
