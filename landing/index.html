@@ -28,7 +28,7 @@
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
-html{overflow-x:hidden}
+html{overflow-x:hidden;--oi-cue-band:calc(92px + env(safe-area-inset-bottom,0px))}
 body{background:#04050c;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 a{color:var(--accent-link);text-decoration:none}
 a:hover{color:var(--accent-blue-light)}
@@ -62,8 +62,11 @@ a:hover{color:var(--accent-blue-light)}
 .oi-ultra .oi-hero-col > div{max-width:100% !important;width:100% !important;display:flex;flex-direction:column;align-items:center;gap:20px}
 .oi-ultra .oi-hero-col [data-reveal]{margin:0 !important}
 .oi-ultra .oi-hero-col > div > div:last-child{justify-content:center}
+/* brand lockup: stack logo ABOVE the wordmark in ultra so the text itself centers on screen */
+.oi-ultra .oi-hero-col > div > div:first-child{flex-direction:column !important;justify-content:center !important;align-items:center !important;gap:14px !important}
+.oi-ultra .oi-hero-col > div > div:first-child > div{align-items:center !important;text-align:center;gap:6px !important}
 .oi-ultra [data-scene="cta"]{text-align:center}
-.oi-ultra [data-scene="hero"]{justify-content:flex-end !important;padding-bottom:11vh !important}
+.oi-ultra [data-scene="hero"]{justify-content:flex-end !important;padding-top:max(88px, calc(100svh - var(--oi-cue-band) - 480px)) !important;padding-bottom:var(--oi-cue-band) !important}
 .oi-ultra [data-scene="cta"] > div,.oi-ultra [data-scene="cta"] > img{margin-left:auto !important;margin-right:auto !important}
 </style>
 <script src="graph-data.js"></script>
@@ -80,7 +83,7 @@ a:hover{color:var(--accent-blue-light)}
   <div ref="{{ scrimRef }}" style="position:fixed;inset:0;z-index:1;pointer-events:none;background:linear-gradient(90deg,rgba(4,5,12,.82) 0%,rgba(4,5,12,.41) 30%,rgba(4,5,12,0) 56%)"></div>
   <!-- Persistent "scroll for more" cue — fixed so it stays on-screen at any
        viewport size; fades out once the user starts leaving the hero. -->
-  <div ref="{{ scrollCueRef }}" style="position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:5;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;transition:opacity .4s ease">
+  <div ref="{{ scrollCueRef }}" style="position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:5;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;transition:opacity .4s ease">
     <span style="font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.55)">Scroll for more</span>
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:oi-bob 1.8s ease-in-out infinite"><path d="M12 5v14"></path><path d="m19 12-7 7-7-7"></path></svg>
   </div>
@@ -506,7 +509,6 @@ class Component extends DCLogic {
     this._selectFocus = o.selectFocus !== false;
     this._sceneEase = o.sceneEase != null ? o.sceneEase : 5;
     var heroLen = o.heroLength != null ? o.heroLength : 130;
-    if (window.innerWidth <= window.innerHeight) heroLen *= 0.74;   // portrait: less scroll to traverse
     if (this.heroEl) this.heroEl.style.height = heroLen + 'vh';
     if (this.graph) {
       this.graph.particleSystems.forEach(function (ps) { ps.setAlphaScale(bright); ps.container.visible = show; });
@@ -535,7 +537,7 @@ class Component extends DCLogic {
     dt = Math.min(0.05, dt || 0.016);
     var W = g.app.screen.width, H = g.app.screen.height, landscape = W > H;
     this._landscape = landscape;
-    this._ultra = W < H * 0.5;   // ultra-portrait: single-column, graph as a top band
+    this._ultra = W <= H;   // everything not-landscape uses the single-column layout
     var st = this.state || { scene: 'intro', scenePos: 0 };
     var now = (performance.now() - this._t0) / 1000;
     var lerp = function (a, b, t) { return a + (b - a) * t; };
@@ -796,7 +798,7 @@ class Component extends DCLogic {
       if (!self.sceneEls || !self.sceneEls.length) self.sceneEls = self.rootEl ? Array.prototype.slice.call(self.rootEl.querySelectorAll('[data-scene]')) : [];
       self._applyResponsiveHeights();   // resolve mode + size the ultra spacer first
       var els = self.sceneEls, n = els.length, pos = 0;
-      var ultra = window.innerWidth < window.innerHeight * 0.5;
+      var ultra = window.innerWidth <= window.innerHeight;
       if (ultra && n > 1) {
         // single-scrollbar timeline: page scroll → pos + active panel's internal scroll
         var m = self._ultraMap(top / vh);
@@ -827,16 +829,16 @@ class Component extends DCLogic {
   _ultraStep = 0.6;   // fraction of a viewport of scroll per scene, in ultra
   _applyResponsiveHeights() {
     var W = window.innerWidth, H = window.innerHeight;
-    var mode = W > H ? 'landscape' : (W < H * 0.5 ? 'ultra' : 'portrait');
+    var mode = W > H ? 'landscape' : 'ultra';   // no separate portrait mode — everything not-landscape is single-column
     if (mode === this._layoutMode) return;
     var prev = this._layoutMode;
     this._layoutMode = mode;
     var self = this;
-    var ultra = mode === 'ultra', portrait = mode !== 'landscape';
+    var ultra = mode === 'ultra';
     if (this.rootEl) this.rootEl.classList.toggle('oi-ultra', ultra);
     var els = this.sceneEls || [];
     els.forEach(function (el) {
-      if (el !== self.heroEl) el.style.minHeight = ultra ? '' : (portrait ? '66vh' : '100vh');
+      if (el !== self.heroEl) el.style.minHeight = ultra ? '' : '100vh';
       // leaving ultra: clear the stage transforms/opacity we stamped on sections
       if (!ultra && prev === 'ultra') { el.style.transform = ''; el.style.opacity = ''; el.style.pointerEvents = ''; }
     });
@@ -852,7 +854,6 @@ class Component extends DCLogic {
     }
     var o = this.props || {};
     var heroLen = o.heroLength != null ? o.heroLength : 130;
-    if (portrait) heroLen *= 0.74;
     if (this.heroEl) this.heroEl.style.height = ultra ? '' : heroLen + 'vh';
   }
 
@@ -1010,7 +1011,7 @@ class Component extends DCLogic {
     // like a hard cut once it appears). Reveal mid-fly only when the hero is
     // actually visible during the fly (landscape/portrait); ultra reveals at
     // the end, just after the card is shown.
-    var ultraMode = window.innerWidth < window.innerHeight * 0.5;
+    var ultraMode = window.innerWidth <= window.innerHeight;
     if (!ultraMode) setTimeout(function () { self._revealHero(); }, 350);
     var FLY = ultraMode ? 2000 : 2600 / (this._flyInSpeed || 1);   // ultra: text in by ~2s
     var t0 = performance.now();
@@ -1249,9 +1250,9 @@ class Component extends DCLogic {
     // behind content — this stops the slide between scenes from dragging nodes
     // under the cursor and flashing hover pop-ups mid-transition.
     var pos = (this.state && this.state.scenePos) || 0;
-    var settled = Math.abs(pos - Math.round(pos)) < 0.18;
+    var settled = Math.abs(pos - Math.round(pos)) < 0.3;
     // Portrait/mobile: the graph is a backdrop only — no hover/selection.
-    var interactive = !!this._landscape && settled && (this._sceneDim || 0) < 0.3 && this.state && this.state.scene === 'flow';
+    var interactive = !!this._landscape && settled && (this._sceneDim || 0) < 0.45 && this.state && this.state.scene === 'flow';
     var realId = (interactive && this._ptr) ? this._hitTest(this._ptr.x, this._ptr.y) : null;
     // In the "select" scene, auto-light the demo paper when the user isn't
     // hovering — so the section shows the real focus behaviour on its own.
