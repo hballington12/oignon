@@ -14,13 +14,13 @@
 <img src="brand/motto.svg" width="300" alt="Open-source citation graph tool" />
 
 <p>
-  <a href="https://oignon.dev"><img alt="Live app" src="https://img.shields.io/badge/try%20it-oignon.dev-8b5cf6"></a>
+  <a href="https://oignon.dev/app"><img alt="Live app" src="https://img.shields.io/badge/try%20it-oignon.dev-8b5cf6"></a>
   <a href="https://github.com/hballington12/oignon/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/hballington12/oignon?color=8b5cf6"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
   <a href="https://arxiv.org/abs/2512.22159"><img alt="arXiv" src="https://img.shields.io/badge/arXiv-2512.22159-b31b1b.svg"></a>
 </p>
 
-<p><a href="https://oignon.dev"><b>→ Try it at oignon.dev</b></a></p>
+<p><a href="https://oignon.dev"><b>oignon.dev</b></a></p>
 
 </div>
 
