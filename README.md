@@ -18,6 +18,7 @@
   <a href="https://github.com/hballington12/oignon/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/hballington12/oignon?color=8b5cf6"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
   <a href="https://arxiv.org/abs/2512.22159"><img alt="arXiv" src="https://img.shields.io/badge/arXiv-2512.22159-b31b1b.svg"></a>
+  <a href="https://buymeacoffee.com/hballington"><img alt="Support" src="https://img.shields.io/badge/support-buy%20me%20a%20coffee-8b5cf6"></a>
 </p>
 
 <p><a href="https://oignon.dev"><b>oignon.dev</b></a></p>

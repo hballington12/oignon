@@ -8,6 +8,7 @@ const links = [
   { label: "What's new", href: `${REPO}/blob/main/CHANGELOG.md`, title: 'Recent changes' },
   { label: 'Privacy', href: `${REPO}/blob/main/PRIVACY.md`, title: 'Privacy policy' },
   { label: 'GitHub', href: REPO, title: 'Source code' },
+  { label: 'Support', href: 'https://buymeacoffee.com/hballington', title: 'Support oignon — buy me a coffee' },
 ]
 </script>
 
