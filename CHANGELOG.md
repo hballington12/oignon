@@ -2,7 +2,7 @@
 
 What's new in oignon. Most recent first.
 
-## Unreleased
+## 2.0.0
 
 - **Shareable graphs.** A Share button on any graph creates a short
   `oignon.dev/g/<code>` link. Open it and the full graph loads, no signup, works
